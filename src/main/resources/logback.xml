@@ -1,0 +1,17 @@
+<configuration scan="true" scanPeriod="30 seconds" packagingData="true">
+
+    <property scope="context" name="logPattern" value="%d{${LOG_DATEFORMAT_PATTERN:-yyyy-MM-dd HH:mm:ss.SSS}} ${LOG_LEVEL_PATTERN:-%5p} ${PID:- } [%15.15t,%X{LCT_USER}[%X{LCT_USER_ROLES}]] %-40.40logger{39} : %m%n"/>
+
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>${logPattern}</pattern>
+        </encoder>
+    </appender>
+
+    <root level="info">
+        <appender-ref ref="STDOUT" />
+    </root>
+
+    <include optional="true" file="/jda/dct/config/transportation-service/logback_override.xml"/>
+
+</configuration>

@@ -1,0 +1,10 @@
+*.swp
+*.swo
+.gradle
+.idea
+*.iml
+.DS_Store
+build/
+out/
+!gradle-wrapper.jar
+/bin

@@ -1,0 +1,1 @@
+The chat-service micro service which acts as a proxy to the mattermost server

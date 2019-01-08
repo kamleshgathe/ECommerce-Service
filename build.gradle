@@ -1,0 +1,61 @@
+buildscript {
+	ext {
+		springBootVersion = '2.1.0.RELEASE'
+	}
+	repositories {
+		mavenLocal()
+		repositories {
+			mavenLocal()
+			maven {
+				url "${artifactoryContextUrl}/jda-dev-repositories"
+				credentials {
+					username = artifactoryUsername
+					password = artifactoryPassword
+				}
+			}
+		}
+	}
+	dependencies {
+		classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}")
+	}
+}
+
+apply plugin: 'java'
+apply plugin: 'maven'
+apply plugin: 'org.springframework.boot'
+apply plugin: 'io.spring.dependency-management'
+apply plugin: 'checkstyle'
+apply plugin: 'maven-publish'
+
+group = 'com.jda.dct'
+version = '0.0.1-SNAPSHOT'
+sourceCompatibility = 1.8
+
+checkstyle {
+	toolVersion "8.8"
+}
+
+repositories {
+	mavenCentral()
+}
+
+
+dependencies {
+
+	compile('org.springframework.boot:spring-boot-starter-web')
+	compile group: 'commons-codec', name: 'commons-codec', version: '1.9'
+	compile group: 'org.springframework.boot', name: 'spring-boot-starter-data-jpa'
+	runtime group: 'com.h2database', name: 'h2', version: '1.4.197'
+
+	compile('org.springframework.boot:spring-boot-starter-security')
+
+	compile 'org.springframework.security:spring-security-jwt:1.0.9.RELEASE'
+	compile 'org.springframework.security.oauth:spring-security-oauth2:2.3.4.RELEASE'
+	compile 'com.nimbusds:nimbus-jose-jwt:6.3'
+
+	compile group: 'org.yaml', name: 'snakeyaml', version: '1.23'
+	compile group: 'com.fasterxml.jackson.dataformat', name: 'jackson-dataformat-yaml', version: '2.9.7'
+
+	testImplementation('org.springframework.boot:spring-boot-starter-test')
+}
+

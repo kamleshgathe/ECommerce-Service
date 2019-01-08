@@ -1,0 +1,78 @@
+spring.application.name: chat
+spring:
+  profiles:
+    active: production
+
+server:
+  compression:
+    enabled: true
+    mime-types: text/html,text/xml,text/plain,text/css,application/javascript,application/json
+
+dct:
+  datasource:
+    driverClassName: org.mariadb.jdbc.Driver
+  tenants:
+    ids:
+  swagger:
+    path: /v1/swagger/**
+  service:
+    allowDeletes: true
+
+delivery:
+  service:
+    batch:
+      commit:
+        interval: 100
+        max.wait.time.milliseconds: 5000
+
+enable:
+  kafka:
+    auto:
+      commit: false
+
+kafka:
+  acknowledge:
+    manual:
+      commit: true
+
+luminate:
+  application:
+    component: dct
+    service: chat
+
+oauth2:
+  jwt:
+    key: 123
+
+
+# only enabled for development and testing
+---
+spring:
+  profiles: development
+
+server:
+  port: 9976
+
+ignite:
+  ipFinderImpl: multicast
+
+dct:
+  tenants:
+    ids: a4b7a825f67930965747445709011120
+  datasource:
+    a4b7a825f67930965747445709011120:
+      url: 'jdbc:mariadb://127.0.0.1:3306/dcta4b7a825f67930965747445709011120?useUnicode=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC&useSSL=false&autoReconnect=true'
+      username: dct
+      password: unr3@lity
+  service:
+    allowDeletes: true
+
+kafka:
+  bootstrap:
+    servers: http://localhost:9092
+
+es:
+  hosts: http://localhost:9200
+
+---
+#end of development profile
