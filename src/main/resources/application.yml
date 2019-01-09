@@ -1,4 +1,4 @@
-spring.application.name: chat
+spring.application.name: chat-service
 spring:
   profiles:
     active: production
@@ -51,7 +51,7 @@ spring:
   profiles: development
 
 server:
-  port: 9976
+  port: 9292
 
 ignite:
   ipFinderImpl: multicast
@@ -66,7 +66,11 @@ dct:
       password: unr3@lity
   service:
     allowDeletes: true
-
+  situationRoom:
+       mattermost:
+          host: http://localhost:8065/api/v4/
+          teamId: rgua1b36r7r7xkg9ajh58n33br
+       token: zdjyp6kg9tbxbbipu6ojqfjomo
 kafka:
   bootstrap:
     servers: http://localhost:9092
