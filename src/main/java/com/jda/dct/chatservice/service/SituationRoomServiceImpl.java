@@ -8,6 +8,7 @@
 
 package com.jda.dct.chatservice.service;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.jda.dct.chatservice.dto.downstream.AddParticipantDto;
 import com.jda.dct.chatservice.dto.downstream.CreateChannelDto;
 import com.jda.dct.chatservice.dto.downstream.RemoteUserDto;
@@ -28,6 +29,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -97,11 +99,11 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         Assert.notNull(authContext.getCurrentUser(), "Current user can't be null");
         setupUser(authContext.getCurrentUser(), channelTeamId);
         ProxyTokenMapping token = getUserTokenMapping(authContext.getCurrentUser());
-        Assert.notNull(token, "User should be pressent but missing in situation room");
+        Assert.notNull(token, "User should be present but missing in situation room");
         TokenDto tokenDto = new TokenDto();
         tokenDto.setToken(token.getProxyToken());
         tokenDto.setTeamId(channelTeamId);
-        LOGGER.info("Returning token foe user {}", authContext.getCurrentUser());
+        LOGGER.info("Returning token for user {}", authContext.getCurrentUser());
         return tokenDto;
     }
 
@@ -245,8 +247,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     private ProxyTokenMapping setupAccessToken(ProxyTokenMapping mapping) {
         LOGGER.info("Generating access token in remote system for user {} ", mapping.getAppUserId());
         HttpHeaders headers = getHttpHeader(adminAccessToken);
-        Map<String, String> request = new HashMap<>();
-        request.put("description", "situation room");
+        Map<String, String> request = teamRequest();
         HttpEntity<RemoteUserDto> requestEntity = new HttpEntity(request, headers);
         HttpEntity<Map> response = restTemplate.exchange(
             getRemoteActionUrl(getTokenPath(mapping.getRemoteUserId())),
@@ -264,16 +265,19 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         return updatedMapping;
     }
 
+
+
     private Map<String, Object> crateUser(String appUserId) {
         LOGGER.warn("Creating new user{} into system", appUserId);
         RemoteUserDto newUser = buildNewRemoteUser(appUserId);
         HttpHeaders headers = getHttpHeader(adminAccessToken);
         HttpEntity<RemoteUserDto> requestEntity = new HttpEntity<>(newUser, headers);
-        HttpEntity<Map> response = restTemplate.exchange(
+        ResponseEntity<Map> response = restTemplate.exchange(
             getRemoteActionUrl(getUsersPath()),
             HttpMethod.POST,
             requestEntity,
             Map.class);
+
         LOGGER.info("User {} created in system and with id {}", appUserId,
             response.getBody().get("id"));
 
@@ -352,7 +356,6 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         user.setUsername(username);
         user.setEmail(username + "@test.com");
         user.setPassword("dummy1234");
-        System.out.println("new user which going to be save ==>" + user.toString());
         return user;
     }
 
@@ -368,6 +371,12 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         dto.setPostRootId(postId);
         dto.setUserId(userId);
         return dto;
+    }
+
+   private Map<String, String> teamRequest() {
+        Map<String, String> request = new HashMap<>();
+        request.put("description", "situation room");
+        return request;
     }
 
     private RoleDto buildRoles() {
@@ -424,5 +433,20 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         headers.set(HttpHeaders.ACCEPT, HttpHeaders.ACCEPT);
         headers.set(HttpHeaders.AUTHORIZATION, "Bearer " + token);
         return headers;
+    }
+
+    @VisibleForTesting
+    protected void setRestTemplate(RestTemplate restTemplate) {
+        this.restTemplate = restTemplate;
+    }
+
+    @VisibleForTesting
+    protected void setChannelTeamId(String teamId) {
+        this.channelTeamId = teamId;
+    }
+
+    @VisibleForTesting
+    protected void setMattermostUrl(String mattermostUrl) {
+        this.mattermostUrl = mattermostUrl;
     }
 }
