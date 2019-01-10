@@ -5,6 +5,7 @@
  * as restricted rights software. The use,reproduction, or disclosure of this software
  * is subject to restrictions set forth in your license agreement with JDA.
  */
+
 package com.jda.dct.chatservice.service;
 
 import com.jda.dct.chatservice.dto.downstream.AddParticipantDto;
@@ -113,15 +114,16 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     @Override
     public Map<String, Object> postMessage(Map<String, Object> chat) {
         LOGGER.info("User {} posting message to channel {}", authContext.getCurrentUser(), chat.get("channel_id"));
-        HttpHeaders headers = getHttpHeader(adminAccessToken);
+        ProxyTokenMapping proxyTokenMapping = getUserTokenMapping(authContext.getCurrentUser());
+        HttpHeaders headers = getHttpHeader(proxyTokenMapping.getProxyToken());
         HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(chat, headers);
         HttpEntity<Map> response = restTemplate.exchange(
-                getRemoteActionUrl(getMessagePath()),
-                HttpMethod.POST,
-                requestEntity,
-                Map.class);
+            getRemoteActionUrl(getMessagePath()),
+            HttpMethod.POST,
+            requestEntity,
+            Map.class);
         LOGGER.info("Message posted successfully into channel {} by user {}", chat.get("channel_id"),
-                authContext.getCurrentUser());
+            authContext.getCurrentUser());
         return response.getBody();
     }
 
@@ -136,9 +138,9 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     public Map<String, Object> createChannel(SituationRoomDto request) {
         validateRequest(request);
         LOGGER.info("Going to create new channel {} requested by {} with details", request.getName(),
-                authContext.getCurrentUser(), request);
+            authContext.getCurrentUser(), request);
         HttpEntity<Map> response = createSituationRoom(request);
-        String roomId = (String) response.getBody().get("id");
+        String roomId = roomId(response.getBody());
         setupParticipantsIfNotBefore(request);
         addParticipantsToRoom(request.getParticipants(), roomId);
 
@@ -154,20 +156,21 @@ public class SituationRoomServiceImpl implements SituationRoomService {
 
     private HttpEntity<Map> createSituationRoom(SituationRoomDto request) {
         LOGGER.info("Creating new situation room {} by user requested, with details", request.getName(),
-                authContext.getCurrentUser(), request);
-        HttpHeaders headers = getHttpHeader(adminAccessToken);
+            authContext.getCurrentUser(), request);
+        ProxyTokenMapping tokenMapping = getUserTokenMapping(authContext.getCurrentUser());
+        HttpHeaders headers = getHttpHeader(tokenMapping.getProxyToken());
         HttpEntity<CreateChannelDto> requestEntity
-                = new HttpEntity<>(buildRemoteChannelCreationRequest(request), headers);
+            = new HttpEntity<>(buildRemoteChannelCreationRequest(request), headers);
         HttpEntity<Map> response = restTemplate.exchange(
-                getRemoteActionUrl(getChannelPath()),
-                HttpMethod.POST,
-                requestEntity,
-                Map.class);
+            getRemoteActionUrl(getChannelPath()),
+            HttpMethod.POST,
+            requestEntity,
+            Map.class);
 
         LOGGER.info("Channel {} creation done in remote system", request.getName());
         Tenants.setCurrent(authContext.getCurrentTid());
         SituationRoom situationRoom = buildSituationRoom(request);
-        situationRoom.setRoomId((String) response.getBody().get("id"));
+        situationRoom.setRoomId(roomId(response.getBody()));
         LOGGER.info("Going to persist channel {} meta information into system", request.getName());
         situationRoomRepository.save(situationRoom);
         LOGGER.info("Channel {} meta information persisted successfully", request.getName());
@@ -184,11 +187,11 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         if (proxyTokenMapping == null) {
             LOGGER.warn("User {} does not exists into system", appUserId);
             Assert.isNull(proxyTokenMapping,
-                    String.format("User %s does not exists, going to create", appUserId));
+                String.format("User %s does not exists, going to create", appUserId));
 
             Map<String, Object> newUserResponse = crateUser(appUserId);
-            setupRoles((String) newUserResponse.get("id"));
-            proxyTokenMapping = addUserTokenMapping(appUserId, (String) newUserResponse.get("id"));
+            setupRoles(remoteUserId(newUserResponse));
+            proxyTokenMapping = addUserTokenMapping(appUserId, remoteUserId(newUserResponse));
             proxyTokenMapping = setupAccessToken(proxyTokenMapping);
             joinTeam(proxyTokenMapping.getRemoteUserId(), teamId);
             LOGGER.info("Setup done for user {}", appUserId);
@@ -198,18 +201,20 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         return proxyTokenMapping;
     }
 
+
+
     private void joinTeam(String remoteUserId, String teamId) {
         LOGGER.info("Adding user {} to team {}", remoteUserId, teamId);
         HttpHeaders headers = getHttpHeader(adminAccessToken);
         HttpEntity<TeamDto> requestEntity
-                = new HttpEntity<>(
-                buildJoinTeamRequest(remoteUserId, teamId),
-                headers);
+            = new HttpEntity<>(
+            buildJoinTeamRequest(remoteUserId, teamId),
+            headers);
         HttpEntity<Map> response = restTemplate.exchange(
-                getRemoteActionUrl(getTeamsPath(teamId)),
-                HttpMethod.POST,
-                requestEntity,
-                Map.class);
+            getRemoteActionUrl(getTeamsPath(teamId)),
+            HttpMethod.POST,
+            requestEntity,
+            Map.class);
         if (!((ResponseEntity<Map>) response).getStatusCode().is2xxSuccessful()) {
             throw new IllegalStateException("Unable to joined situation room");
         }
@@ -217,19 +222,21 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     }
 
     private void addParticipantsToRoom(List<String> users, String roomId) {
-        users.stream().map(this::getUserTokenMapping).forEach(ptm -> joinRoom(ptm.getRemoteUserId(), roomId));
+        ProxyTokenMapping proxyTokenMapping = getUserTokenMapping(authContext.getCurrentUser());
+        users.stream().map(this::getUserTokenMapping).forEach(ptm -> joinRoom(proxyTokenMapping.getProxyToken(),
+            ptm.getRemoteUserId(), roomId));
     }
 
-    private void joinRoom(String remoteUserId, String roomId) {
-        HttpHeaders headers = getHttpHeader(adminAccessToken);
+    private void joinRoom(String callerToken,String remoteUserId, String roomId) {
+        HttpHeaders headers = getHttpHeader(callerToken);
         HttpEntity<AddParticipantDto> requestEntity
-                = new HttpEntity<>(
-                buildChannelMemberRequest(remoteUserId, ""), headers);
+            = new HttpEntity<>(
+            buildChannelMemberRequest(remoteUserId, ""), headers);
         HttpEntity<Map> response = restTemplate.exchange(
-                getRemoteActionUrl(getAddParticipantPath(roomId)),
-                HttpMethod.POST,
-                requestEntity,
-                Map.class);
+            getRemoteActionUrl(getAddParticipantPath(roomId)),
+            HttpMethod.POST,
+            requestEntity,
+            Map.class);
         if (!((ResponseEntity<Map>) response).getStatusCode().is2xxSuccessful()) {
             throw new IllegalStateException("Unable to joined situation room");
         }
@@ -242,15 +249,15 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         request.put("description", "situation room");
         HttpEntity<RemoteUserDto> requestEntity = new HttpEntity(request, headers);
         HttpEntity<Map> response = restTemplate.exchange(
-                getRemoteActionUrl(getTokenPath(mapping.getRemoteUserId())),
-                HttpMethod.POST,
-                requestEntity,
-                Map.class);
+            getRemoteActionUrl(getTokenPath(mapping.getRemoteUserId())),
+            HttpMethod.POST,
+            requestEntity,
+            Map.class);
         if (!((ResponseEntity<Map>) response).getStatusCode().is2xxSuccessful()) {
             throw new IllegalStateException("Unable to update roles.");
         }
         LOGGER.info("Access token generated successfully for user {}", mapping.getAppUserId());
-        mapping.setProxyToken((String) response.getBody().get("token"));
+        mapping.setProxyToken(token(response.getBody()));
         LOGGER.info("Updating token mapping for user {}", mapping.getAppUserId());
         ProxyTokenMapping updatedMapping = saveProxyTokenMapping(mapping);
         LOGGER.info("Token mapping for user {} updated successfully", mapping.getAppUserId());
@@ -263,12 +270,12 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         HttpHeaders headers = getHttpHeader(adminAccessToken);
         HttpEntity<RemoteUserDto> requestEntity = new HttpEntity<>(newUser, headers);
         HttpEntity<Map> response = restTemplate.exchange(
-                getRemoteActionUrl(getUsersPath()),
-                HttpMethod.POST,
-                requestEntity,
-                Map.class);
+            getRemoteActionUrl(getUsersPath()),
+            HttpMethod.POST,
+            requestEntity,
+            Map.class);
         LOGGER.info("User {} created in system and with id {}", appUserId,
-                response.getBody().get("id"));
+            response.getBody().get("id"));
 
         return response.getBody();
     }
@@ -279,10 +286,10 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         RoleDto role = buildRoles();
         HttpEntity<RoleDto> requestEntity = new HttpEntity<>(role, headers);
         HttpEntity<Map> response = restTemplate.exchange(
-                getRemoteActionUrl(getRolePath(userId)),
-                HttpMethod.PUT,
-                requestEntity,
-                Map.class);
+            getRemoteActionUrl(getRolePath(userId)),
+            HttpMethod.PUT,
+            requestEntity,
+            Map.class);
         if (!((ResponseEntity<Map>) response).getStatusCode().is2xxSuccessful()) {
             throw new IllegalStateException("Unable to update roles.");
         }
@@ -340,7 +347,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     private RemoteUserDto buildNewRemoteUser(String username) {
         username = username.replace("@", "");
         username = username.length() < MAX_REMOTE_USERNAME_LENGTH
-                ? username : username.substring(0, MAX_REMOTE_USERNAME_LENGTH);
+            ? username : username.substring(0, MAX_REMOTE_USERNAME_LENGTH);
         RemoteUserDto user = new RemoteUserDto();
         user.setUsername(username);
         user.setEmail(username + "@test.com");
@@ -369,7 +376,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
 
     private String getRemoteActionUrl(String cxtPath) {
         return UriComponentsBuilder.fromHttpUrl(mattermostUrl)
-                .path(cxtPath).toUriString();
+            .path(cxtPath).toUriString();
     }
 
     private static String getUsersPath() {
@@ -398,6 +405,18 @@ public class SituationRoomServiceImpl implements SituationRoomService {
 
     private static String getTokenPath(String userId) {
         return getUsersPath() + "/" + userId + "/tokens";
+    }
+
+    private static String roomId(Map<String,Object> input) {
+        return (String) input.get("id");
+    }
+
+    private static String remoteUserId(Map<String, Object> input) {
+        return (String) input.get("id");
+    }
+
+    private String token(Map body) {
+        return (String) body.get("token");
     }
 
     private HttpHeaders getHttpHeader(String token) {
