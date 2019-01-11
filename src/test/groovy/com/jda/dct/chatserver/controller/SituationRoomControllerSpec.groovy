@@ -1,8 +1,15 @@
+/*
+ * Copyright © 2019, JDA Software Group, Inc. ALL RIGHTS RESERVED.
+ * <p>
+ * This software is the confidential information of JDA Software, Inc., and is licensed
+ * as restricted rights software. The use,reproduction, or disclosure of this software
+ * is subject to restrictions set forth in your license agreement with JDA.
+ */
 package com.jda.dct.chatserver.controller
 
 import com.google.common.collect.Maps
 import com.jda.dct.chatservice.controller.SituationRoomController
-import com.jda.dct.chatservice.dto.upstream.SituationRoomDto
+import com.jda.dct.chatservice.dto.upstream.ChatRoomCreateDto
 import com.jda.dct.chatservice.dto.upstream.TokenDto
 import com.jda.dct.chatservice.service.SituationRoomService
 import groovy.json.JsonSlurper
@@ -48,7 +55,7 @@ class SituationRoomControllerSpec extends Specification {
 
     def "test create channel"() {
         given:
-        /*SituationRoomDto channelDto = new SituationRoomDto();
+        /*ChatRoomCreateDto channelDto = new ChatRoomCreateDto();
         channelDto.setName("name1");
         channelDto.setEntityType("shipment")
         channelDto.setHeader("header1");
@@ -63,13 +70,13 @@ class SituationRoomControllerSpec extends Specification {
         exepectedResponse.put("created_at",new Date());
         exepectedResponse.put("name","channels_1")
         exepectedResponse.put("team_id","2222");
-        SituationRoomDto situationRoomDto = new SituationRoomDto();
+        ChatRoomCreateDto situationRoomDto = new ChatRoomCreateDto();
         def service = Mock(SituationRoomService);
-        service.createChannel(_ as SituationRoomDto) >> exepectedResponse;
+        service.createChannel(_ as ChatRoomCreateDto) >> exepectedResponse;
 
         when: "Calling get token of a user"
         def controller = new SituationRoomController(service);
-        ResponseEntity<Map<String,Object>> responseEntity =controller.addNewChannel(Mock(SituationRoomDto))
+        ResponseEntity<Map<String,Object>> responseEntity =controller.addNewChannel(Mock(ChatRoomCreateDto))
         then:
         responseEntity.getStatusCode().value() == 200
         responseEntity.getBody() == exepectedResponse

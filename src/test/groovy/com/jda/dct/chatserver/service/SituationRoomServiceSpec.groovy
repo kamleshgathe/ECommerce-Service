@@ -1,11 +1,16 @@
+/*
+ * Copyright © 2019, JDA Software Group, Inc. ALL RIGHTS RESERVED.
+ * <p>
+ * This software is the confidential information of JDA Software, Inc., and is licensed
+ * as restricted rights software. The use,reproduction, or disclosure of this software
+ * is subject to restrictions set forth in your license agreement with JDA.
+ */
 package com.jda.dct.chatserver.service
 
 import com.google.common.collect.Maps
-import com.jda.dct.chatservice.dto.downstream.RemoteUserDto
 import com.jda.dct.chatservice.dto.upstream.TokenDto
 import com.jda.dct.chatservice.repository.ProxyTokenMappingRepository
 import com.jda.dct.chatservice.repository.SituationRoomRepository
-import com.jda.dct.chatservice.service.SituationRoomService
 import com.jda.dct.chatservice.service.SituationRoomServiceImpl
 import com.jda.dct.contexts.AuthContext
 import com.jda.dct.domain.ProxyTokenMapping

@@ -7,7 +7,7 @@
  */
 package com.jda.dct.chatservice.service;
 
-import com.jda.dct.chatservice.dto.upstream.SituationRoomDto;
+import com.jda.dct.chatservice.dto.upstream.ChatRoomCreateDto;
 import com.jda.dct.chatservice.dto.upstream.TokenDto;
 
 import java.util.Map;
@@ -17,5 +17,5 @@ public interface SituationRoomService {
 
     Map<String,Object> postMessage(Map<String,Object> chat);
 
-    Map<String,Object> createChannel(SituationRoomDto request);
+    Map<String,Object> createChannel(ChatRoomCreateDto request);
 }

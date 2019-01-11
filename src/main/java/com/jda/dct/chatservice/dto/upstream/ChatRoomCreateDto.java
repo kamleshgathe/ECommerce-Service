@@ -12,7 +12,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.List;
 
-public class SituationRoomDto {
+public class ChatRoomCreateDto {
 
     private String teamId;
     private String name;
@@ -25,7 +25,7 @@ public class SituationRoomDto {
     private List<String> objectIds;
 
     @JsonCreator
-    public SituationRoomDto() {
+    public ChatRoomCreateDto() {
     }
 
     public String getTeamId() {
@@ -111,7 +111,7 @@ public class SituationRoomDto {
 
     @Override
     public String toString() {
-        final StringBuilder sb = new StringBuilder("SituationRoomDto{");
+        final StringBuilder sb = new StringBuilder("ChatRoomCreateDto{");
         sb.append("teamId='").append(teamId).append('\'');
         sb.append(", name='").append(name).append('\'');
         sb.append(", situationType='").append(situationType).append('\'');

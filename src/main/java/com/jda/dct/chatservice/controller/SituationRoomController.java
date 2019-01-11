@@ -8,7 +8,7 @@
 
 package com.jda.dct.chatservice.controller;
 
-import com.jda.dct.chatservice.dto.upstream.SituationRoomDto;
+import com.jda.dct.chatservice.dto.upstream.ChatRoomCreateDto;
 import com.jda.dct.chatservice.dto.upstream.TokenDto;
 import com.jda.dct.chatservice.service.SituationRoomService;
 
@@ -55,7 +55,7 @@ public class SituationRoomController {
             method = RequestMethod.POST,
             consumes = MediaType.APPLICATION_JSON_VALUE,
             produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Map<String, Object>> addNewChannel(@RequestBody SituationRoomDto request) {
+    public ResponseEntity<Map<String, Object>> addNewChannel(@RequestBody ChatRoomCreateDto request) {
 
         return ResponseEntity.ok(service.createChannel(request));
     }

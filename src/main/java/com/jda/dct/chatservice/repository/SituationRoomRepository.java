@@ -7,10 +7,10 @@
  */
 package com.jda.dct.chatservice.repository;
 
-import com.jda.dct.domain.SituationRoom;
+import com.jda.dct.domain.ChatRoom;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface SituationRoomRepository extends CrudRepository<SituationRoom,Long> {
+public interface SituationRoomRepository extends CrudRepository<ChatRoom,String> {
 }
