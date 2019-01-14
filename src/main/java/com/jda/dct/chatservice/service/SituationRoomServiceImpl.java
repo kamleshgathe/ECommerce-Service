@@ -11,6 +11,7 @@ package com.jda.dct.chatservice.service;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import com.jda.dct.chatservice.domainreader.EntityReaderFactory;
 import com.jda.dct.chatservice.dto.downstream.AddParticipantDto;
 import com.jda.dct.chatservice.dto.downstream.CreateChannelDto;
 import com.jda.dct.chatservice.dto.downstream.RemoteUserDto;
@@ -32,6 +33,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 import org.assertj.core.util.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -67,9 +69,10 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     @Value("${dct.situationRoom.mattermost.teamId}")
     private String channelTeamId;
 
-    private AuthContext authContext;
-    private SituationRoomRepository roomRepository;
-    private ProxyTokenMappingRepository tokenRepository;
+    private final AuthContext authContext;
+    private final SituationRoomRepository roomRepository;
+    private final ProxyTokenMappingRepository tokenRepository;
+    private final EntityReaderFactory entityReaderFactory;
 
     private RestTemplate restTemplate = new RestTemplate();
 
@@ -82,10 +85,12 @@ public class SituationRoomServiceImpl implements SituationRoomService {
      */
     public SituationRoomServiceImpl(@Autowired AuthContext authContext,
                                     @Autowired SituationRoomRepository roomRepository,
-                                    @Autowired ProxyTokenMappingRepository tokenRepository) {
+                                    @Autowired ProxyTokenMappingRepository tokenRepository,
+                                    @Autowired EntityReaderFactory entityReaderFactory) {
         this.authContext = authContext;
         this.roomRepository = roomRepository;
         this.tokenRepository = tokenRepository;
+        this.entityReaderFactory = entityReaderFactory;
     }
 
     /**
@@ -389,7 +394,11 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         room.setTid(authContext.getCurrentTid());
         room.setDomainObjectIds(request.getObjectIds());
         room.setChats(ChatRoomUtil.objectToByteArray(Lists.newArrayList()));
-        room.setContexts(ChatRoomUtil.objectToByteArray(Lists.newArrayList()));
+        List<Object> chatEntities = request.getObjectIds()
+            .stream()
+            .map(entityId -> entityReaderFactory.getEntity(request.getEntityType(), entityId))
+            .collect(Collectors.toList());
+        room.setContexts(ChatRoomUtil.objectToByteArray(chatEntities));
         return room;
     }
 
