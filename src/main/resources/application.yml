@@ -49,9 +49,6 @@ oauth2:
 ---
 spring:
   profiles: development
-  jpa:
-    hibernate:
-      ddl-auto: validate
 server:
   port: 9292
 

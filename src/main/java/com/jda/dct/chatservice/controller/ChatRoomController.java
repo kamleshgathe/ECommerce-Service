@@ -25,17 +25,17 @@ import org.springframework.web.bind.annotation.RestController;
 
 
 @RestController
-@RequestMapping("/situationRoom")
-public class SituationRoomController {
+@RequestMapping("/chat")
+public class ChatRoomController {
 
     private SituationRoomService service;
 
-    public SituationRoomController(@Autowired SituationRoomService service) {
+    public ChatRoomController(@Autowired SituationRoomService service) {
         Assert.notNull(service, "Situation service can't be null");
         this.service = service;
     }
 
-    @RequestMapping(value = "/api/v4/token",
+    @RequestMapping(value = "/token",
             method = RequestMethod.GET,
             consumes = MediaType.APPLICATION_JSON_VALUE,
             produces = MediaType.APPLICATION_JSON_VALUE)
@@ -43,7 +43,7 @@ public class SituationRoomController {
         return ResponseEntity.ok(service.getSessionToken());
     }
 
-    @RequestMapping(value = "/api/v4/posts",
+    @RequestMapping(value = "/posts",
             method = RequestMethod.POST,
             consumes = MediaType.APPLICATION_JSON_VALUE,
             produces = MediaType.APPLICATION_JSON_VALUE)
@@ -51,7 +51,7 @@ public class SituationRoomController {
         return ResponseEntity.ok(service.postMessage(request));
     }
 
-    @RequestMapping(value = "/api/v4/channels",
+    @RequestMapping(value = "/channels",
             method = RequestMethod.POST,
             consumes = MediaType.APPLICATION_JSON_VALUE,
             produces = MediaType.APPLICATION_JSON_VALUE)

@@ -8,6 +8,7 @@
 package com.jda.dct.chatservice.config;
 
 import com.jda.dct.chatservice.domainreader.EntityReaderFactory;
+import com.jda.dct.contexts.AuthContext;
 import com.jda.dct.domain.stateful.Shipment;
 import com.jda.dct.persist.ignite.dao.ShipmentDaoImpl;
 import com.jda.luminate.ingest.rest.services.IngestionApiService;
@@ -24,10 +25,8 @@ public class DomainEntityRepoConfig {
     @Autowired
     private ShipmentDaoImpl shipmentDao;
 
-    @Bean
-    public IngestionApiService<Shipment> shipmentIngestionApiService() {
-        return new IngestionApiService<>(shipmentDao, Shipment.class);
-    }
+    @Autowired
+    private AuthContext authContext;
 
     @Bean
     public Class shipmentClass() {
@@ -36,7 +35,7 @@ public class DomainEntityRepoConfig {
 
     @Bean
     public EntityReaderFactory entityReaderFactory() {
-        return new EntityReaderFactory(shipmentIngestionApiService());
+        return new EntityReaderFactory(shipmentDao,authContext);
     }
 
 }

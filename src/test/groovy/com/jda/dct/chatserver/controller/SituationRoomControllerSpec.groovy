@@ -8,7 +8,7 @@
 package com.jda.dct.chatserver.controller
 
 import com.google.common.collect.Maps
-import com.jda.dct.chatservice.controller.SituationRoomController
+import com.jda.dct.chatservice.controller.ChatRoomController
 import com.jda.dct.chatservice.dto.upstream.ChatRoomCreateDto
 import com.jda.dct.chatservice.dto.upstream.TokenDto
 import com.jda.dct.chatservice.service.SituationRoomService
@@ -20,7 +20,7 @@ class SituationRoomControllerSpec extends Specification {
 
     def "test throw exception if service is null"() {
         when: "Create the purchase order"
-        new SituationRoomController(null)
+        new ChatRoomController(null)
         then:
         thrown IllegalArgumentException
     }
@@ -30,7 +30,7 @@ class SituationRoomControllerSpec extends Specification {
         def service = Mock(SituationRoomService);
         when: "Create the purchase order"
 
-        new SituationRoomController(service)
+        new ChatRoomController(service)
         then:
         noExceptionThrown()
     }
@@ -44,7 +44,7 @@ class SituationRoomControllerSpec extends Specification {
         service.getSessionToken() >> token;
 
         when: "Calling get token of a user"
-        def SituationRoomController controller = new SituationRoomController(service);
+        def ChatRoomController controller = new ChatRoomController(service);
         ResponseEntity<TokenDto> tokenResponse = controller.getAccessToken();
 
         then:
@@ -75,7 +75,7 @@ class SituationRoomControllerSpec extends Specification {
         service.createChannel(_ as ChatRoomCreateDto) >> exepectedResponse;
 
         when: "Calling get token of a user"
-        def controller = new SituationRoomController(service);
+        def controller = new ChatRoomController(service);
         ResponseEntity<Map<String,Object>> responseEntity =controller.addNewChannel(Mock(ChatRoomCreateDto))
         then:
         responseEntity.getStatusCode().value() == 200
@@ -98,7 +98,7 @@ class SituationRoomControllerSpec extends Specification {
         service.postMessage(_ as Map) >> expectedObj;
 
         when:
-        def controller = new SituationRoomController(service);
+        def controller = new ChatRoomController(service);
         ResponseEntity<Map<String,Object>> responseEntity =controller.postMessageToChannel(postObject)
 
         then:

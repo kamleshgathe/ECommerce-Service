@@ -24,7 +24,6 @@ public class ChatRoomUtil {
      *
      * @param chats List of chats.
      * @return byte array for chats.
-     * @throws IOException
      */
     public static byte[] objectToByteArray(Object chats) {
         byte[] bytes = null;
@@ -46,14 +45,12 @@ public class ChatRoomUtil {
      *
      * @param bytes Bytes of chats.
      * @return List of chat objects.
-     * @throws IOException
-     * @throws ClassNotFoundException
      */
     public static Object byteArrayToObject(byte[] bytes) {
         try {
             try (ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
                  ObjectInputStream ois = new ObjectInputStream(bis)) {
-                return (List<Object>) ois.readObject();
+                return ois.readObject();
             }
         } catch (IOException e) {
             throw new IllegalArgumentException(e.getMessage());

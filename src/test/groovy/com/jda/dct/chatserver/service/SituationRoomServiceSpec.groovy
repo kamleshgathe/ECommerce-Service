@@ -8,6 +8,7 @@
 package com.jda.dct.chatserver.service
 
 import com.google.common.collect.Maps
+import com.jda.dct.chatservice.domainreader.EntityReaderFactory
 import com.jda.dct.chatservice.dto.upstream.TokenDto
 import com.jda.dct.chatservice.repository.ProxyTokenMappingRepository
 import com.jda.dct.chatservice.repository.SituationRoomRepository
@@ -28,6 +29,7 @@ class SituationRoomServiceSpec extends Specification {
     def SituationRoomRepository roomRepository;
     def ProxyTokenMappingRepository tokenRepository
     def RestTemplate restTemplate;
+    def EntityReaderFactory entityReaderFactory
 
     def SituationRoomServiceImpl service;
 
@@ -92,7 +94,7 @@ class SituationRoomServiceSpec extends Specification {
     }
 
     def initNewSituationRoomService() {
-        service = new SituationRoomServiceImpl(authContext, roomRepository, tokenRepository)
+        service = new SituationRoomServiceImpl(authContext, roomRepository, tokenRepository,entityReaderFactory)
         service.setRestTemplate(restTemplate)
         service.setChannelTeamId(CHANNEL_TEAM_ID)
         service.setMattermostUrl("http://localhost:80/api/v4")
@@ -103,6 +105,7 @@ class SituationRoomServiceSpec extends Specification {
         roomRepository = Mock(SituationRoomRepository)
         tokenRepository = Mock(ProxyTokenMappingRepository)
         restTemplate = Mock(RestTemplate)
+        entityReaderFactory = Mock(EntityReaderFactory)
     }
 
     def mockedResponseEntity(status, body) {

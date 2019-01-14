@@ -27,18 +27,22 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
     JpaRepositoriesAutoConfiguration.class
 })
 @ComponentScan(basePackages = {
-    "com.jda.dct.chatservice",
     "com.jda.dct.kafka",
-    "com.jda.dct.search",
+    "com.jda.dct.chatservice",
     "com.jda.dct.persist",
+    "com.jda.dct.search",
     "com.jda.dct.foundation.process",
     "com.jda.dct.ignitecaches.springimpl",
     "com.jda.dct.foundation.tenantutils",
+    "com.jda.dct.exec.lib.actions",
+    "com.jda.dct.domain.util",
+    "com.jda.dct.exec.lib.relationships"
 })
 
 @EntityScan(basePackages = {"com.jda.dct.domain"})
 @Import({SpringAuthContextConfig.class, OAuth2ResourceServerConfig.class, DctTracingConfig.class})
-@EnableJpaRepositories(basePackages = {"com.jda.dct.ignitecaches.springimpl"})
+@EnableJpaRepositories(basePackages = {"com.jda.dct.ignitecaches.springimpl",
+    "com.jda.dct.chatservice.repository"})
 public class ChatServiceApplication {
 
     public static void main(String[] args) {

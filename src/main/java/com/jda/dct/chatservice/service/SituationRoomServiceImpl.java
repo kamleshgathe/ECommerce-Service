@@ -26,7 +26,9 @@ import com.jda.dct.contexts.AuthContext;
 import com.jda.dct.domain.ChatRoom;
 import com.jda.dct.domain.ProxyTokenMapping;
 import com.jda.dct.domain.SituationRoomStatus;
+import com.jda.dct.domain.stateful.Shipment;
 import com.jda.dct.ignitecaches.springimpl.Tenants;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -362,20 +364,20 @@ public class SituationRoomServiceImpl implements SituationRoomService {
 
     private void archiveMessage(Map<String, Object> chat) {
         LOGGER.debug("Going to archive conversion for room {}", getRoomIdFromPostMessage(chat));
-        ChatRoom room = getChatRoom((String) getRoomIdFromPostMessage(chat));
+        ChatRoom room = getChatRoom(getRoomIdFromPostMessage(chat));
         List<Object> chats = (List<Object>) ChatRoomUtil.byteArrayToObject(room.getChats());
-        System.out.println("existing chats = " + chats);
         chats.add(chat);
         room.setChats(ChatRoomUtil.objectToByteArray(chats));
+        room.setLmd(new Date());
         saveChatRoom(room);
         LOGGER.debug("Chat archived successfully for room {}", getRoomIdFromPostMessage(chat));
     }
 
     private ChatRoom saveChatRoom(ChatRoom chatRoom) {
         LOGGER.debug("Going to persist chat room {} meta information into system", chatRoom.getRoomName());
-        ChatRoom savedCHatRoom = roomRepository.save(chatRoom);
+        ChatRoom savedChatRoot = roomRepository.save(chatRoom);
         LOGGER.debug("Chat room {} meta information persisted successfully", chatRoom.getRoomName());
-        return savedCHatRoom;
+        return savedChatRoot;
     }
 
     private ChatRoom buildChatRoom(String id, ChatRoomCreateDto request) {
@@ -394,10 +396,11 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         room.setTid(authContext.getCurrentTid());
         room.setDomainObjectIds(request.getObjectIds());
         room.setChats(ChatRoomUtil.objectToByteArray(Lists.newArrayList()));
-        List<Object> chatEntities = request.getObjectIds()
-            .stream()
-            .map(entityId -> entityReaderFactory.getEntity(request.getEntityType(), entityId))
-            .collect(Collectors.toList());
+        List<Object> chatEntities = new ArrayList<>();
+        for (String entityId : request.getObjectIds()) {
+            Object entity = entityReaderFactory.getEntity(request.getEntityType(), entityId);
+            chatEntities.add(entity);
+        }
         room.setContexts(ChatRoomUtil.objectToByteArray(chatEntities));
         return room;
     }

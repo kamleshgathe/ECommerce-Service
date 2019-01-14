@@ -163,7 +163,10 @@ jacocoTestCoverageVerification {
 			enabled = true
 			element = 'CLASS'
 			includes = ['com.jda.dct.*']
-
+			excludes = ['com.jda.dct.chatservice.dto.downstream.*',
+						'com.jda.dct.chatservice.dto.upstream.*',
+						'com.jda.dct.chatservice.config.*',
+						'com.jda.dct.chatservice.ChatServiceApplication']
 			limit {
 				counter = 'LINE'
 				minimum = 0.9
