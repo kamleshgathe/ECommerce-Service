@@ -21,17 +21,20 @@ import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.client.RestTemplate
 import spock.lang.Specification
+import spock.lang.Subject
+import spock.lang.Unroll
 
 class SituationRoomServiceSpec extends Specification {
 
     def CHANNEL_TEAM_ID = "team1"
-    def AuthContext authContext
-    def SituationRoomRepository roomRepository;
-    def ProxyTokenMappingRepository tokenRepository
-    def RestTemplate restTemplate;
-    def EntityReaderFactory entityReaderFactory
+    AuthContext authContext
+    SituationRoomRepository roomRepository;
+    ProxyTokenMappingRepository tokenRepository
+    RestTemplate restTemplate;
+    EntityReaderFactory entityReaderFactory
 
-    def SituationRoomServiceImpl service;
+    @Subject
+    SituationRoomServiceImpl service;
 
     def "test get token expect exception if current user is null"() {
         given:
@@ -93,8 +96,34 @@ class SituationRoomServiceSpec extends Specification {
         tokenDto.teamId == CHANNEL_TEAM_ID
     }
 
+    @Unroll
+    def "test post message should throw exception if input is not valid"() {
+        given: "Intialize mocks"
+        mock()
+        roomRepository.findById(_ as String) >> Optional.empty();
+
+        when: "Calling post message"
+        initNewSituationRoomService();
+        service.postMessage(message)
+
+        then:
+        thrown(exception)
+
+        where:
+        message                     | exception
+        null                        | IllegalArgumentException.class
+        new HashMap<>()             | IllegalArgumentException.class
+        Maps.newHashMap()
+                .put("name", "room1") | IllegalArgumentException.class
+        Maps.newHashMap()
+                .put("channel_id", "123") | IllegalArgumentException.class
+
+    }
+
+
+
     def initNewSituationRoomService() {
-        service = new SituationRoomServiceImpl(authContext, roomRepository, tokenRepository,entityReaderFactory)
+        service = new SituationRoomServiceImpl(authContext, roomRepository, tokenRepository, entityReaderFactory)
         service.setRestTemplate(restTemplate)
         service.setChannelTeamId(CHANNEL_TEAM_ID)
         service.setMattermostUrl("http://localhost:80/api/v4")

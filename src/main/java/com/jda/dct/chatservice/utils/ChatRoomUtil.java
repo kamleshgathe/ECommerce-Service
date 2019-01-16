@@ -52,10 +52,8 @@ public class ChatRoomUtil {
                  ObjectInputStream ois = new ObjectInputStream(bis)) {
                 return ois.readObject();
             }
-        } catch (IOException e) {
+        } catch (Exception e) {
             throw new IllegalArgumentException(e.getMessage());
-        } catch (ClassNotFoundException e) {
-            throw new ResourceAccessException(e.getMessage());
         }
     }
 
