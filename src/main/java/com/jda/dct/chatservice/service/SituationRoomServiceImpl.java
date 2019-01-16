@@ -36,6 +36,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import javax.swing.text.html.Option;
 import org.assertj.core.util.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -124,10 +125,10 @@ public class SituationRoomServiceImpl implements SituationRoomService {
      */
     @Override
     public Map<String, Object> postMessage(Map<String, Object> chat) {
+        validatePostMessageRequest(chat);
         Map<String, Object> chatCopy = Maps.newHashMap(chat);
         LOGGER.info("User {} posting message to channel {}", authContext.getCurrentUser(),
             getRoomIdFromPostMessage(chatCopy));
-        validatePostMessageRequest(chatCopy);
         ProxyTokenMapping proxyTokenMapping = getUserTokenMapping(authContext.getCurrentUser());
         HttpHeaders headers = getHttpHeader(proxyTokenMapping.getProxyToken());
         HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(chatCopy, headers);
@@ -174,10 +175,10 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     private void validatePostMessageRequest(Map<String, Object> request) {
         Assert.notNull(request, "Post message can't be null");
         Assert.notEmpty(request, "Post message can't be empty");
-        Assert.notNull(getRoomIdFromPostMessage(request), "Reference domain object can't be null");
         Assert.isTrue(getRoomIdFromPostMessage(request).toString().trim().length() > 0,
             "Channel can't be empty");
-        getChatRoom((String) getRoomIdFromPostMessage(request));
+        Assert.isTrue(getChatRoom(getRoomIdFromPostMessage(request)).isPresent(),
+            String.format("Invalid chat room id %s", getRoomIdFromPostMessage(request)));
     }
 
 
@@ -206,15 +207,10 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         LOGGER.debug("Chat room {} meta information persisted successfully", chatRoom.getRoomName());
     }
 
-    private ChatRoom getChatRoom(String id) {
+    private Optional<ChatRoom> getChatRoom(String id) {
         LOGGER.debug("Fetching chat room {}", id);
-        Optional<ChatRoom> record = roomRepository.findById(id);
-        if (record.isPresent()) {
-            LOGGER.debug("Returning chat room {}", id);
-            return record.get();
-        }
-        LOGGER.error("Invalid chat room {} ", id);
-        throw new IllegalArgumentException(String.format("Invalid chat room id %s", id));
+        return roomRepository.findById(id);
+
     }
 
     private void setupParticipantsIfNotBefore(ChatRoomCreateDto request) {
@@ -363,8 +359,13 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     }
 
     private void archiveMessage(Map<String, Object> chat) {
-        LOGGER.debug("Going to archive conversion for room {}", getRoomIdFromPostMessage(chat));
-        ChatRoom room = getChatRoom(getRoomIdFromPostMessage(chat));
+        String roomId = getRoomIdFromPostMessage(chat);
+        LOGGER.debug("Going to archive conversion for room {}", roomId);
+        Optional<ChatRoom> record = getChatRoom(getRoomIdFromPostMessage(chat));
+        if (!record.isPresent()) {
+            throw new IllegalArgumentException(String.format("Invalid chat room %s", roomId));
+        }
+        ChatRoom room = record.get();
         List<Object> chats = (List<Object>) ChatRoomUtil.byteArrayToObject(room.getChats());
         chats.add(chat);
         room.setChats(ChatRoomUtil.objectToByteArray(chats));

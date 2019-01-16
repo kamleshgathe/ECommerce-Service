@@ -10,6 +10,7 @@ package com.jda.dct.chatserver.util
 import com.jda.dct.chatservice.utils.ChatRoomUtil
 import org.assertj.core.util.Lists
 import org.assertj.core.util.Maps
+import org.springframework.web.client.ResourceAccessException
 import spock.lang.Specification
 
 public class ChatRoomUtilSpec extends Specification {
@@ -36,4 +37,30 @@ public class ChatRoomUtilSpec extends Specification {
         then: "Object should match"
         objects == convertedObject
     }
+
+    def "test object from byte should raise IllegalArgumentException exception"() {
+        given: "Initialize byte array"
+
+        byte[] bytes = new byte[10];
+
+        when: "Converting to object"
+         ChatRoomUtil.byteArrayToObject(bytes);
+
+        then: "Expect exception"
+        thrown(IllegalArgumentException)
+    }
+
+    def "test byte array from object should raise IO exception"() {
+        given: "Initialize Object"
+
+        List<Object> objects = Mock(List)
+        objects.get(_) >> {throw new IOException("Unable to find class")()}
+        when: "Converting to byte array"
+        ChatRoomUtil.objectToByteArray(objects);
+
+        then: "Expect exception"
+        thrown(IllegalArgumentException)
+    }
+
+
 }

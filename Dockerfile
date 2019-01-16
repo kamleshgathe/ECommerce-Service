@@ -4,7 +4,6 @@ ARG version
 ARG app
 
 COPY /build/libs/${app}-${version}.jar /opt/${app}/service.jar
-COPY /build/resources/main/stacks-configuration.yaml /opt/config/stacks-configuration.yaml
 
 WORKDIR /opt/${app}
 
