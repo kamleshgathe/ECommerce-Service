@@ -457,7 +457,8 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     }
 
     private RoleDto buildRoles() {
-        return new RoleDto("system_user system_user_access_token");
+        return new RoleDto("system_user team_admin team_user system_post_all team_post_all channel_admin "
+            + "channel_user system_user_access_token");
     }
 
     private String getRemoteActionUrl(String cxtPath) {
