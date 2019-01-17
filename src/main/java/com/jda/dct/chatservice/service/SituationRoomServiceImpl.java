@@ -48,6 +48,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
+import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -169,13 +170,21 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     private void validateChannelCreationRequest(ChatRoomCreateDto request) {
         Assert.notNull(request, "Channel creation input can't be null");
         Assert.notEmpty(request.getObjectIds(), "Reference domain object can't be null or empty");
-        Assert.notNull(request.getParticipants(), "Participants can't be null");
+        Assert.notEmpty(request.getParticipants(), "Participants can't be null");
+        Assert.isTrue(!StringUtils.isEmpty(request.getTeamId()), "Team id can't be null or empty");
+        Assert.isTrue(!StringUtils.isEmpty(request.getEntityType()), "Entity type can't be null or empty");
+        Assert.isTrue(!StringUtils.isEmpty(request.getName()), "Team name can't be null or empty");
+        Assert.isTrue(!StringUtils.isEmpty(request.getPurpose()), "Purpose can't be null or empty");
+        Assert.isTrue(!StringUtils.isEmpty(request.getSituationType()),
+            "Situation type can't be null or empty");
     }
 
     private void validatePostMessageRequest(Map<String, Object> request) {
         Assert.notNull(request, "Post message can't be null");
         Assert.notEmpty(request, "Post message can't be empty");
-        Assert.isTrue(getRoomIdFromPostMessage(request).toString().trim().length() > 0,
+        Assert.notNull(getRoomIdFromPostMessage(request),
+            "Channel can't be null");
+        Assert.isTrue(getRoomIdFromPostMessage(request).trim().length() > 0,
             "Channel can't be empty");
         Assert.isTrue(getChatRoom(getRoomIdFromPostMessage(request)).isPresent(),
             String.format("Invalid chat room id %s", getRoomIdFromPostMessage(request)));
