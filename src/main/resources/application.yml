@@ -24,6 +24,8 @@ delivery:
       commit:
         interval: 100
         max.wait.time.milliseconds: 5000
+ignite:
+  ipFinderImpl: kubernetes
 
 enable:
   kafka:
