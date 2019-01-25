@@ -69,4 +69,13 @@ public class ChatRoomController {
         return ResponseEntity.ok(service.addUserToChannel(channelId, request));
     }
 
+
+    @RequestMapping(value = "/channels/{channel_id}/context",
+        method = RequestMethod.GET,
+        consumes = MediaType.ALL_VALUE,
+        produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Object> getChatRoomContext(@PathVariable("channel_id") String channelId) {
+        return ResponseEntity.ok(service.getChannelContext(channelId));
+    }
+
 }

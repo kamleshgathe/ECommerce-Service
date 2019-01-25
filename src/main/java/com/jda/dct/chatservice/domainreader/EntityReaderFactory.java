@@ -9,8 +9,12 @@
 package com.jda.dct.chatservice.domainreader;
 
 import com.jda.dct.contexts.AuthContext;
+import com.jda.dct.domain.stateful.PurchaseOrder;
+import com.jda.dct.domain.stateful.SalesOrder;
 import com.jda.dct.domain.stateful.Shipment;
 import com.jda.dct.persist.ignite.dao.DctDaoBase;
+import java.util.HashMap;
+import java.util.Map;
 import org.apache.logging.log4j.util.Strings;
 import org.springframework.util.Assert;
 
@@ -21,9 +25,12 @@ import org.springframework.util.Assert;
 public class EntityReaderFactory {
 
     private static final String TYPE_SHIPMENT = "shipment";
+    private static final String TYPE_PURCHASE_ORDER = "purchase_order";
+    private static final String TYPE_SALES_ORDER = "sales_order";
 
-    private DctDaoBase<Shipment> shipmentRepo;
     private AuthContext authContext;
+
+    private final Map<String, DctDaoBase> repoMap;
 
     /**
      * Constructor for domain entity reader.
@@ -31,11 +38,24 @@ public class EntityReaderFactory {
      * @param shipmentRepo ShipmentIngestionApiService instance.
      * @param authContext  Authentication context;
      */
-    public EntityReaderFactory(final DctDaoBase<Shipment> shipmentRepo, final AuthContext authContext) {
+    public EntityReaderFactory(final DctDaoBase<Shipment> shipmentRepo,
+                               final DctDaoBase<SalesOrder> salesOrderRepo,
+                               final DctDaoBase<PurchaseOrder> purchaseOrderRepo,
+                               final AuthContext authContext) {
         Assert.notNull(shipmentRepo, "Shipment ingestion repository can't be null");
+        Assert.notNull(salesOrderRepo, "SalesOrder ingestion repository can't be null");
+        Assert.notNull(purchaseOrderRepo, "PurchaseOrder ingestion repository can't be null");
         Assert.notNull(authContext, "AuthContext can't be null");
-        this.shipmentRepo = shipmentRepo;
+
         this.authContext = authContext;
+
+        repoMap = new HashMap<String, DctDaoBase>() {
+            {
+                put(TYPE_SHIPMENT, shipmentRepo);
+                put(TYPE_PURCHASE_ORDER, purchaseOrderRepo);
+                put(TYPE_SALES_ORDER, salesOrderRepo);
+            }
+        };
     }
 
 
@@ -50,9 +70,10 @@ public class EntityReaderFactory {
     public Object getEntity(String type, String id) {
         Assert.isTrue(Strings.isNotEmpty(type), "Entity type can't be null or empty");
         Assert.isTrue(Strings.isNotEmpty(id), "Entity id can't be null or empty");
-        if (TYPE_SHIPMENT.equals(type)) {
-            return shipmentRepo.getById(authContext.getCurrentTid(), id);
+        if (!repoMap.containsKey(type)) {
+            throw new IllegalArgumentException(String.format("Invalid entity type {}", type));
         }
-        throw new IllegalArgumentException(String.format("Invalid entity type {}", type));
+
+        return repoMap.get(type).getById(authContext.getCurrentTid(), id);
     }
 }

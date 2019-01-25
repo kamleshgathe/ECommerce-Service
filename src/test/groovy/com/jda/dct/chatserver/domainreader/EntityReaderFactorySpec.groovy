@@ -15,23 +15,40 @@ import spock.lang.Specification
 
 class EntityReaderFactorySpec extends Specification {
 
-    def "test constructor should throw exception if any is parameter is null"() {
+    def "test constructor should throw exception if shipment repo is null"() {
         when: "Initialize constructor"
-        new EntityReaderFactory(null, Mock(AuthContext));
+        new EntityReaderFactory(null,null,null , Mock(AuthContext));
         then: "Should expect exception"
         thrown(IllegalArgumentException)
     }
 
-    def "test constructor should throw exception if all parameter is null"() {
+    def "test constructor should throw exception sales order repo is null"() {
         when: "Initialize constructor"
-        new EntityReaderFactory(null, null);
+        new EntityReaderFactory(Mock(DctDaoBase),null,null, Mock(AuthContext));
+        then: "Should expect exception"
+        thrown(IllegalArgumentException)
+    }
+
+    def "test constructor should throw exception purchase order repo is null"() {
+        when: "Initialize constructor"
+        new EntityReaderFactory(Mock(DctDaoBase),Mock(DctDaoBase),null, Mock(AuthContext));
+        then: "Should expect exception"
+        thrown(IllegalArgumentException)
+    }
+
+    def "test constructor should throw exception auth context is null"() {
+        when: "Initialize constructor"
+        new EntityReaderFactory(Mock(DctDaoBase),Mock(DctDaoBase),Mock(DctDaoBase), null);
         then: "Should expect exception"
         thrown(IllegalArgumentException)
     }
 
     def "test throw exception if type is not valid"() {
         given: "Initialize reader factory"
-        def entityReaderFactory = new EntityReaderFactory(Mock(DctDaoBase), Mock(AuthContext))
+        def entityReaderFactory = new EntityReaderFactory(Mock(DctDaoBase),
+                Mock(DctDaoBase),
+                Mock(DctDaoBase),
+                Mock(AuthContext))
 
         when: "Called with invalid type"
         entityReaderFactory.getEntity("abcd", "id1")
@@ -42,12 +59,17 @@ class EntityReaderFactorySpec extends Specification {
     def "test get domain entity"() {
         given: "Initialize reader factory"
         def authContext = Mock(AuthContext)
-        def dctDaoBase = Mock(DctDaoBase)
+        def dctShipmentDaoBase = Mock(DctDaoBase)
+        def dctSalesOrderDaoBase = Mock(DctDaoBase)
+        def dctPurchaseOrderDaoBase = Mock(DctDaoBase)
         def shipment = Mock(Shipment)
         shipment.getShipmentId() >> "shipment1"
-        dctDaoBase.getById(_, _) >> shipment;
+        dctShipmentDaoBase.getById(_, _) >> shipment;
 
-        def entityReaderFactory = new EntityReaderFactory(dctDaoBase, authContext)
+        def entityReaderFactory = new EntityReaderFactory(dctShipmentDaoBase,
+                dctSalesOrderDaoBase,
+                dctPurchaseOrderDaoBase,
+                authContext)
 
         when: "Called with shipment as type"
         Object obj = entityReaderFactory.getEntity("shipment", "id1")
