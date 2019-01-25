@@ -7,8 +7,10 @@
  */
 package com.jda.dct.chatserver.controller
 
+import com.google.common.collect.Lists
 import com.google.common.collect.Maps
 import com.jda.dct.chatservice.controller.ChatRoomController
+import com.jda.dct.chatservice.dto.upstream.AddUserToRoomDto
 import com.jda.dct.chatservice.dto.upstream.ChatRoomCreateDto
 import com.jda.dct.chatservice.dto.upstream.TokenDto
 import com.jda.dct.chatservice.service.SituationRoomService
@@ -55,16 +57,6 @@ class SituationRoomControllerSpec extends Specification {
 
     def "test create channel"() {
         given:
-        /*ChatRoomCreateDto channelDto = new ChatRoomCreateDto();
-        channelDto.setName("name1");
-        channelDto.setEntityType("shipment")
-        channelDto.setHeader("header1");
-        channelDto.setObjectIds(Lists.newArrayList("o1","o2"))
-        channelDto.setParticipants(Lists.newArrayList("p1","p2"))
-        channelDto.setType("P")
-        channelDto.setSituationType("shipment delayed")
-        channelDto.setPurpose("purpose")
-        channelDto.setTeamId("team1")*/
         def exepectedResponse = Maps.newHashMap();
         exepectedResponse.put("id","1111");
         exepectedResponse.put("created_at",new Date());
@@ -80,6 +72,23 @@ class SituationRoomControllerSpec extends Specification {
         then:
         responseEntity.getStatusCode().value() == 200
         responseEntity.getBody() == exepectedResponse
+    }
+
+    def "test add user to existing"() {
+        given:
+        def users = Lists.newArrayList("user1");
+        def request = new AddUserToRoomDto();
+        request.users == users;
+        def exepectedResponse = Maps.newHashMap();
+        exepectedResponse.put("Status","success");
+        def service = Mock(SituationRoomService);
+        service.addUserToChannel("abcd",request) >> exepectedResponse;
+
+        when: "Add user to existing channel"
+        def controller = new ChatRoomController(service);
+        ResponseEntity<Map<String,Object>> responseEntity =controller.addUsersToChannels("abcd",request)
+        then:
+        responseEntity.getStatusCode().value() == 200
     }
 
     def "test post message" () {

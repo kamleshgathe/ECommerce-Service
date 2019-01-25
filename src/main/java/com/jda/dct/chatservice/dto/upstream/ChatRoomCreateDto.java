@@ -5,16 +5,18 @@
  * as restricted rights software. The use,reproduction, or disclosure of this software
  * is subject to restrictions set forth in your license agreement with JDA.
  */
+
 package com.jda.dct.chatservice.dto.upstream;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.List;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class ChatRoomCreateDto {
 
-    private String teamId;
     private String name;
     private String situationType;
     private String entityType;
@@ -26,10 +28,6 @@ public class ChatRoomCreateDto {
 
     @JsonCreator
     public ChatRoomCreateDto() {
-    }
-
-    public String getTeamId() {
-        return teamId;
     }
 
     public String getName() {
@@ -64,47 +62,43 @@ public class ChatRoomCreateDto {
         return objectIds;
     }
 
-    @JsonProperty("team_id")
-    public void setTeamId(String teamId) {
-        this.teamId = teamId;
-    }
 
-    @JsonProperty(value = "name",required = true)
+    @JsonProperty(value = "name", required = true)
     public void setName(String name) {
         this.name = name;
     }
 
-    @JsonProperty(value = "purpose",required = true)
+    @JsonProperty(value = "purpose", required = true)
     public void setPurpose(String purpose) {
         this.purpose = purpose;
     }
 
-    @JsonProperty(value = "header",required = false)
+    @JsonProperty(value = "header", required = false)
     public void setHeader(String header) {
         this.header = header;
     }
 
-    @JsonProperty(value = "type",required = false)
+    @JsonProperty(value = "type", required = false)
     public void setType(String type) {
         this.roomType = type;
     }
 
-    @JsonProperty(value = "situation_type",required = true)
+    @JsonProperty(value = "situation_type", required = true)
     public void setSituationType(String situationType) {
         this.situationType = situationType;
     }
 
-    @JsonProperty(value = "entity_type",required = true)
+    @JsonProperty(value = "entity_type", required = true)
     public void setEntityType(String entityType) {
         this.entityType = entityType;
     }
 
-    @JsonProperty(value = "participants",required = false)
+    @JsonProperty(value = "participants", required = false)
     public void setParticipants(List<String> participants) {
         this.participants = participants;
     }
 
-    @JsonProperty(value = "object_ids",required = true)
+    @JsonProperty(value = "object_ids", required = true)
     public void setObjectIds(List<String> objectIds) {
         this.objectIds = objectIds;
     }
@@ -112,7 +106,6 @@ public class ChatRoomCreateDto {
     @Override
     public String toString() {
         final StringBuilder sb = new StringBuilder("ChatRoomCreateDto{");
-        sb.append("teamId='").append(teamId).append('\'');
         sb.append(", name='").append(name).append('\'');
         sb.append(", situationType='").append(situationType).append('\'');
         sb.append(", entityType='").append(entityType).append('\'');
