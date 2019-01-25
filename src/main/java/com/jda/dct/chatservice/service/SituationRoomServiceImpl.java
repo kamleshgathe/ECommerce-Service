@@ -169,6 +169,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
 
     /**
      * This API allow to add request to an existing channel.
+     *
      * @param channel channel id.
      * @param request list request in AddUserToRoomDto object.
      * @return Map containing status
@@ -183,10 +184,29 @@ public class SituationRoomServiceImpl implements SituationRoomService {
 
         setupParticipantsIfNotBefore(request.getUsers(), channelTeamId);
         addParticipantsToRoom(request.getUsers(), channel);
-        updateParticipantOfRooms(request.getUsers(),channel);
+        updateParticipantOfRooms(request.getUsers(), channel);
         Map<String, Object> status = new HashMap<>();
         status.put("Status", "Success");
         return status;
+    }
+
+    /**
+     * This API will return channel context.
+     *
+     * @param channelId Channel Id
+     * @return Channel context object
+     */
+    @Override
+    public Object getChannelContext(String channelId) {
+        Assert.isTrue(!StringUtils.isEmpty(channelId), "Channel id can't be null or empty");
+        LOGGER.info("Going to fetch chat room {} context request by user {}",channelId,authContext.getCurrentUser());
+        Optional<ChatRoom> chatRoom = getChatRoom(channelId);
+        if (!chatRoom.isPresent()) {
+            LOGGER.error("Chat room {} does not exists",channelId);
+            throw new IllegalArgumentException(String.format("Channel %s does not exists", channelId));
+        }
+        LOGGER.info("Returning chat room {} context",channelId);
+        return ChatRoomUtil.byteArrayToObject(chatRoom.get().getContexts());
     }
 
 
@@ -405,19 +425,19 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         LOGGER.debug("Chat archived successfully for room {}", getRoomIdFromPostMessage(chat));
     }
 
-    private void updateParticipantOfRooms(List<String> users,String roomId) {
+    private void updateParticipantOfRooms(List<String> users, String roomId) {
         LOGGER.debug("Going to add new participants for room {}", roomId);
         Optional<ChatRoom> record = getChatRoom(roomId);
         if (!record.isPresent()) {
             throw new IllegalArgumentException(String.format("Invalid chat room %s", roomId));
         }
         ChatRoom room = record.get();
-        Set<String> existingUsers =  Sets.newHashSet(room.getParticipants());
+        Set<String> existingUsers = Sets.newHashSet(room.getParticipants());
         existingUsers.addAll(users);
         room.setParticipants(Lists.newArrayList(existingUsers));
         room.setLmd(new Date());
         saveChatRoom(room);
-        LOGGER.debug("Participants updated successfully {}",room);
+        LOGGER.debug("Participants updated successfully {}", room);
     }
 
     private ChatRoom saveChatRoom(ChatRoom chatRoom) {

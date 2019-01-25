@@ -27,6 +27,7 @@ import org.springframework.http.ResponseEntity
 import org.springframework.web.client.RestTemplate
 import spock.lang.Specification
 import spock.lang.Subject
+import spock.lang.Unroll
 
 class SituationRoomServiceSpec extends Specification {
 
@@ -330,7 +331,7 @@ class SituationRoomServiceSpec extends Specification {
         thrown(IllegalArgumentException)
     }
 
-    def "test add user to existing channel and should add user in remote" () {
+    def "test add user to existing channel and should add user in remote"() {
         given: "Setup request"
 
 
@@ -344,7 +345,7 @@ class SituationRoomServiceSpec extends Specification {
         _ * authContext.getCurrentUser() >> user
         1 * tokenRepository.findByAppUserId(user) >> null;
         tokenRepository.save(_ as ProxyTokenMapping) >> Mock(ProxyTokenMapping)
-        roomRepository.findById("abcd")>> Optional.of(mockChatRoom)
+        roomRepository.findById("abcd") >> Optional.of(mockChatRoom)
         //tokenRepository.save(_ as ProxyTokenMapping) >> proxyTokenMappingWithToken("token")
         tokenRepository.findByAppUserId(user) >> proxyTokenMappingWithoutToken();
         restTemplate.exchange(_ as String, _ as HttpMethod, _ as HttpEntity, Map.class, *_) >>
@@ -367,7 +368,7 @@ class SituationRoomServiceSpec extends Specification {
         1 * roomRepository.save(_)
     }
 
-    def "test add existing user to existing channel and should not add user in remote" () {
+    def "test add existing user to existing channel and should not add user in remote"() {
         given: "Setup request"
 
 
@@ -380,8 +381,8 @@ class SituationRoomServiceSpec extends Specification {
         mockChatRoom.getParticipants() >> Lists.newArrayList("user1")
         _ * authContext.getCurrentUser() >> user
         1 * tokenRepository.findByAppUserId(user) >> null;
-        tokenRepository.save(_ as ProxyTokenMapping) >>proxyTokenMappingWithToken("token")
-        roomRepository.findById("abcd")>> Optional.of(mockChatRoom)
+        tokenRepository.save(_ as ProxyTokenMapping) >> proxyTokenMappingWithToken("token")
+        roomRepository.findById("abcd") >> Optional.of(mockChatRoom)
         tokenRepository.findByAppUserId(user) >> proxyTokenMappingWithoutToken();
         restTemplate.exchange(_ as String, _ as HttpMethod, _ as HttpEntity, Map.class, *_) >>
                 {
@@ -400,10 +401,44 @@ class SituationRoomServiceSpec extends Specification {
         initNewSituationRoomService()
         service.addUserToChannel("abcd", request)
         then: "Should succeed"
-        1 * roomRepository.save( {
+        1 * roomRepository.save({
             ChatRoom room ->
                 room.getParticipants().get(0) == "user1";
         });
+    }
+
+    @Unroll
+    def "test get chat context should get exception if input is invalid"() {
+        given: "Setup request"
+        mock()
+        roomRepository.findById("1") >> Optional.empty()
+        when: "Calling get channel context"
+        initNewSituationRoomService()
+        service.getChannelContext(channel)
+        then: "Should get exception"
+        thrown(ex)
+        where:
+        channel | ex
+        null    | IllegalArgumentException
+        ""      | IllegalArgumentException
+        "1"     | IllegalArgumentException
+    }
+
+    def "test get chat context should succeed"() {
+        given: "Setup request"
+        mock()
+        def list = new ArrayList();
+        list.add("user1");
+        byte[] bytes = ChatRoomUtil.objectToByteArray(list);
+        def mockRoom = Mock(ChatRoom)
+        mockRoom.getContexts() >> bytes;
+
+        roomRepository.findById("1") >> Optional.of(mockRoom);
+        when: "Calling get channel context"
+        initNewSituationRoomService()
+        Object actual = service.getChannelContext("1")
+        then: "Should get context"
+        ((List) actual).get(0) == "user1";
     }
 
     def initNewSituationRoomService() {

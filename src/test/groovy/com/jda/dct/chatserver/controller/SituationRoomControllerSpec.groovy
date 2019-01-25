@@ -91,6 +91,22 @@ class SituationRoomControllerSpec extends Specification {
         responseEntity.getStatusCode().value() == 200
     }
 
+    def "test get chat context"() {
+        given:
+        def list = new ArrayList();
+        list.add("user1");
+        def service = Mock(SituationRoomService);
+        service.getChannelContext("abcd") >> list;
+
+        when: "Add user to existing channel"
+        def controller = new ChatRoomController(service);
+        ResponseEntity<Object> responseEntity =controller.getChatRoomContext("abcd")
+        then:
+        responseEntity.getStatusCode().value() == 200
+        ((List)responseEntity.getBody())[0] == "user1"
+
+    }
+
     def "test post message" () {
         given:
          def jsonSlurper = new JsonSlurper()
