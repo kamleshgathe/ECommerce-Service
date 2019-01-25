@@ -9,6 +9,7 @@ package com.jda.dct.chatserver.service
 
 import com.google.common.collect.Maps
 import com.jda.dct.chatservice.domainreader.EntityReaderFactory
+import com.jda.dct.chatservice.dto.upstream.AddUserToRoomDto
 import com.jda.dct.chatservice.dto.upstream.ChatRoomCreateDto
 import com.jda.dct.chatservice.dto.upstream.TokenDto
 import com.jda.dct.chatservice.repository.ProxyTokenMappingRepository
@@ -26,7 +27,6 @@ import org.springframework.http.ResponseEntity
 import org.springframework.web.client.RestTemplate
 import spock.lang.Specification
 import spock.lang.Subject
-import spock.lang.Unroll
 
 class SituationRoomServiceSpec extends Specification {
 
@@ -180,8 +180,8 @@ class SituationRoomServiceSpec extends Specification {
         given:
         def channel = null
         when: "Calling create channel"
-         initNewSituationRoomService()
-         service.createChannel(channel)
+        initNewSituationRoomService()
+        service.createChannel(channel)
         then: "Should get exception"
         thrown(IllegalArgumentException)
     }
@@ -199,7 +199,7 @@ class SituationRoomServiceSpec extends Specification {
     def "test create channel expect exception if no participant"() {
         given:
         def channel = new ChatRoomCreateDto();
-        channel.setObjectIds(Lists.newArrayList("1","2"))
+        channel.setObjectIds(Lists.newArrayList("1", "2"))
         when: "Calling create channel"
         initNewSituationRoomService()
         service.createChannel(channel)
@@ -210,8 +210,8 @@ class SituationRoomServiceSpec extends Specification {
     def "test create channel expect exception if team id missing"() {
         given:
         def channel = new ChatRoomCreateDto();
-        channel.setObjectIds(Lists.newArrayList("1","2"))
-        channel.setParticipants(Lists.newArrayList("1","2"))
+        channel.setObjectIds(Lists.newArrayList("1", "2"))
+        channel.setParticipants(Lists.newArrayList("1", "2"))
         when: "Calling create channel"
         initNewSituationRoomService()
         service.createChannel(channel)
@@ -222,9 +222,8 @@ class SituationRoomServiceSpec extends Specification {
     def "test create channel expect exception if entity type missing"() {
         given:
         def channel = new ChatRoomCreateDto();
-        channel.setObjectIds(Lists.newArrayList("1","2"))
-        channel.setParticipants(Lists.newArrayList("1","2"))
-        channel.setTeamId("team1")
+        channel.setObjectIds(Lists.newArrayList("1", "2"))
+        channel.setParticipants(Lists.newArrayList("1", "2"))
         when: "Calling create channel"
         initNewSituationRoomService()
         service.createChannel(channel)
@@ -235,9 +234,8 @@ class SituationRoomServiceSpec extends Specification {
     def "test create channel expect exception if name missing"() {
         given:
         def channel = new ChatRoomCreateDto();
-        channel.setObjectIds(Lists.newArrayList("1","2"))
-        channel.setParticipants(Lists.newArrayList("1","2"))
-        channel.setTeamId("team1")
+        channel.setObjectIds(Lists.newArrayList("1", "2"))
+        channel.setParticipants(Lists.newArrayList("1", "2"))
         channel.setEntityType("shipment")
         when: "Calling create channel"
         initNewSituationRoomService()
@@ -249,9 +247,8 @@ class SituationRoomServiceSpec extends Specification {
     def "test create channel expect exception if purpose missing"() {
         given:
         def channel = new ChatRoomCreateDto();
-        channel.setObjectIds(Lists.newArrayList("1","2"))
-        channel.setParticipants(Lists.newArrayList("1","2"))
-        channel.setTeamId("team1")
+        channel.setObjectIds(Lists.newArrayList("1", "2"))
+        channel.setParticipants(Lists.newArrayList("1", "2"))
         channel.setEntityType("shipment")
         channel.setName("name1")
         when: "Calling create channel"
@@ -264,9 +261,8 @@ class SituationRoomServiceSpec extends Specification {
     def "test create channel expect exception if situation type missing"() {
         given:
         def channel = new ChatRoomCreateDto();
-        channel.setObjectIds(Lists.newArrayList("1","2"))
-        channel.setParticipants(Lists.newArrayList("1","2"))
-        channel.setTeamId("team1")
+        channel.setObjectIds(Lists.newArrayList("1", "2"))
+        channel.setParticipants(Lists.newArrayList("1", "2"))
         channel.setEntityType("shipment")
         channel.setName("name1")
         channel.setPurpose("situation room for shipment delayed")
@@ -275,6 +271,139 @@ class SituationRoomServiceSpec extends Specification {
         service.createChannel(channel)
         then: "Should get exception"
         thrown(IllegalArgumentException)
+    }
+
+    def "test add users to existing channel expect exception if channel is missing"() {
+        given: "Setup request"
+        def request = new AddUserToRoomDto();
+        when: "Calling create channel"
+        initNewSituationRoomService()
+        service.addUserToChannel(null, request)
+        then: "Should get exception"
+        thrown(IllegalArgumentException)
+    }
+
+    def "test add users to existing channel expect exception if request is null"() {
+        given: "Setup request"
+        def request = new AddUserToRoomDto();
+        request.setUsers(null);
+        when: "Calling create channel"
+        initNewSituationRoomService()
+        service.addUserToChannel("abcd", request)
+        then: "Should get exception"
+        thrown(IllegalArgumentException)
+    }
+
+    def "test add users to existing channel expect exception if users in request null"() {
+        given: "Setup request"
+        def request = new AddUserToRoomDto();
+        request.setUsers(null);
+        when: "Calling create channel"
+        initNewSituationRoomService()
+        service.addUserToChannel("abcd", request)
+        then: "Should get exception"
+        thrown(IllegalArgumentException)
+    }
+
+    def "test add users to existing channel expect exception if users in request empty"() {
+        given: "Setup request"
+        def request = new AddUserToRoomDto();
+        request.setUsers(Lists.newArrayList());
+        when: "Calling create channel"
+        initNewSituationRoomService()
+        service.addUserToChannel("abcd", request)
+        then: "Should get exception"
+        thrown(IllegalArgumentException)
+    }
+
+    def "test add users to existing channel expect exception if channel does not exists"() {
+        given: "Setup request"
+        mock()
+        def users = Lists.newArrayList("user1");
+        def request = new AddUserToRoomDto();
+        request.setUsers(users);
+        roomRepository.findById("abcd") >> Optional.empty()
+        when: "Calling create channel"
+        initNewSituationRoomService()
+        service.addUserToChannel("abcd", request)
+        then: "Should get exception"
+        thrown(IllegalArgumentException)
+    }
+
+    def "test add user to existing channel and should add user in remote" () {
+        given: "Setup request"
+
+
+        def user = "newUser"
+        def users = Lists.newArrayList(user);
+        def request = new AddUserToRoomDto();
+        request.setUsers(users);
+        mock()
+        def mockChatRoom = Mock(ChatRoom);
+        mockChatRoom.getParticipants() >> Lists.newArrayList("user1")
+        _ * authContext.getCurrentUser() >> user
+        1 * tokenRepository.findByAppUserId(user) >> null;
+        tokenRepository.save(_ as ProxyTokenMapping) >> Mock(ProxyTokenMapping)
+        roomRepository.findById("abcd")>> Optional.of(mockChatRoom)
+        //tokenRepository.save(_ as ProxyTokenMapping) >> proxyTokenMappingWithToken("token")
+        tokenRepository.findByAppUserId(user) >> proxyTokenMappingWithoutToken();
+        restTemplate.exchange(_ as String, _ as HttpMethod, _ as HttpEntity, Map.class, *_) >>
+                {
+                    args ->
+                        Map body = Maps.newHashMap();
+                        if (args[0].contains("/users")) {
+                            body.put("id", "123")
+                        } else if (args[0].contains("/roles")) {
+                            body.put("status", "ok")
+                        } else {
+                            body.put("token", "token")
+                        }
+                        return mockedResponseEntity(HttpStatus.OK, body)
+                }
+        when: "Calling create channel"
+        initNewSituationRoomService()
+        service.addUserToChannel("abcd", request)
+        then: "Should succeed"
+        1 * roomRepository.save(_)
+    }
+
+    def "test add existing user to existing channel and should not add user in remote" () {
+        given: "Setup request"
+
+
+        def user = "user1"
+        def users = Lists.newArrayList(user);
+        def request = new AddUserToRoomDto();
+        request.setUsers(users);
+        mock()
+        def mockChatRoom = Mock(ChatRoom);
+        mockChatRoom.getParticipants() >> Lists.newArrayList("user1")
+        _ * authContext.getCurrentUser() >> user
+        1 * tokenRepository.findByAppUserId(user) >> null;
+        tokenRepository.save(_ as ProxyTokenMapping) >>proxyTokenMappingWithToken("token")
+        roomRepository.findById("abcd")>> Optional.of(mockChatRoom)
+        tokenRepository.findByAppUserId(user) >> proxyTokenMappingWithoutToken();
+        restTemplate.exchange(_ as String, _ as HttpMethod, _ as HttpEntity, Map.class, *_) >>
+                {
+                    args ->
+                        Map body = Maps.newHashMap();
+                        if (args[0].contains("/users")) {
+                            body.put("id", "123")
+                        } else if (args[0].contains("/roles")) {
+                            body.put("status", "ok")
+                        } else {
+                            body.put("token", "token")
+                        }
+                        return mockedResponseEntity(HttpStatus.OK, body)
+                }
+        when: "Calling create channel"
+        initNewSituationRoomService()
+        service.addUserToChannel("abcd", request)
+        then: "Should succeed"
+        1 * roomRepository.save( {
+            ChatRoom room ->
+                room.getParticipants().get(0) == "user1";
+        });
     }
 
     def initNewSituationRoomService() {
