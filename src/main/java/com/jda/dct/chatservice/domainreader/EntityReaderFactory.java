@@ -49,13 +49,11 @@ public class EntityReaderFactory {
 
         this.authContext = authContext;
 
-        repoMap = new HashMap<String, DctDaoBase>() {
-            {
-                put(TYPE_SHIPMENT, shipmentRepo);
-                put(TYPE_PURCHASE_ORDER, purchaseOrderRepo);
-                put(TYPE_SALES_ORDER, salesOrderRepo);
-            }
-        };
+        repoMap = new HashMap<>();
+        repoMap.put(TYPE_SHIPMENT, shipmentRepo);
+        repoMap.put(TYPE_PURCHASE_ORDER, purchaseOrderRepo);
+        repoMap.put(TYPE_SALES_ORDER, salesOrderRepo);
+
     }
 
 
@@ -71,7 +69,7 @@ public class EntityReaderFactory {
         Assert.isTrue(Strings.isNotEmpty(type), "Entity type can't be null or empty");
         Assert.isTrue(Strings.isNotEmpty(id), "Entity id can't be null or empty");
         if (!repoMap.containsKey(type)) {
-            throw new IllegalArgumentException(String.format("Invalid entity type {}", type));
+            throw new IllegalArgumentException(String.format("Invalid entity type %s", type));
         }
 
         return repoMap.get(type).getById(authContext.getCurrentTid(), id);

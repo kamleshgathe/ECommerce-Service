@@ -17,7 +17,7 @@ public class AddUserToRoomDto {
 
     @JsonCreator
     public AddUserToRoomDto() {
-
+        // this constructor will be initialize by jackson
     }
 
 

@@ -28,6 +28,7 @@ public class ChatRoomCreateDto {
 
     @JsonCreator
     public ChatRoomCreateDto() {
+        //this has been kept blank to get initialize by jackson
     }
 
     public String getName() {

@@ -25,6 +25,7 @@ public class ChatContext {
 
     @JsonCreator
     public ChatContext() {
+        //this has been kept blank to get initialize by jackson
     }
 
     @JsonProperty(value = "name", required = true)

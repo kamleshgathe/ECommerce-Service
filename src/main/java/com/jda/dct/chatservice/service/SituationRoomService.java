@@ -11,8 +11,6 @@ import com.jda.dct.chatservice.dto.upstream.AddUserToRoomDto;
 import com.jda.dct.chatservice.dto.upstream.ChatContext;
 import com.jda.dct.chatservice.dto.upstream.ChatRoomCreateDto;
 import com.jda.dct.chatservice.dto.upstream.TokenDto;
-
-import com.jda.dct.domain.ChatRoom;
 import java.util.Map;
 
 public interface SituationRoomService {

@@ -59,9 +59,12 @@ import org.springframework.web.util.UriComponentsBuilder;
 @Service
 public class SituationRoomServiceImpl implements SituationRoomService {
 
-    private static Logger LOGGER = LoggerFactory.getLogger(SituationRoomServiceImpl.class);
+    public static final String MATTERMOST_POSTS = "/posts";
+    private static final Logger LOGGER = LoggerFactory.getLogger(SituationRoomServiceImpl.class);
 
     private static final int MAX_REMOTE_USERNAME_LENGTH = 19;
+    public static final String MATTERMOST_USERS = "/users";
+    public static final String MATTERMOST_CHANNELS = "/channels";
 
     @Value("${dct.situationRoom.mattermost.host}")
     private String mattermostUrl;
@@ -154,7 +157,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     @Override
     public Map<String, Object> createChannel(ChatRoomCreateDto request) {
         validateChannelCreationRequest(request);
-        LOGGER.info("Going to create new channel {} requested by {} with details", request.getName(),
+        LOGGER.info("Going to create new channel {} requested by {} with details {}", request.getName(),
             authContext.getCurrentUser(), request);
         Tenants.setCurrent(authContext.getCurrentTid());
         HttpEntity<Map> response = createRemoteServerChatRoom(request);
@@ -240,7 +243,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
 
 
     private HttpEntity<Map> createRemoteServerChatRoom(ChatRoomCreateDto request) {
-        LOGGER.info("Creating new situation room {} by user {} requested, with details", request.getName(),
+        LOGGER.info("Creating new situation room {} by user {} requested, with details {}", request.getName(),
             authContext.getCurrentUser(), request);
         ProxyTokenMapping tokenMapping = getUserTokenMapping(authContext.getCurrentUser());
         HttpHeaders headers = getHttpHeader(tokenMapping.getProxyToken());
@@ -530,15 +533,15 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     }
 
     private static String getUsersPath() {
-        return "/users";
+        return MATTERMOST_USERS;
     }
 
     private static String getMessagePath() {
-        return "/posts";
+        return MATTERMOST_POSTS;
     }
 
     private static String getChannelPath() {
-        return "/channels";
+        return MATTERMOST_CHANNELS;
     }
 
     private static String getAddParticipantPath(String roomId) {
