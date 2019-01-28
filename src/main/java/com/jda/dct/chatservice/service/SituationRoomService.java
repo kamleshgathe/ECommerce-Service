@@ -8,6 +8,7 @@
 package com.jda.dct.chatservice.service;
 
 import com.jda.dct.chatservice.dto.upstream.AddUserToRoomDto;
+import com.jda.dct.chatservice.dto.upstream.ChatContext;
 import com.jda.dct.chatservice.dto.upstream.ChatRoomCreateDto;
 import com.jda.dct.chatservice.dto.upstream.TokenDto;
 
@@ -23,5 +24,5 @@ public interface SituationRoomService {
 
     Map<String,Object> addUserToChannel(String channel,AddUserToRoomDto users);
 
-    Object getChannelContext(String channelId);
+    ChatContext getChannelContext(String channelId);
 }

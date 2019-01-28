@@ -18,6 +18,7 @@ import com.jda.dct.chatservice.dto.downstream.RemoteUserDto;
 import com.jda.dct.chatservice.dto.downstream.RoleDto;
 import com.jda.dct.chatservice.dto.downstream.TeamDto;
 import com.jda.dct.chatservice.dto.upstream.AddUserToRoomDto;
+import com.jda.dct.chatservice.dto.upstream.ChatContext;
 import com.jda.dct.chatservice.dto.upstream.ChatRoomCreateDto;
 import com.jda.dct.chatservice.dto.upstream.TokenDto;
 import com.jda.dct.chatservice.repository.ProxyTokenMappingRepository;
@@ -191,10 +192,10 @@ public class SituationRoomServiceImpl implements SituationRoomService {
      * This API will return channel context.
      *
      * @param channelId Channel Id
-     * @return Channel context object
+     * @return ChatContext Channel context object
      */
     @Override
-    public Object getChannelContext(String channelId) {
+    public ChatContext getChannelContext(String channelId) {
         Assert.isTrue(!StringUtils.isEmpty(channelId), "Channel id can't be null or empty");
         LOGGER.info("Going to fetch chat room {} context request by user {}",channelId,authContext.getCurrentUser());
         Optional<ChatRoom> chatRoom = getChatRoom(channelId);
@@ -203,7 +204,15 @@ public class SituationRoomServiceImpl implements SituationRoomService {
             throw new IllegalArgumentException(String.format("Channel %s does not exists", channelId));
         }
         LOGGER.info("Returning chat room {} context",channelId);
-        return ChatRoomUtil.byteArrayToObject(chatRoom.get().getContexts());
+        ChatRoom room = chatRoom.get();
+        ChatContext context = new ChatContext();
+        context.setName(room.getRoomName());
+        context.setEntityType(room.getEntityType());
+        context.setParticipants(room.getParticipants());
+        context.setPurpose(room.getDescription());
+        context.setSituationType(room.getSituationType());
+        context.setEntity(ChatRoomUtil.byteArrayToObject(chatRoom.get().getContexts()));
+        return context;
     }
 
 

@@ -9,6 +9,7 @@
 package com.jda.dct.chatservice.controller;
 
 import com.jda.dct.chatservice.dto.upstream.AddUserToRoomDto;
+import com.jda.dct.chatservice.dto.upstream.ChatContext;
 import com.jda.dct.chatservice.dto.upstream.ChatRoomCreateDto;
 import com.jda.dct.chatservice.dto.upstream.TokenDto;
 import com.jda.dct.chatservice.service.SituationRoomService;
@@ -74,7 +75,7 @@ public class ChatRoomController {
         method = RequestMethod.GET,
         consumes = MediaType.ALL_VALUE,
         produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Object> getChatRoomContext(@PathVariable("channel_id") String channelId) {
+    public ResponseEntity<ChatContext> getChatRoomContext(@PathVariable("channel_id") String channelId) {
         return ResponseEntity.ok(service.getChannelContext(channelId));
     }
 

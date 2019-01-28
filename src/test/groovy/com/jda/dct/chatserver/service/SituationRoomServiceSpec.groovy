@@ -10,6 +10,7 @@ package com.jda.dct.chatserver.service
 import com.google.common.collect.Maps
 import com.jda.dct.chatservice.domainreader.EntityReaderFactory
 import com.jda.dct.chatservice.dto.upstream.AddUserToRoomDto
+import com.jda.dct.chatservice.dto.upstream.ChatContext
 import com.jda.dct.chatservice.dto.upstream.ChatRoomCreateDto
 import com.jda.dct.chatservice.dto.upstream.TokenDto
 import com.jda.dct.chatservice.repository.ProxyTokenMappingRepository
@@ -427,9 +428,9 @@ class SituationRoomServiceSpec extends Specification {
     def "test get chat context should succeed"() {
         given: "Setup request"
         mock()
-        def list = new ArrayList();
-        list.add("user1");
-        byte[] bytes = ChatRoomUtil.objectToByteArray(list);
+        def entity = new ArrayList();
+        entity.add("json1");
+        byte[] bytes = ChatRoomUtil.objectToByteArray(entity);
         def mockRoom = Mock(ChatRoom)
         mockRoom.getContexts() >> bytes;
 
@@ -438,7 +439,7 @@ class SituationRoomServiceSpec extends Specification {
         initNewSituationRoomService()
         Object actual = service.getChannelContext("1")
         then: "Should get context"
-        ((List) actual).get(0) == "user1";
+        ((List) ((ChatContext) actual).getEntity()).get(0) == "json1";
     }
 
     def initNewSituationRoomService() {
