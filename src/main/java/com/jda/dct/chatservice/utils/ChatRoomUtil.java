@@ -5,6 +5,7 @@
  * as restricted rights software. The use,reproduction, or disclosure of this software
  * is subject to restrictions set forth in your license agreement with JDA.
  */
+
 package com.jda.dct.chatservice.utils;
 
 import java.io.ByteArrayInputStream;
@@ -12,12 +13,12 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.util.List;
-import java.util.Map;
-import org.apache.commons.io.FileUtils;
-import org.springframework.web.client.ResourceAccessException;
 
 public class ChatRoomUtil {
+
+    private ChatRoomUtil() {
+
+    }
 
     /**
      * Utility to convert List of chats to byte array.
@@ -25,6 +26,7 @@ public class ChatRoomUtil {
      * @param chats List of chats.
      * @return byte array for chats.
      */
+
     public static byte[] objectToByteArray(Object chats) {
         byte[] bytes = null;
         try {

@@ -18,6 +18,7 @@ import com.jda.dct.chatservice.dto.downstream.RemoteUserDto;
 import com.jda.dct.chatservice.dto.downstream.RoleDto;
 import com.jda.dct.chatservice.dto.downstream.TeamDto;
 import com.jda.dct.chatservice.dto.upstream.AddUserToRoomDto;
+import com.jda.dct.chatservice.dto.upstream.ChatContext;
 import com.jda.dct.chatservice.dto.upstream.ChatRoomCreateDto;
 import com.jda.dct.chatservice.dto.upstream.TokenDto;
 import com.jda.dct.chatservice.repository.ProxyTokenMappingRepository;
@@ -58,9 +59,12 @@ import org.springframework.web.util.UriComponentsBuilder;
 @Service
 public class SituationRoomServiceImpl implements SituationRoomService {
 
-    private static Logger LOGGER = LoggerFactory.getLogger(SituationRoomServiceImpl.class);
+    public static final String MATTERMOST_POSTS = "/posts";
+    private static final Logger LOGGER = LoggerFactory.getLogger(SituationRoomServiceImpl.class);
 
     private static final int MAX_REMOTE_USERNAME_LENGTH = 19;
+    public static final String MATTERMOST_USERS = "/users";
+    public static final String MATTERMOST_CHANNELS = "/channels";
 
     @Value("${dct.situationRoom.mattermost.host}")
     private String mattermostUrl;
@@ -153,7 +157,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     @Override
     public Map<String, Object> createChannel(ChatRoomCreateDto request) {
         validateChannelCreationRequest(request);
-        LOGGER.info("Going to create new channel {} requested by {} with details", request.getName(),
+        LOGGER.info("Going to create new channel {} requested by {} with details {}", request.getName(),
             authContext.getCurrentUser(), request);
         Tenants.setCurrent(authContext.getCurrentTid());
         HttpEntity<Map> response = createRemoteServerChatRoom(request);
@@ -191,10 +195,10 @@ public class SituationRoomServiceImpl implements SituationRoomService {
      * This API will return channel context.
      *
      * @param channelId Channel Id
-     * @return Channel context object
+     * @return ChatContext Channel context object
      */
     @Override
-    public Object getChannelContext(String channelId) {
+    public ChatContext getChannelContext(String channelId) {
         Assert.isTrue(!StringUtils.isEmpty(channelId), "Channel id can't be null or empty");
         LOGGER.info("Going to fetch chat room {} context request by user {}",channelId,authContext.getCurrentUser());
         Optional<ChatRoom> chatRoom = getChatRoom(channelId);
@@ -203,7 +207,15 @@ public class SituationRoomServiceImpl implements SituationRoomService {
             throw new IllegalArgumentException(String.format("Channel %s does not exists", channelId));
         }
         LOGGER.info("Returning chat room {} context",channelId);
-        return ChatRoomUtil.byteArrayToObject(chatRoom.get().getContexts());
+        ChatRoom room = chatRoom.get();
+        ChatContext context = new ChatContext();
+        context.setName(room.getRoomName());
+        context.setEntityType(room.getEntityType());
+        context.setParticipants(room.getParticipants());
+        context.setPurpose(room.getDescription());
+        context.setSituationType(room.getSituationType());
+        context.setEntity(ChatRoomUtil.byteArrayToObject(chatRoom.get().getContexts()));
+        return context;
     }
 
 
@@ -231,7 +243,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
 
 
     private HttpEntity<Map> createRemoteServerChatRoom(ChatRoomCreateDto request) {
-        LOGGER.info("Creating new situation room {} by user {} requested, with details", request.getName(),
+        LOGGER.info("Creating new situation room {} by user {} requested, with details {}", request.getName(),
             authContext.getCurrentUser(), request);
         ProxyTokenMapping tokenMapping = getUserTokenMapping(authContext.getCurrentUser());
         HttpHeaders headers = getHttpHeader(tokenMapping.getProxyToken());
@@ -521,15 +533,15 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     }
 
     private static String getUsersPath() {
-        return "/users";
+        return MATTERMOST_USERS;
     }
 
     private static String getMessagePath() {
-        return "/posts";
+        return MATTERMOST_POSTS;
     }
 
     private static String getChannelPath() {
-        return "/channels";
+        return MATTERMOST_CHANNELS;
     }
 
     private static String getAddParticipantPath(String roomId) {

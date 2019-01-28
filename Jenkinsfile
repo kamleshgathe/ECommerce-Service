@@ -6,6 +6,5 @@ svcPipeline {
     targetHelmCharts = 'chat'
     deployToDCT = 'true'
     shouldTest = 'false'
-    skipSonarAnalysis = 'true'
 }
 

@@ -25,7 +25,7 @@ public class RemoteUserDto {
 
     @JsonCreator
     public RemoteUserDto() {
-
+        // this constructor will be initialize by jackson
     }
 
     public void setId(String id) {

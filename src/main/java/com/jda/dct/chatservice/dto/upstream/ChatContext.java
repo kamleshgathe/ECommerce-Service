@@ -5,105 +5,96 @@
  * as restricted rights software. The use,reproduction, or disclosure of this software
  * is subject to restrictions set forth in your license agreement with JDA.
  */
-
 package com.jda.dct.chatservice.dto.upstream;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
-
 import java.util.List;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class ChatRoomCreateDto {
-
+public class ChatContext {
     private String name;
     private String situationType;
     private String entityType;
     private String purpose;
-    private String header;
     private String roomType = "P";
     private List<String> participants;
-    private List<String> objectIds;
+    private Object entity;
 
     @JsonCreator
-    public ChatRoomCreateDto() {
+    public ChatContext() {
         //this has been kept blank to get initialize by jackson
     }
 
+    @JsonProperty(value = "name", required = true)
     public String getName() {
         return name;
     }
 
+    @JsonProperty(value = "purpose", required = true)
     public String getPurpose() {
         return purpose;
     }
 
-    public String getHeader() {
-        return header;
-    }
-
-    public String getRoomType() {
+    @JsonProperty(value = "type")
+    public String getType() {
         return roomType;
     }
 
+    @JsonProperty(value = "situation_type")
     public String getSituationType() {
         return situationType;
     }
 
+    @JsonProperty(value = "entity_type", required = true)
     public String getEntityType() {
         return entityType;
     }
 
+    @JsonProperty(value = "participants")
     public List<String> getParticipants() {
         return participants;
     }
 
-    public List<String> getObjectIds() {
-        return objectIds;
+    @JsonProperty(value = "entity")
+    public Object getEntity() {
+        return entity;
     }
 
-
-    @JsonProperty(value = "name", required = true)
     public void setName(String name) {
         this.name = name;
     }
 
-    @JsonProperty(value = "purpose", required = true)
+
     public void setPurpose(String purpose) {
         this.purpose = purpose;
     }
 
-    @JsonProperty(value = "header", required = false)
-    public void setHeader(String header) {
-        this.header = header;
-    }
 
-    @JsonProperty(value = "type", required = false)
     public void setType(String type) {
         this.roomType = type;
     }
 
-    @JsonProperty(value = "situation_type", required = true)
     public void setSituationType(String situationType) {
         this.situationType = situationType;
     }
 
-    @JsonProperty(value = "entity_type", required = true)
     public void setEntityType(String entityType) {
         this.entityType = entityType;
     }
 
-    @JsonProperty(value = "participants", required = false)
     public void setParticipants(List<String> participants) {
         this.participants = participants;
     }
 
-    @JsonProperty(value = "object_ids", required = true)
-    public void setObjectIds(List<String> objectIds) {
-        this.objectIds = objectIds;
+    public void setEntity(Object entity) {
+        this.entity = entity;
     }
 
+
+    @JsonIgnore
     @Override
     public String toString() {
         final StringBuilder sb = new StringBuilder("ChatRoomCreateDto{");
@@ -111,10 +102,8 @@ public class ChatRoomCreateDto {
         sb.append(", situationType='").append(situationType).append('\'');
         sb.append(", entityType='").append(entityType).append('\'');
         sb.append(", purpose='").append(purpose).append('\'');
-        sb.append(", header='").append(header).append('\'');
         sb.append(", roomType='").append(roomType).append('\'');
         sb.append(", participants=").append(participants);
-        sb.append(", objectIds=").append(objectIds);
         sb.append('}');
         return sb.toString();
     }

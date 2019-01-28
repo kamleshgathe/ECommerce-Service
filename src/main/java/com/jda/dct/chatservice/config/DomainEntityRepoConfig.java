@@ -16,7 +16,6 @@ import com.jda.dct.domain.stateful.Shipment;
 import com.jda.dct.persist.ignite.dao.PurchaseOrderDaoImpl;
 import com.jda.dct.persist.ignite.dao.SalesOrderDaoImpl;
 import com.jda.dct.persist.ignite.dao.ShipmentDaoImpl;
-import com.jda.luminate.ingest.rest.services.IngestionApiService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Component;

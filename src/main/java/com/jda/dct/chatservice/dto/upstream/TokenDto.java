@@ -18,7 +18,7 @@ public class TokenDto {
 
     @JsonCreator
     public TokenDto() {
-
+        // this constructor will be initialize by jackson
     }
 
     public String getToken() {

@@ -11,6 +11,7 @@ import com.google.common.collect.Lists
 import com.google.common.collect.Maps
 import com.jda.dct.chatservice.controller.ChatRoomController
 import com.jda.dct.chatservice.dto.upstream.AddUserToRoomDto
+import com.jda.dct.chatservice.dto.upstream.ChatContext
 import com.jda.dct.chatservice.dto.upstream.ChatRoomCreateDto
 import com.jda.dct.chatservice.dto.upstream.TokenDto
 import com.jda.dct.chatservice.service.SituationRoomService
@@ -93,17 +94,19 @@ class SituationRoomControllerSpec extends Specification {
 
     def "test get chat context"() {
         given:
-        def list = new ArrayList();
-        list.add("user1");
+        def entity = new ArrayList();
+        entity.add("json1");
+        def context = Mock(ChatContext);
+        context.getEntity()>>entity;
         def service = Mock(SituationRoomService);
-        service.getChannelContext("abcd") >> list;
+        service.getChannelContext("abcd") >> context;
 
         when: "Add user to existing channel"
         def controller = new ChatRoomController(service);
-        ResponseEntity<Object> responseEntity =controller.getChatRoomContext("abcd")
+        ResponseEntity<ChatContext> responseEntity =controller.getChatRoomContext("abcd")
         then:
         responseEntity.getStatusCode().value() == 200
-        ((List)responseEntity.getBody())[0] == "user1"
+        ((List)((ChatContext)responseEntity.getBody()).getEntity())[0] == "json1"
 
     }
 
