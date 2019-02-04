@@ -10,9 +10,13 @@ package com.jda.dct.chatservice.config;
 
 import com.jda.dct.chatservice.domainreader.EntityReaderFactory;
 import com.jda.dct.contexts.AuthContext;
+import com.jda.dct.domain.Node;
+import com.jda.dct.domain.stateful.Delivery;
 import com.jda.dct.domain.stateful.PurchaseOrder;
 import com.jda.dct.domain.stateful.SalesOrder;
 import com.jda.dct.domain.stateful.Shipment;
+import com.jda.dct.persist.ignite.dao.DeliveryDaoImpl;
+import com.jda.dct.persist.ignite.dao.NodeDaoImpl;
 import com.jda.dct.persist.ignite.dao.PurchaseOrderDaoImpl;
 import com.jda.dct.persist.ignite.dao.SalesOrderDaoImpl;
 import com.jda.dct.persist.ignite.dao.ShipmentDaoImpl;
@@ -35,6 +39,11 @@ public class DomainEntityRepoConfig {
     @Autowired
     private PurchaseOrderDaoImpl purchaseOrderDao;
 
+    @Autowired
+    private DeliveryDaoImpl deliveryDao;
+
+    @Autowired
+    private NodeDaoImpl nodeDao;
 
     @Autowired
     private AuthContext authContext;
@@ -54,6 +63,16 @@ public class DomainEntityRepoConfig {
         return PurchaseOrder.class;
     }
 
+    @Bean
+    public Class deliveryClass() {
+        return Delivery.class;
+    }
+
+    @Bean
+    public Class nodeClass() {
+        return Node.class;
+    }
+
 
     /**
      * Return the bean instance of EntityReaderFactory.
@@ -62,10 +81,16 @@ public class DomainEntityRepoConfig {
      */
     @Bean
     public EntityReaderFactory entityReaderFactory() {
-        return new EntityReaderFactory(shipmentDao,
-            salesOrderDao,
-            purchaseOrderDao,
-            authContext);
+        EntityReaderFactory.EntityReaderFactoryBuilder builder =
+            new EntityReaderFactory.EntityReaderFactoryBuilder();
+
+        return builder.authContext(authContext)
+            .salesOrderRepo(salesOrderDao)
+            .purchaseOrderRepo(purchaseOrderDao)
+            .shipmentRepo(shipmentDao)
+            .deliveryRepo(deliveryDao)
+            .inventoryRepo(nodeDao)
+            .build();
     }
 
 }
