@@ -26,16 +26,21 @@ import com.jda.dct.chatservice.repository.SituationRoomRepository;
 import com.jda.dct.chatservice.utils.ChatRoomUtil;
 import com.jda.dct.contexts.AuthContext;
 import com.jda.dct.domain.ChatRoom;
+import com.jda.dct.domain.ChatRoomParticipant;
+import com.jda.dct.domain.ChatRoomParticipantStatus;
+import com.jda.dct.domain.ChatRoomStatus;
 import com.jda.dct.domain.ProxyTokenMapping;
-import com.jda.dct.domain.SituationRoomStatus;
 import com.jda.dct.ignitecaches.springimpl.Tenants;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
+import javax.transaction.Transactional;
 import org.assertj.core.util.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -155,6 +160,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
      * @return Map object, containing remote system returned information.
      */
     @Override
+    @Transactional
     public Map<String, Object> createChannel(ChatRoomCreateDto request) {
         validateChannelCreationRequest(request);
         LOGGER.info("Going to create new channel {} requested by {} with details {}", request.getName(),
@@ -164,7 +170,8 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         String roomId = roomId(response.getBody());
         createChatRoomInApp(request, roomId);
         setupParticipantsIfNotBefore(request.getParticipants(), channelTeamId);
-        addParticipantsToRoom(request.getParticipants(), roomId);
+        List users = Lists.newArrayList(authContext.getCurrentUser());
+        addParticipantsToRoom(users, roomId, authContext.getCurrentUser());
         return response.getBody();
     }
 
@@ -184,7 +191,6 @@ public class SituationRoomServiceImpl implements SituationRoomService {
             String.format("Invalid chat room id %s", channel));
 
         setupParticipantsIfNotBefore(request.getUsers(), channelTeamId);
-        addParticipantsToRoom(request.getUsers(), channel);
         updateParticipantOfRooms(request.getUsers(), channel);
         Map<String, Object> status = new HashMap<>();
         status.put("Status", "Success");
@@ -200,18 +206,21 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     @Override
     public ChatContext getChannelContext(String channelId) {
         Assert.isTrue(!StringUtils.isEmpty(channelId), "Channel id can't be null or empty");
-        LOGGER.info("Going to fetch chat room {} context request by user {}",channelId,authContext.getCurrentUser());
+        LOGGER.info("Going to fetch chat room {} context request by user {}", channelId, authContext.getCurrentUser());
         Optional<ChatRoom> chatRoom = getChatRoom(channelId);
         if (!chatRoom.isPresent()) {
-            LOGGER.error("Chat room {} does not exists",channelId);
+            LOGGER.error("Chat room {} does not exists", channelId);
             throw new IllegalArgumentException(String.format("Channel %s does not exists", channelId));
         }
-        LOGGER.info("Returning chat room {} context",channelId);
+        LOGGER.info("Returning chat room {} context", channelId);
         ChatRoom room = chatRoom.get();
         ChatContext context = new ChatContext();
         context.setName(room.getRoomName());
         context.setEntityType(room.getEntityType());
-        context.setParticipants(room.getParticipants());
+        List<String> channelUsers = room.getParticipants()
+            .stream()
+            .map(ChatRoomParticipant::getUserName).collect(Collectors.toList());
+        context.setParticipants(channelUsers);
         context.setPurpose(room.getDescription());
         context.setSituationType(room.getSituationType());
         context.setEntity(ChatRoomUtil.byteArrayToObject(chatRoom.get().getContexts()));
@@ -316,11 +325,9 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         LOGGER.info("User {} added to team {} successfully", remoteUserId, teamId);
     }
 
-    private void addParticipantsToRoom(List<String> users, String roomId) {
-        Set<String> uniqueUsers = Sets.newHashSet(users);
-        uniqueUsers.add(authContext.getCurrentUser());
-        ProxyTokenMapping proxyTokenMapping = getUserTokenMapping(authContext.getCurrentUser());
-        uniqueUsers.stream().map(this::getUserTokenMapping).forEach(ptm -> joinRoom(proxyTokenMapping.getProxyToken(),
+    private void addParticipantsToRoom(List<String> users, String roomId, String addBy) {
+        ProxyTokenMapping proxyTokenMapping = getUserTokenMapping(addBy);
+        users.stream().map(this::getUserTokenMapping).forEach(ptm -> joinRoom(proxyTokenMapping.getProxyToken(),
             ptm.getRemoteUserId(), roomId));
     }
 
@@ -441,9 +448,9 @@ public class SituationRoomServiceImpl implements SituationRoomService {
             throw new IllegalArgumentException(String.format("Invalid chat room %s", roomId));
         }
         ChatRoom room = record.get();
-        Set<String> existingUsers = Sets.newHashSet(room.getParticipants());
-        existingUsers.addAll(users);
-        room.setParticipants(Lists.newArrayList(existingUsers));
+        Set<ChatRoomParticipant> existingUsers = room.getParticipants();
+        existingUsers.addAll(buildParticipants(room, users));
+        room.setParticipants(existingUsers);
         room.setLmd(new Date());
         saveChatRoom(room);
         LOGGER.debug("Participants updated successfully {}", room);
@@ -461,13 +468,13 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         room.setId(id);
         room.setRoomName(request.getName());
         room.setEntityType(request.getEntityType());
-        room.setCreatedBy(authContext.getCurrentTid());
+        room.setCreatedBy(authContext.getCurrentUser());
         room.setDescription(request.getPurpose());
         room.setTeamId(channelTeamId);
-        room.setStatus(SituationRoomStatus.NEW);
+        room.setStatus(ChatRoomStatus.NEW);
         room.setResolution(null);
         room.setSituationType(request.getSituationType());
-        room.setParticipants(request.getParticipants());
+        room.setParticipants(buildParticipantsIncludingCreator(room, request.getParticipants()));
         room.setCreationDate(new Date());
         room.setTid(authContext.getCurrentTid());
         room.setDomainObjectIds(request.getObjectIds());
@@ -479,6 +486,35 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         }
         room.setContexts(ChatRoomUtil.objectToByteArray(chatEntities));
         return room;
+    }
+
+    private Set<ChatRoomParticipant> buildParticipantsIncludingCreator(ChatRoom room, List<String> joinees) {
+
+        ChatRoomParticipant invitee = buildParticipant(room, authContext.getCurrentUser());
+        invitee.setJoinedAt(new Date());
+        invitee.setStatus(ChatRoomParticipantStatus.JOINED);
+        Set<ChatRoomParticipant> participants = buildParticipants(room, joinees);
+        if (participants.contains(invitee)) {
+            participants.remove(invitee);
+            participants.add(invitee);
+        }
+        return participants;
+    }
+
+    private Set<ChatRoomParticipant> buildParticipants(ChatRoom room, List<String> joinees) {
+        Set<ChatRoomParticipant> participants = new HashSet<>();
+        participants.add(buildParticipant(room, authContext.getCurrentUser()));
+        joinees.forEach(user -> participants.add(buildParticipant(room, user)));
+        return participants;
+    }
+
+    private ChatRoomParticipant buildParticipant(ChatRoom room, String userName) {
+        ChatRoomParticipant participant = new ChatRoomParticipant();
+        participant.setId(userName + "-" + room.getRoomName());
+        participant.setRoom(room);
+        participant.setUserName(userName);
+        participant.setStatus(ChatRoomParticipantStatus.PENDING);
+        return participant;
     }
 
     private CreateChannelDto buildRemoteChannelCreationRequest(ChatRoomCreateDto request) {

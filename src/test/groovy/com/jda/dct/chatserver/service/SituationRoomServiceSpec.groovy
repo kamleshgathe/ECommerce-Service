@@ -30,6 +30,8 @@ import spock.lang.Specification
 import spock.lang.Subject
 import spock.lang.Unroll
 
+import java.lang.reflect.Array
+
 class SituationRoomServiceSpec extends Specification {
 
     def CHANNEL_TEAM_ID = "team1"
@@ -433,7 +435,7 @@ class SituationRoomServiceSpec extends Specification {
         byte[] bytes = ChatRoomUtil.objectToByteArray(entity);
         def mockRoom = Mock(ChatRoom)
         mockRoom.getContexts() >> bytes;
-
+        mockRoom.getParticipants() >> new ArrayList<>()
         roomRepository.findById("1") >> Optional.of(mockRoom);
         when: "Calling get channel context"
         initNewSituationRoomService()
