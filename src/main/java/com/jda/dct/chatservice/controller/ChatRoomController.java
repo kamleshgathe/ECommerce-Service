@@ -13,6 +13,7 @@ import com.jda.dct.chatservice.dto.upstream.ChatContext;
 import com.jda.dct.chatservice.dto.upstream.ChatRoomCreateDto;
 import com.jda.dct.chatservice.dto.upstream.TokenDto;
 import com.jda.dct.chatservice.service.SituationRoomService;
+import java.util.List;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -21,8 +22,10 @@ import org.springframework.util.Assert;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 
@@ -44,6 +47,13 @@ public class ChatRoomController {
         return ResponseEntity.ok(service.getSessionToken());
     }
 
+    @GetMapping(value = "/channels",
+        consumes = MediaType.ALL_VALUE,
+        produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<List<ChatContext>> getChannels(@RequestParam(value = "type", required = false) String type) {
+        return ResponseEntity.ok(service.getChannels(type));
+    }
+
     @PostMapping(value = "/posts",
         consumes = MediaType.APPLICATION_JSON_VALUE,
         produces = MediaType.APPLICATION_JSON_VALUE)
@@ -62,9 +72,9 @@ public class ChatRoomController {
     @PostMapping(value = "/channels/{channel_id}/members",
         consumes = MediaType.APPLICATION_JSON_VALUE,
         produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Map<String, Object>> addUsersToChannels(@PathVariable("channel_id") String channelId,
-                                                                  @RequestBody AddUserToRoomDto request) {
-        return ResponseEntity.ok(service.addUserToChannel(channelId, request));
+    public ResponseEntity<Map<String, Object>> inviteUsers(@PathVariable("channel_id") String channelId,
+                                                           @RequestBody AddUserToRoomDto request) {
+        return ResponseEntity.ok(service.inviteUsers(channelId, request));
     }
 
 
@@ -75,4 +85,10 @@ public class ChatRoomController {
         return ResponseEntity.ok(service.getChannelContext(channelId));
     }
 
+    @PutMapping(value = "/channels/{channel_id}/join",
+        consumes = MediaType.ALL_VALUE,
+        produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Map<String, Object>> join(@PathVariable("channel_id") String channelId) {
+        return ResponseEntity.ok(service.acceptInvitation(channelId));
+    }
 }
