@@ -32,6 +32,7 @@ import com.jda.dct.domain.ChatRoomStatus;
 import com.jda.dct.domain.ProxyTokenMapping;
 import com.jda.dct.ignitecaches.springimpl.Tenants;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -49,6 +50,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
@@ -224,11 +226,10 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         List<ChatRoomParticipant> participants;
         if (!StringUtils.isEmpty(type)) {
             LOGGER.info("Fetching chat rooms for user {} with filter {}", currentUser, type);
-            participants = participantRepository.findByUserNameAndStatusLike(currentUser,
-                ChatRoomParticipantStatus.valueOf(type));
+            participants = getUserRoomsByType(type, currentUser);
         } else {
             LOGGER.info("Fetching all chat rooms for user {}", currentUser);
-            participants = participantRepository.findByUserName(currentUser);
+            participants = getUserAllRooms(currentUser);
         }
 
         return participants
@@ -245,6 +246,46 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         Assert.isTrue(!StringUtils.isEmpty(roomId), "Room id can't be null");
         Map<String, Object> response = addParticipantsToRoom(currentUser, roomId);
         LOGGER.info("User {} added successfully to remote room {}", currentUser, roomId);
+        return response;
+    }
+
+    @Override
+    public List<Map<String, Object>> getUnreadCount() {
+        String currentUser = authContext.getCurrentUser();
+        List<Map<String, Object>> response = new ArrayList<>();
+        LOGGER.info("User {} called for unread message count", currentUser);
+        ProxyTokenMapping proxyTokenMapping = getUserTokenMapping(currentUser);
+        String remoteUserId = proxyTokenMapping.getRemoteUserId();
+        List<ChatRoomParticipant> userRooms =
+            getUserRoomsByType(ChatRoomParticipantStatus.JOINED.name(), currentUser);
+        LOGGER.info("Fetching total {} number of room unread count for user {} as remote user is {}",
+            userRooms.size(),
+            currentUser,
+            proxyTokenMapping.getRemoteUserId());
+        HttpHeaders headers = getHttpHeader(proxyTokenMapping.getProxyToken());
+        headers.setAccept(Arrays.asList(MediaType.APPLICATION_JSON));
+        for (ChatRoomParticipant userRoom : userRooms) {
+            String roomId = userRoom.getRoom().getId();
+            try {
+                ResponseEntity<Map> remoteResponse = restTemplate.exchange(
+                    getRemoteActionUrl(getChannelUnreadCountPath(remoteUserId, roomId)),
+                    HttpMethod.GET,
+                    new HttpEntity<Map<String, Object>>(headers),
+                    Map.class);
+                if (remoteResponse.getStatusCode().is2xxSuccessful()) {
+                    response.add(remoteResponse.getBody());
+                } else {
+                    LOGGER.error("Error {} while fetching unread count for channel {} for user {}",
+                        remoteResponse.getBody(),
+                        roomId,
+                        currentUser);
+                }
+
+            } catch (Exception t) {
+                t.printStackTrace();
+                LOGGER.error("Unable to fetch unread count for channel {} for user {}", roomId, currentUser);
+            }
+        }
         return response;
     }
 
@@ -300,6 +341,19 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         LOGGER.debug("Fetching chat room {}", id);
         return roomRepository.findById(id);
 
+    }
+
+    private List<ChatRoomParticipant> getUserAllRooms(String currentUser) {
+        List<ChatRoomParticipant> participants;
+        participants = participantRepository.findByUserName(currentUser);
+        return participants;
+    }
+
+    private List<ChatRoomParticipant> getUserRoomsByType(String type, String currentUser) {
+        List<ChatRoomParticipant> participants;
+        participants = participantRepository.findByUserNameAndStatusLike(currentUser,
+            ChatRoomParticipantStatus.valueOf(type));
+        return participants;
     }
 
     private void setupParticipantsIfNotBefore(List<String> users, String teamId) {
@@ -671,6 +725,10 @@ public class SituationRoomServiceImpl implements SituationRoomService {
 
     private static String getTokenPath(String userId) {
         return getUsersPath() + "/" + userId + "/tokens";
+    }
+
+    private static String getChannelUnreadCountPath(String userId, String channelId) {
+        return getUsersPath() + "/" + userId + "/" + getChannelPath() + "/" + channelId + "/unread";
     }
 
     private static String roomId(Map<String, Object> input) {

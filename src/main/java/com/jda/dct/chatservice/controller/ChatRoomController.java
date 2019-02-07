@@ -91,4 +91,11 @@ public class ChatRoomController {
     public ResponseEntity<Map<String, Object>> join(@PathVariable("channel_id") String channelId) {
         return ResponseEntity.ok(service.acceptInvitation(channelId));
     }
+
+    @GetMapping(value = "/channels/unReadCount",
+        consumes = MediaType.ALL_VALUE,
+        produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<List<Map<String,Object>>> getUserUnreadCount() {
+        return ResponseEntity.ok(service.getUnreadCount());
+    }
 }
