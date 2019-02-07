@@ -214,7 +214,8 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         context.setParticipants(room.getParticipants());
         context.setPurpose(room.getDescription());
         context.setSituationType(room.getSituationType());
-        context.setEntity(ChatRoomUtil.byteArrayToObject(chatRoom.get().getContexts()));
+        context.setEntity(ChatRoomUtil.jsonToObject(
+            (String)ChatRoomUtil.byteArrayToObject(chatRoom.get().getContexts())));
         return context;
     }
 
@@ -477,7 +478,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
             Object entity = entityReaderFactory.getEntity(request.getEntityType(), entityId);
             chatEntities.add(entity);
         }
-        room.setContexts(ChatRoomUtil.objectToByteArray(chatEntities));
+        room.setContexts(ChatRoomUtil.objectToByteArray(ChatRoomUtil.objectToJson(chatEntities)));
         return room;
     }
 
