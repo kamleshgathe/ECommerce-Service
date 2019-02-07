@@ -28,5 +28,7 @@ public interface SituationRoomService {
 
     Map<String, Object> postMessage(Map<String, Object> chat);
 
+    Map
+
     Map<String, Object> acceptInvitation(String channelId);
 }

@@ -551,6 +551,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         room.setCreationDate(time);
         room.setLmd(time);
         room.setLastPostAt(time);
+        room.setTotalMessageCount(1);
         room.setTid(authContext.getCurrentTid());
         room.setDomainObjectIds(request.getObjectIds());
         room.setChats(ChatRoomUtil.objectToByteArray(Lists.newArrayList()));
@@ -588,6 +589,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         participant.setId(userName + "-" + room.getRoomName());
         participant.setRoom(room);
         participant.setUserName(userName);
+        participant.setInvitedAt(new Date());
         participant.setStatus(ChatRoomParticipantStatus.PENDING);
         return participant;
     }
