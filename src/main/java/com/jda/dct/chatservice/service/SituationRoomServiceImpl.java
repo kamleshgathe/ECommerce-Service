@@ -237,7 +237,6 @@ public class SituationRoomServiceImpl implements SituationRoomService {
             .map(ChatRoomParticipant::getRoom)
             .map(room -> toChatContext(room, currentUser))
             .collect(Collectors.toList());
-
     }
 
     @Override
@@ -579,7 +578,8 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         context.setParticipants(channelUsers);
         context.setPurpose(room.getDescription());
         context.setSituationType(room.getSituationType());
-        context.setEntity(ChatRoomUtil.byteArrayToObject(room.getContexts()));
+        context.setEntity(ChatRoomUtil.jsonToObject(
+            (String)ChatRoomUtil.byteArrayToObject(room.getContexts())));
         context.setCreatedAt(room.getCreationDate().getTime());
         context.setUpdatedAt(room.getLmd().getTime());
         context.setLastPostAt(room.getLastPostAt().getTime());
@@ -614,7 +614,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
             Object entity = entityReaderFactory.getEntity(request.getEntityType(), entityId);
             chatEntities.add(entity);
         }
-        room.setContexts(ChatRoomUtil.objectToByteArray(chatEntities));
+        room.setContexts(ChatRoomUtil.objectToByteArray(ChatRoomUtil.objectToJson(chatEntities)));
         return room;
     }
 

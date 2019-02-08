@@ -122,7 +122,7 @@ dependencies {
 	compile group: "com.jda.dct", name: "search", version: "${depVersion}", changing: true
 	compile group: "com.jda.dct", name: "tracing", version: "${depVersion}", changing: true
 	compile group: "com.jda.dct", name: "exec", version: "${depVersion}", changing: true
-	compile group: "com.jda.luminate", name: "ingest", version: "${depVersion}", changing: true
+	compile group: "com.jda.dct", name: "ingest", version: "${depVersion}", changing: true
 
 	compile 'org.elasticsearch:elasticsearch:5.6.6'
 	compile 'org.elasticsearch.client:elasticsearch-rest-high-level-client:5.6.6'
@@ -169,7 +169,7 @@ jacocoTestCoverageVerification {
 						'com.jda.dct.chatservice.ChatServiceApplication']
 			limit {
 				counter = 'LINE'
-				minimum = 0.6
+				minimum = 0.7
 			}
 		}
 	}
