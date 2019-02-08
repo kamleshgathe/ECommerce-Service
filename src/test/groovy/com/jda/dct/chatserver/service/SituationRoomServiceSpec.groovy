@@ -7,6 +7,7 @@
  */
 package com.jda.dct.chatserver.service
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.common.collect.Maps
 import com.jda.dct.chatservice.domainreader.EntityReaderFactory
 import com.jda.dct.chatservice.dto.upstream.AddUserToRoomDto
@@ -430,7 +431,8 @@ class SituationRoomServiceSpec extends Specification {
         mock()
         def entity = new ArrayList();
         entity.add("json1");
-        byte[] bytes = ChatRoomUtil.objectToByteArray(entity);
+        String jsonString = ChatRoomUtil.objectToJson(entity);
+        byte[] bytes = ChatRoomUtil.objectToByteArray(jsonString);
         def mockRoom = Mock(ChatRoom)
         mockRoom.getContexts() >> bytes;
 
