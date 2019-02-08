@@ -83,11 +83,11 @@ class SituationRoomControllerSpec extends Specification {
         def exepectedResponse = Maps.newHashMap();
         exepectedResponse.put("Status","success");
         def service = Mock(SituationRoomService);
-        service.addUserToChannel("abcd",request) >> exepectedResponse;
+        service.inviteUsers("abcd",request) >> exepectedResponse;
 
         when: "Add user to existing channel"
         def controller = new ChatRoomController(service);
-        ResponseEntity<Map<String,Object>> responseEntity =controller.addUsersToChannels("abcd",request)
+        ResponseEntity<Map<String,Object>> responseEntity =controller.inviteUsers("abcd",request)
         then:
         responseEntity.getStatusCode().value() == 200
     }
