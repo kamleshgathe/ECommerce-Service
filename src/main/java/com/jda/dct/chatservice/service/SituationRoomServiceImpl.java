@@ -10,7 +10,6 @@ package com.jda.dct.chatservice.service;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import com.jda.dct.chatservice.domainreader.EntityReaderFactory;
 import com.jda.dct.chatservice.dto.downstream.AddParticipantDto;
 import com.jda.dct.chatservice.dto.downstream.CreateChannelDto;
@@ -21,21 +20,28 @@ import com.jda.dct.chatservice.dto.upstream.AddUserToRoomDto;
 import com.jda.dct.chatservice.dto.upstream.ChatContext;
 import com.jda.dct.chatservice.dto.upstream.ChatRoomCreateDto;
 import com.jda.dct.chatservice.dto.upstream.TokenDto;
+import com.jda.dct.chatservice.repository.ChatRoomParticipantRepository;
 import com.jda.dct.chatservice.repository.ProxyTokenMappingRepository;
 import com.jda.dct.chatservice.repository.SituationRoomRepository;
 import com.jda.dct.chatservice.utils.ChatRoomUtil;
 import com.jda.dct.contexts.AuthContext;
 import com.jda.dct.domain.ChatRoom;
+import com.jda.dct.domain.ChatRoomParticipant;
+import com.jda.dct.domain.ChatRoomParticipantStatus;
+import com.jda.dct.domain.ChatRoomStatus;
 import com.jda.dct.domain.ProxyTokenMapping;
-import com.jda.dct.domain.SituationRoomStatus;
 import com.jda.dct.ignitecaches.springimpl.Tenants;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
+import javax.transaction.Transactional;
 import org.assertj.core.util.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,6 +50,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
@@ -62,7 +69,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     public static final String MATTERMOST_POSTS = "/posts";
     private static final Logger LOGGER = LoggerFactory.getLogger(SituationRoomServiceImpl.class);
 
-    private static final int MAX_REMOTE_USERNAME_LENGTH = 19;
+    private static final int MAX_REMOTE_USERNAME_LENGTH = 30;
     public static final String MATTERMOST_USERS = "/users";
     public static final String MATTERMOST_CHANNELS = "/channels";
 
@@ -78,6 +85,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     private final AuthContext authContext;
     private final SituationRoomRepository roomRepository;
     private final ProxyTokenMappingRepository tokenRepository;
+    private final ChatRoomParticipantRepository participantRepository;
     private final EntityReaderFactory entityReaderFactory;
 
     private RestTemplate restTemplate = new RestTemplate();
@@ -92,10 +100,12 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     public SituationRoomServiceImpl(@Autowired AuthContext authContext,
                                     @Autowired SituationRoomRepository roomRepository,
                                     @Autowired ProxyTokenMappingRepository tokenRepository,
+                                    @Autowired ChatRoomParticipantRepository participantRepository,
                                     @Autowired EntityReaderFactory entityReaderFactory) {
         this.authContext = authContext;
         this.roomRepository = roomRepository;
         this.tokenRepository = tokenRepository;
+        this.participantRepository = participantRepository;
         this.entityReaderFactory = entityReaderFactory;
     }
 
@@ -155,6 +165,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
      * @return Map object, containing remote system returned information.
      */
     @Override
+    @Transactional
     public Map<String, Object> createChannel(ChatRoomCreateDto request) {
         validateChannelCreationRequest(request);
         LOGGER.info("Going to create new channel {} requested by {} with details {}", request.getName(),
@@ -164,7 +175,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         String roomId = roomId(response.getBody());
         createChatRoomInApp(request, roomId);
         setupParticipantsIfNotBefore(request.getParticipants(), channelTeamId);
-        addParticipantsToRoom(request.getParticipants(), roomId);
+        addParticipantsToRoom(authContext.getCurrentUser(), roomId);
         return response.getBody();
     }
 
@@ -176,7 +187,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
      * @return Map containing status
      */
     @Override
-    public Map<String, Object> addUserToChannel(String channel, AddUserToRoomDto request) {
+    public Map<String, Object> inviteUsers(String channel, AddUserToRoomDto request) {
         Assert.isTrue(!StringUtils.isEmpty(channel), "Channel can't be null or empty");
         Assert.notNull(request, "Request can't be null");
         Assert.notEmpty(request.getUsers(), "Users can't be empty");
@@ -184,7 +195,6 @@ public class SituationRoomServiceImpl implements SituationRoomService {
             String.format("Invalid chat room id %s", channel));
 
         setupParticipantsIfNotBefore(request.getUsers(), channelTeamId);
-        addParticipantsToRoom(request.getUsers(), channel);
         updateParticipantOfRooms(request.getUsers(), channel);
         Map<String, Object> status = new HashMap<>();
         status.put("Status", "Success");
@@ -200,25 +210,82 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     @Override
     public ChatContext getChannelContext(String channelId) {
         Assert.isTrue(!StringUtils.isEmpty(channelId), "Channel id can't be null or empty");
-        LOGGER.info("Going to fetch chat room {} context request by user {}",channelId,authContext.getCurrentUser());
+        LOGGER.info("Going to fetch chat room {} context request by user {}", channelId, authContext.getCurrentUser());
         Optional<ChatRoom> chatRoom = getChatRoom(channelId);
         if (!chatRoom.isPresent()) {
-            LOGGER.error("Chat room {} does not exists",channelId);
+            LOGGER.error("Chat room {} does not exists", channelId);
             throw new IllegalArgumentException(String.format("Channel %s does not exists", channelId));
         }
-        LOGGER.info("Returning chat room {} context",channelId);
-        ChatRoom room = chatRoom.get();
-        ChatContext context = new ChatContext();
-        context.setName(room.getRoomName());
-        context.setEntityType(room.getEntityType());
-        context.setParticipants(room.getParticipants());
-        context.setPurpose(room.getDescription());
-        context.setSituationType(room.getSituationType());
-        context.setEntity(ChatRoomUtil.jsonToObject(
-            (String)ChatRoomUtil.byteArrayToObject(chatRoom.get().getContexts())));
-        return context;
+        LOGGER.info("Returning chat room {} context", channelId);
+        return toChatContext(chatRoom.get(), authContext.getCurrentUser());
     }
 
+    @Override
+    public List<ChatContext> getChannels(String type) {
+        String currentUser = authContext.getCurrentUser();
+        List<ChatRoomParticipant> participants;
+        if (!StringUtils.isEmpty(type)) {
+            LOGGER.info("Fetching chat rooms for user {} with filter {}", currentUser, type);
+            participants = getUserRoomsByType(type, currentUser);
+        } else {
+            LOGGER.info("Fetching all chat rooms for user {}", currentUser);
+            participants = getUserAllRooms(currentUser);
+        }
+
+        return participants
+            .stream()
+            .map(ChatRoomParticipant::getRoom)
+            .map(room -> toChatContext(room, currentUser))
+            .collect(Collectors.toList());
+    }
+
+    @Override
+    public Map<String, Object> acceptInvitation(String roomId) {
+        String currentUser = authContext.getCurrentUser();
+        Assert.isTrue(!StringUtils.isEmpty(roomId), "Room id can't be null");
+        Map<String, Object> response = addParticipantsToRoom(currentUser, roomId);
+        LOGGER.info("User {} added successfully to remote room {}", currentUser, roomId);
+        return response;
+    }
+
+    @Override
+    public List<Map<String, Object>> getUnreadCount() {
+        String currentUser = authContext.getCurrentUser();
+        List<Map<String, Object>> response = new ArrayList<>();
+        LOGGER.info("User {} called for unread message count", currentUser);
+        ProxyTokenMapping proxyTokenMapping = getUserTokenMapping(currentUser);
+        String remoteUserId = proxyTokenMapping.getRemoteUserId();
+        List<ChatRoomParticipant> userRooms =
+            getUserRoomsByType(ChatRoomParticipantStatus.JOINED.name(), currentUser);
+        LOGGER.info("Fetching total {} number of room unread count for user {} as remote user is {}",
+            userRooms.size(),
+            currentUser,
+            proxyTokenMapping.getRemoteUserId());
+        HttpHeaders headers = getHttpHeader(proxyTokenMapping.getProxyToken());
+        headers.setAccept(Arrays.asList(MediaType.APPLICATION_JSON));
+        for (ChatRoomParticipant userRoom : userRooms) {
+            String roomId = userRoom.getRoom().getId();
+            try {
+                ResponseEntity<Map> remoteResponse = restTemplate.exchange(
+                    getRemoteActionUrl(getChannelUnreadCountPath(remoteUserId, roomId)),
+                    HttpMethod.GET,
+                    new HttpEntity<Map<String, Object>>(headers),
+                    Map.class);
+                if (remoteResponse.getStatusCode().is2xxSuccessful()) {
+                    response.add(remoteResponse.getBody());
+                } else {
+                    LOGGER.error("Error {} while fetching unread count for channel {} for user {}",
+                        remoteResponse.getBody(),
+                        roomId,
+                        currentUser);
+                }
+
+            } catch (Exception t) {
+                LOGGER.error("Unable to fetch unread count for channel {} for user {}", roomId, currentUser);
+            }
+        }
+        return response;
+    }
 
     private void validateChannelCreationRequest(ChatRoomCreateDto request) {
         Assert.notNull(request, "Channel creation input can't be null");
@@ -274,6 +341,19 @@ public class SituationRoomServiceImpl implements SituationRoomService {
 
     }
 
+    private List<ChatRoomParticipant> getUserAllRooms(String currentUser) {
+        List<ChatRoomParticipant> participants;
+        participants = participantRepository.findByUserName(currentUser);
+        return participants;
+    }
+
+    private List<ChatRoomParticipant> getUserRoomsByType(String type, String currentUser) {
+        List<ChatRoomParticipant> participants;
+        participants = participantRepository.findByUserNameAndStatusLike(currentUser,
+            ChatRoomParticipantStatus.valueOf(type));
+        return participants;
+    }
+
     private void setupParticipantsIfNotBefore(List<String> users, String teamId) {
         users.forEach(user -> setupUser(user, teamId));
     }
@@ -283,9 +363,6 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         ProxyTokenMapping proxyTokenMapping = getUserTokenMapping(appUserId);
         if (proxyTokenMapping == null) {
             LOGGER.warn("User {} does not exists into system", appUserId);
-            Assert.isNull(proxyTokenMapping,
-                String.format("User %s does not exists, going to create", appUserId));
-
             Map<String, Object> newUserResponse = crateUser(appUserId);
             setupRoles(remoteUserId(newUserResponse));
             proxyTokenMapping = addUserTokenMapping(appUserId, remoteUserId(newUserResponse));
@@ -317,15 +394,39 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         LOGGER.info("User {} added to team {} successfully", remoteUserId, teamId);
     }
 
-    private void addParticipantsToRoom(List<String> users, String roomId) {
-        Set<String> uniqueUsers = Sets.newHashSet(users);
-        uniqueUsers.add(authContext.getCurrentUser());
-        ProxyTokenMapping proxyTokenMapping = getUserTokenMapping(authContext.getCurrentUser());
-        uniqueUsers.stream().map(this::getUserTokenMapping).forEach(ptm -> joinRoom(proxyTokenMapping.getProxyToken(),
-            ptm.getRemoteUserId(), roomId));
+    private Map<String, Object> addParticipantsToRoom(String user, String roomId) {
+        Optional<ChatRoom> roomRecord = getChatRoom(roomId);
+        Assert.isTrue(roomRecord.isPresent(), String.format("Invalid %s room id", roomId));
+        ChatRoom room = roomRecord.get();
+
+
+        Optional<ChatRoomParticipant> participantRecord = room.getParticipants()
+            .stream().filter(p -> p.getUserName().equals(user)).findFirst();
+        Assert.isTrue(participantRecord.isPresent(), String.format("User %s not invited to room %s", user, roomId));
+        ChatRoomParticipant participant = participantRecord.get();
+        if (participant.getStatus() == ChatRoomParticipantStatus.JOINED) {
+            LOGGER.info("User {} already joined to room {} not doing anything", user, roomId);
+            Map<String, Object> response = new HashMap<>();
+            response.put("channel_id", roomId);
+            response.put("user_id", user);
+            return response;
+        }
+        Date date = new Date();
+        participant.setJoinedAt(date);
+        participant.setStatus(ChatRoomParticipantStatus.JOINED);
+        room.setLmd(date);
+        room.setTotalMessageCount(room.getTotalMessageCount() + 1);
+        String creatorToken = getUserTokenMapping(room.getCreatedBy()).getProxyToken();
+        String remoteUserId = getUserTokenMapping(user).getRemoteUserId();
+        LOGGER.info("Going to add user {} for room {} as remote user id {} into remote system",
+            user, roomId, remoteUserId);
+        Map response = joinRoom(creatorToken, remoteUserId, roomId);
+        saveChatRoom(room);
+        LOGGER.info("Room {} last modified updated successfully for new joined {}", roomId, user);
+        return (Map<String, Object>) response;
     }
 
-    private void joinRoom(String callerToken, String remoteUserId, String roomId) {
+    private Map joinRoom(String callerToken, String remoteUserId, String roomId) {
         HttpHeaders headers = getHttpHeader(callerToken);
         HttpEntity<AddParticipantDto> requestEntity
             = new HttpEntity<>(
@@ -338,6 +439,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         if (!((ResponseEntity<Map>) response).getStatusCode().is2xxSuccessful()) {
             throw new IllegalStateException("Unable to joined situation room");
         }
+        return response.getBody();
     }
 
     private ProxyTokenMapping setupAccessToken(ProxyTokenMapping mapping) {
@@ -429,8 +531,9 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         ChatRoom room = record.get();
         List<Object> chats = (List<Object>) ChatRoomUtil.byteArrayToObject(room.getChats());
         chats.add(chat);
+        room.setTotalMessageCount(room.getTotalMessageCount() + 1);
         room.setChats(ChatRoomUtil.objectToByteArray(chats));
-        room.setLmd(new Date());
+        room.setLastPostAt(new Date());
         saveChatRoom(room);
         LOGGER.debug("Chat archived successfully for room {}", getRoomIdFromPostMessage(chat));
     }
@@ -442,10 +545,9 @@ public class SituationRoomServiceImpl implements SituationRoomService {
             throw new IllegalArgumentException(String.format("Invalid chat room %s", roomId));
         }
         ChatRoom room = record.get();
-        Set<String> existingUsers = Sets.newHashSet(room.getParticipants());
-        existingUsers.addAll(users);
-        room.setParticipants(Lists.newArrayList(existingUsers));
-        room.setLmd(new Date());
+        Set<ChatRoomParticipant> existingUsers = room.getParticipants();
+        existingUsers.addAll(buildParticipants(room, users));
+        room.setParticipants(existingUsers);
         saveChatRoom(room);
         LOGGER.debug("Participants updated successfully {}", room);
     }
@@ -457,19 +559,52 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         return savedChatRoot;
     }
 
+    private ChatContext toChatContext(ChatRoom room, String caller) {
+        ChatContext context = new ChatContext();
+        context.setId(room.getId());
+        context.setName(room.getRoomName());
+        context.setTeamId(room.getTeamId());
+        context.setCreatedBy(room.getCreatedBy());
+        context.setEntityType(room.getEntityType());
+        List<String> channelUsers = new ArrayList<>();
+        room.getParticipants().forEach(participant -> {
+            if (participant.getUserName().equals(caller)) {
+                context.setStatus(participant.getStatus());
+            }
+            channelUsers.add(participant.getUserName());
+        });
+        context.setTotalMessageCount(room.getTotalMessageCount());
+        context.setParticipants(channelUsers);
+        context.setPurpose(room.getDescription());
+        context.setSituationType(room.getSituationType());
+        context.setEntity(ChatRoomUtil.jsonToObject(
+            (String)ChatRoomUtil.byteArrayToObject(room.getContexts())));
+        context.setCreatedAt(room.getCreationDate().getTime());
+        context.setUpdatedAt(room.getLmd().getTime());
+        context.setLastPostAt(room.getLastPostAt().getTime());
+        context.setDeletedAt(0);
+        context.setExpiredAt(0);
+        context.setExtraUpdateAt(0);
+        return context;
+    }
+
     private ChatRoom buildChatRoom(String id, ChatRoomCreateDto request) {
         ChatRoom room = new ChatRoom();
         room.setId(id);
         room.setRoomName(request.getName());
         room.setEntityType(request.getEntityType());
-        room.setCreatedBy(authContext.getCurrentTid());
+        room.setCreatedBy(authContext.getCurrentUser());
         room.setDescription(request.getPurpose());
         room.setTeamId(channelTeamId);
-        room.setStatus(SituationRoomStatus.NEW);
+        room.setStatus(ChatRoomStatus.NEW);
         room.setResolution(null);
         room.setSituationType(request.getSituationType());
-        room.setParticipants(request.getParticipants());
-        room.setCreationDate(new Date());
+        room.setParticipants(buildParticipantsIncludingCreator(room, request.getParticipants()));
+        Date time = new Date();
+        room.setCreationDate(time);
+        room.setLmd(time);
+        room.setLastPostAt(time);
+        room.setTotalMessageCount(1);
         room.setTid(authContext.getCurrentTid());
         room.setDomainObjectIds(request.getObjectIds());
         room.setChats(ChatRoomUtil.objectToByteArray(Lists.newArrayList()));
@@ -480,6 +615,36 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         }
         room.setContexts(ChatRoomUtil.objectToByteArray(ChatRoomUtil.objectToJson(chatEntities)));
         return room;
+    }
+
+    private Set<ChatRoomParticipant> buildParticipantsIncludingCreator(ChatRoom room, List<String> joinees) {
+
+        ChatRoomParticipant invitee = buildParticipant(room, authContext.getCurrentUser());
+        invitee.setJoinedAt(new Date());
+        invitee.setStatus(ChatRoomParticipantStatus.JOINED);
+        Set<ChatRoomParticipant> participants = buildParticipants(room, joinees);
+        if (participants.contains(invitee)) {
+            participants.remove(invitee);
+            participants.add(invitee);
+        }
+        return participants;
+    }
+
+    private Set<ChatRoomParticipant> buildParticipants(ChatRoom room, List<String> joinees) {
+        Set<ChatRoomParticipant> participants = new HashSet<>();
+        participants.add(buildParticipant(room, authContext.getCurrentUser()));
+        joinees.forEach(user -> participants.add(buildParticipant(room, user)));
+        return participants;
+    }
+
+    private ChatRoomParticipant buildParticipant(ChatRoom room, String userName) {
+        ChatRoomParticipant participant = new ChatRoomParticipant();
+        participant.setId(userName + "-" + room.getRoomName());
+        participant.setRoom(room);
+        participant.setUserName(userName);
+        participant.setInvitedAt(new Date());
+        participant.setStatus(ChatRoomParticipantStatus.PENDING);
+        return participant;
     }
 
     private CreateChannelDto buildRemoteChannelCreationRequest(ChatRoomCreateDto request) {
@@ -559,6 +724,10 @@ public class SituationRoomServiceImpl implements SituationRoomService {
 
     private static String getTokenPath(String userId) {
         return getUsersPath() + "/" + userId + "/tokens";
+    }
+
+    private static String getChannelUnreadCountPath(String userId, String channelId) {
+        return getUsersPath() + "/" + userId + "/" + getChannelPath() + "/" + channelId + "/unread";
     }
 
     private static String roomId(Map<String, Object> input) {

@@ -7,19 +7,22 @@
  */
 package com.jda.dct.chatserver.service
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.common.collect.Maps
+import com.google.common.collect.Sets
 import com.jda.dct.chatservice.domainreader.EntityReaderFactory
 import com.jda.dct.chatservice.dto.upstream.AddUserToRoomDto
 import com.jda.dct.chatservice.dto.upstream.ChatContext
 import com.jda.dct.chatservice.dto.upstream.ChatRoomCreateDto
 import com.jda.dct.chatservice.dto.upstream.TokenDto
+import com.jda.dct.chatservice.repository.ChatRoomParticipantRepository
 import com.jda.dct.chatservice.repository.ProxyTokenMappingRepository
 import com.jda.dct.chatservice.repository.SituationRoomRepository
 import com.jda.dct.chatservice.service.SituationRoomServiceImpl
 import com.jda.dct.chatservice.utils.ChatRoomUtil
 import com.jda.dct.contexts.AuthContext
 import com.jda.dct.domain.ChatRoom
+import com.jda.dct.domain.ChatRoomParticipant
+import com.jda.dct.domain.ChatRoomParticipantStatus
 import com.jda.dct.domain.ProxyTokenMapping
 import org.assertj.core.util.Lists
 import org.springframework.http.HttpEntity
@@ -37,6 +40,7 @@ class SituationRoomServiceSpec extends Specification {
     AuthContext authContext
     SituationRoomRepository roomRepository;
     ProxyTokenMappingRepository tokenRepository
+    ChatRoomParticipantRepository participantRepository;
     RestTemplate restTemplate;
     EntityReaderFactory entityReaderFactory
 
@@ -276,12 +280,73 @@ class SituationRoomServiceSpec extends Specification {
         thrown(IllegalArgumentException)
     }
 
+    def "test create channel with user"() {
+        given:
+        def channel = new ChatRoomCreateDto();
+        channel.setObjectIds(Lists.newArrayList("1", "2"))
+        channel.setParticipants(Lists.newArrayList("1", "2"))
+        channel.setEntityType("shipment")
+        channel.setName("name1")
+        channel.setPurpose("situation room for shipment delayed")
+        when: "Calling create channel"
+        initNewSituationRoomService()
+        service.createChannel(channel)
+        then: "Should get exception"
+        thrown(IllegalArgumentException)
+    }
+
+    def "test create channel should succeed"() {
+        given:
+        mock()
+        def channel = new ChatRoomCreateDto();
+        def user = "1"
+        def ptm1 = proxyTokenMapping("1", "remote_user1", "token1");
+        def ptm2 = proxyTokenMapping("2", "remote_user2", "token1");
+        def room = Mock(ChatRoom);
+        room.getCreatedBy() >> user
+        def participants = Sets.newHashSet();
+        participants.add(chatParticipant(room, "1", ChatRoomParticipantStatus.PENDING))
+        participants.add(chatParticipant(room, "2", ChatRoomParticipantStatus.PENDING))
+        room.getParticipants() >> participants
+
+        authContext.getCurrentUser() >> user
+
+        tokenRepository.findByAppUserId("1") >> ptm1
+        tokenRepository.findByAppUserId("2") >> ptm2
+
+        roomRepository.findById(_ as String) >> Optional.of(room)
+        tokenRepository.save({
+            ProxyTokenMapping ptm -> ptm.getAppUserId() == "1" ? ptm1 : ptm2
+        });
+        restTemplate.exchange(_ as String, _ as HttpMethod, _ as HttpEntity, Map.class, *_) >>
+                {
+                    args ->
+                        Map body = Maps.newHashMap();
+                        if (args[0].contains("/channels")) {
+                            body.put("id", "1")
+                        }
+                        return mockedResponseEntity(HttpStatus.OK, body)
+                }
+
+        channel.setObjectIds(Lists.newArrayList("1", "2"))
+        channel.setParticipants(Lists.newArrayList("1", "2"))
+        channel.setEntityType("shipment")
+        channel.setName("name1")
+        channel.setSituationType("shipment_delayed")
+        channel.setPurpose("situation room for shipment delayed")
+        when: "Calling create channel"
+        initNewSituationRoomService()
+        service.createChannel(channel)
+        then: "Should succeed"
+        true
+    }
+
     def "test add users to existing channel expect exception if channel is missing"() {
         given: "Setup request"
         def request = new AddUserToRoomDto();
         when: "Calling create channel"
         initNewSituationRoomService()
-        service.addUserToChannel(null, request)
+        service.inviteUsers(null, request)
         then: "Should get exception"
         thrown(IllegalArgumentException)
     }
@@ -292,7 +357,7 @@ class SituationRoomServiceSpec extends Specification {
         request.setUsers(null);
         when: "Calling create channel"
         initNewSituationRoomService()
-        service.addUserToChannel("abcd", request)
+        service.inviteUsers("abcd", request)
         then: "Should get exception"
         thrown(IllegalArgumentException)
     }
@@ -303,7 +368,7 @@ class SituationRoomServiceSpec extends Specification {
         request.setUsers(null);
         when: "Calling create channel"
         initNewSituationRoomService()
-        service.addUserToChannel("abcd", request)
+        service.inviteUsers("abcd", request)
         then: "Should get exception"
         thrown(IllegalArgumentException)
     }
@@ -314,7 +379,7 @@ class SituationRoomServiceSpec extends Specification {
         request.setUsers(Lists.newArrayList());
         when: "Calling create channel"
         initNewSituationRoomService()
-        service.addUserToChannel("abcd", request)
+        service.inviteUsers("abcd", request)
         then: "Should get exception"
         thrown(IllegalArgumentException)
     }
@@ -328,7 +393,7 @@ class SituationRoomServiceSpec extends Specification {
         roomRepository.findById("abcd") >> Optional.empty()
         when: "Calling create channel"
         initNewSituationRoomService()
-        service.addUserToChannel("abcd", request)
+        service.inviteUsers("abcd", request)
         then: "Should get exception"
         thrown(IllegalArgumentException)
     }
@@ -365,7 +430,7 @@ class SituationRoomServiceSpec extends Specification {
                 }
         when: "Calling create channel"
         initNewSituationRoomService()
-        service.addUserToChannel("abcd", request)
+        service.inviteUsers("abcd", request)
         then: "Should succeed"
         1 * roomRepository.save(_)
     }
@@ -380,7 +445,11 @@ class SituationRoomServiceSpec extends Specification {
         request.setUsers(users);
         mock()
         def mockChatRoom = Mock(ChatRoom);
-        mockChatRoom.getParticipants() >> Lists.newArrayList("user1")
+        def participant = Mock(ChatRoomParticipant)
+        participant.getUserName() >> "user1";
+        mockChatRoom.getParticipants() >> Lists.newArrayList(participant)
+        mockChatRoom.getRoomName() >> "test"
+
         _ * authContext.getCurrentUser() >> user
         1 * tokenRepository.findByAppUserId(user) >> null;
         tokenRepository.save(_ as ProxyTokenMapping) >> proxyTokenMappingWithToken("token")
@@ -401,12 +470,12 @@ class SituationRoomServiceSpec extends Specification {
                 }
         when: "Calling create channel"
         initNewSituationRoomService()
-        service.addUserToChannel("abcd", request)
+        service.inviteUsers("abcd", request)
         then: "Should succeed"
         1 * roomRepository.save({
             ChatRoom room ->
-                room.getParticipants().get(0) == "user1";
-        });
+                room.getParticipants().getAt(0).userName == "user1"
+        })
     }
 
     @Unroll
@@ -434,8 +503,11 @@ class SituationRoomServiceSpec extends Specification {
         String jsonString = ChatRoomUtil.objectToJson(entity);
         byte[] bytes = ChatRoomUtil.objectToByteArray(jsonString);
         def mockRoom = Mock(ChatRoom)
-        mockRoom.getContexts() >> bytes;
-
+        mockRoom.getContexts() >> bytes
+        mockRoom.getCreationDate() >> new Date()
+        mockRoom.getLastPostAt() >> new Date()
+        mockRoom.getLmd() >> new Date()
+        mockRoom.getParticipants() >> new ArrayList<>()
         roomRepository.findById("1") >> Optional.of(mockRoom);
         when: "Calling get channel context"
         initNewSituationRoomService()
@@ -444,8 +516,13 @@ class SituationRoomServiceSpec extends Specification {
         ((List) ((ChatContext) actual).getEntity()).get(0) == "json1";
     }
 
+
     def initNewSituationRoomService() {
-        service = new SituationRoomServiceImpl(authContext, roomRepository, tokenRepository, entityReaderFactory)
+        service = new SituationRoomServiceImpl(authContext,
+                roomRepository,
+                tokenRepository,
+                participantRepository,
+                entityReaderFactory)
         service.setRestTemplate(restTemplate)
         service.setChannelTeamId(CHANNEL_TEAM_ID)
         service.setMattermostUrl("http://localhost:80/api/v4")
@@ -456,6 +533,7 @@ class SituationRoomServiceSpec extends Specification {
         roomRepository = Mock(SituationRoomRepository)
         tokenRepository = Mock(ProxyTokenMappingRepository)
         restTemplate = Mock(RestTemplate)
+        participantRepository = Mock(ChatRoomParticipantRepository)
         entityReaderFactory = Mock(EntityReaderFactory)
     }
 
@@ -464,6 +542,14 @@ class SituationRoomServiceSpec extends Specification {
         responseEntity.getBody() >> body
         responseEntity.getStatusCode() >> status
         return responseEntity;
+    }
+
+    def proxyTokenMapping(def appUser, def remoteUser, def token) {
+        def mapping = new ProxyTokenMapping()
+        mapping.setAppUserId(appUser)
+        mapping.setRemoteUserId(remoteUser)
+        mapping.setProxyToken(token)
+        return mapping;
     }
 
     def proxyTokenMappingWithoutToken() {
@@ -477,5 +563,13 @@ class SituationRoomServiceSpec extends Specification {
         def mapping = proxyTokenMappingWithoutToken();
         mapping.setProxyToken(token);
         return mapping;
+    }
+
+    def chatParticipant(def chatRoom, def userName, def status) {
+        ChatRoomParticipant p = new ChatRoomParticipant()
+        p.setUserName(userName);
+        p.setRoom(chatRoom)
+        p.status = ChatRoomParticipantStatus.PENDING;
+        return p;
     }
 }

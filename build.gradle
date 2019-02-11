@@ -114,6 +114,7 @@ dependencies {
 	compile 'org.springframework.boot:spring-boot-starter-actuator'
 	compile 'org.springframework.boot:spring-boot-starter-data-jpa'
 	compile 'org.springframework.boot:spring-boot-starter-security'
+    compile group: "com.jda.dct", name: "domain", version: "${depVersion}", changing: true
 	compile group: "com.jda.dct", name: "toys", version: "${depVersion}", changing: true
 	compile group: "com.jda.dct", name: "persist", version: "${depVersion}", changing: true
 	compile group: "com.jda.dct", name: "security", version: "${depVersion}", changing: true
@@ -169,7 +170,7 @@ jacocoTestCoverageVerification {
 						'com.jda.dct.chatservice.ChatServiceApplication']
 			limit {
 				counter = 'LINE'
-				minimum = 0.6
+				minimum = 0.7
 			}
 		}
 	}
