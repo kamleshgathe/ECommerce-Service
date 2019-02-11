@@ -69,7 +69,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     public static final String MATTERMOST_POSTS = "/posts";
     private static final Logger LOGGER = LoggerFactory.getLogger(SituationRoomServiceImpl.class);
 
-    private static final int MAX_REMOTE_USERNAME_LENGTH = 19;
+    private static final int MAX_REMOTE_USERNAME_LENGTH = 30;
     public static final String MATTERMOST_USERS = "/users";
     public static final String MATTERMOST_CHANNELS = "/channels";
 
