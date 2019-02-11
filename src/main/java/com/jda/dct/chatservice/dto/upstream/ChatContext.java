@@ -63,7 +63,7 @@ public class ChatContext {
 
     @JsonProperty(value = "display_name", required = true)
     public String getDisplayName() {
-        return purpose;
+        return displayName;
     }
 
     @JsonProperty(value = "type")

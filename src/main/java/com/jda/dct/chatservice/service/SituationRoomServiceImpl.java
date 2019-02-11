@@ -281,7 +281,6 @@ public class SituationRoomServiceImpl implements SituationRoomService {
                 }
 
             } catch (Exception t) {
-                t.printStackTrace();
                 LOGGER.error("Unable to fetch unread count for channel {} for user {}", roomId, currentUser);
             }
         }
