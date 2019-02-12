@@ -191,7 +191,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         Assert.isTrue(!StringUtils.isEmpty(channel), "Channel can't be null or empty");
         Assert.notNull(request, "Request can't be null");
         Assert.notEmpty(request.getUsers(), "Users can't be empty");
-        Assert.isTrue(getChatRoom(channel).isPresent(),
+        Assert.isTrue(getChatRoomById(channel).isPresent(),
             String.format("Invalid chat room id %s", channel));
 
         setupParticipantsIfNotBefore(request.getUsers(), channelTeamId);
@@ -211,7 +211,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     public ChatContext getChannelContext(String channelId) {
         Assert.isTrue(!StringUtils.isEmpty(channelId), "Channel id can't be null or empty");
         LOGGER.info("Going to fetch chat room {} context request by user {}", channelId, authContext.getCurrentUser());
-        Optional<ChatRoom> chatRoom = getChatRoom(channelId);
+        Optional<ChatRoom> chatRoom = getChatRoomById(channelId);
         if (!chatRoom.isPresent()) {
             LOGGER.error("Chat room {} does not exists", channelId);
             throw new IllegalArgumentException(String.format("Channel %s does not exists", channelId));
@@ -296,6 +296,10 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         Assert.isTrue(!StringUtils.isEmpty(request.getPurpose()), "Purpose can't be null or empty");
         Assert.isTrue(!StringUtils.isEmpty(request.getSituationType()),
             "Situation type can't be null or empty");
+        Assert.isTrue(!StringUtils.containsWhitespace(request.getName()),
+            "Room name should not contain space");
+        Assert.isTrue(!getChatRoomByName(request.getName()).isPresent(),
+            String.format("Situation room %s already exists, try with different name",request.getName()));
     }
 
     private void validatePostMessageRequest(Map<String, Object> request) {
@@ -305,7 +309,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
             "Channel can't be null");
         Assert.isTrue(getRoomIdFromPostMessage(request).trim().length() > 0,
             "Channel can't be empty");
-        Assert.isTrue(getChatRoom(getRoomIdFromPostMessage(request)).isPresent(),
+        Assert.isTrue(getChatRoomById(getRoomIdFromPostMessage(request)).isPresent(),
             String.format("Invalid chat room id %s", getRoomIdFromPostMessage(request)));
     }
 
@@ -335,10 +339,16 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         LOGGER.debug("Chat room {} meta information persisted successfully", chatRoom.getRoomName());
     }
 
-    private Optional<ChatRoom> getChatRoom(String id) {
-        LOGGER.debug("Fetching chat room {}", id);
+    private Optional<ChatRoom> getChatRoomById(String id) {
+        LOGGER.debug("Fetching chat room by id {}", id);
         return roomRepository.findById(id);
 
+    }
+
+    private Optional<ChatRoom> getChatRoomByName(String name) {
+        LOGGER.debug("Fetching chat room by name {}", name);
+        ChatRoom room = roomRepository.findByRoomName(name);
+        return room != null ? Optional.of(room) : Optional.empty();
     }
 
     private List<ChatRoomParticipant> getUserAllRooms(String currentUser) {
@@ -395,7 +405,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     }
 
     private Map<String, Object> addParticipantsToRoom(String user, String roomId) {
-        Optional<ChatRoom> roomRecord = getChatRoom(roomId);
+        Optional<ChatRoom> roomRecord = getChatRoomById(roomId);
         Assert.isTrue(roomRecord.isPresent(), String.format("Invalid %s room id", roomId));
         ChatRoom room = roomRecord.get();
 
@@ -524,7 +534,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     private void archiveMessage(Map<String, Object> chat) {
         String roomId = getRoomIdFromPostMessage(chat);
         LOGGER.debug("Going to archive conversion for room {}", roomId);
-        Optional<ChatRoom> record = getChatRoom(getRoomIdFromPostMessage(chat));
+        Optional<ChatRoom> record = getChatRoomById(getRoomIdFromPostMessage(chat));
         if (!record.isPresent()) {
             throw new IllegalArgumentException(String.format("Invalid chat room %s", roomId));
         }
@@ -540,7 +550,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
 
     private void updateParticipantOfRooms(List<String> users, String roomId) {
         LOGGER.debug("Going to add new participants for room {}", roomId);
-        Optional<ChatRoom> record = getChatRoom(roomId);
+        Optional<ChatRoom> record = getChatRoomById(roomId);
         if (!record.isPresent()) {
             throw new IllegalArgumentException(String.format("Invalid chat room %s", roomId));
         }
@@ -578,7 +588,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         context.setPurpose(room.getDescription());
         context.setSituationType(room.getSituationType());
         context.setEntity(ChatRoomUtil.jsonToObject(
-            (String)ChatRoomUtil.byteArrayToObject(room.getContexts())));
+            (String) ChatRoomUtil.byteArrayToObject(room.getContexts())));
         context.setCreatedAt(room.getCreationDate().getTime());
         context.setUpdatedAt(room.getLmd().getTime());
         context.setLastPostAt(room.getLastPostAt().getTime());
