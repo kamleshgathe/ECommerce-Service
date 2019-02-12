@@ -13,4 +13,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface SituationRoomRepository extends CrudRepository<ChatRoom,String> {
+    ChatRoom findByRoomName(String roomName);
 }
