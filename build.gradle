@@ -170,7 +170,7 @@ jacocoTestCoverageVerification {
 						'com.jda.dct.chatservice.ChatServiceApplication']
 			limit {
 				counter = 'LINE'
-				minimum = 0.7
+				minimum = 0.75
 			}
 		}
 	}

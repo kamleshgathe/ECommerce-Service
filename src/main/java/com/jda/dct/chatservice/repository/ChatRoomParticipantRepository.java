@@ -10,6 +10,7 @@ package com.jda.dct.chatservice.repository;
 
 import com.jda.dct.domain.ChatRoomParticipant;
 import com.jda.dct.domain.ChatRoomParticipantStatus;
+import com.jda.dct.domain.ChatRoomStatus;
 import java.util.List;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.stereotype.Repository;
@@ -18,5 +19,7 @@ import org.springframework.stereotype.Repository;
 public interface ChatRoomParticipantRepository extends CrudRepository<ChatRoomParticipant, String> {
     List<ChatRoomParticipant> findByUserName(String userName);
 
-    List<ChatRoomParticipant> findByUserNameAndStatusLike(String userName, ChatRoomParticipantStatus status);
+    List<ChatRoomParticipant> findByUserNameAndStatus(String userName, ChatRoomParticipantStatus status);
+
+    List<ChatRoomParticipant> findByUserNameAndRoomStatus(String userName, ChatRoomStatus status);
 }

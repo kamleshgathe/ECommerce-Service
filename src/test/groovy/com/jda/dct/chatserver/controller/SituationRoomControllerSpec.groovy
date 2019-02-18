@@ -10,12 +10,11 @@ package com.jda.dct.chatserver.controller
 import com.google.common.collect.Lists
 import com.google.common.collect.Maps
 import com.jda.dct.chatservice.controller.ChatRoomController
-import com.jda.dct.chatservice.dto.upstream.AddUserToRoomDto
-import com.jda.dct.chatservice.dto.upstream.ChatContext
-import com.jda.dct.chatservice.dto.upstream.ChatRoomCreateDto
-import com.jda.dct.chatservice.dto.upstream.TokenDto
+import com.jda.dct.chatservice.dto.upstream.*
 import com.jda.dct.chatservice.service.SituationRoomService
+import com.jda.dct.domain.ChatRoomStatus
 import groovy.json.JsonSlurper
+import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import spock.lang.Specification
 
@@ -59,17 +58,17 @@ class SituationRoomControllerSpec extends Specification {
     def "test create channel"() {
         given:
         def exepectedResponse = Maps.newHashMap();
-        exepectedResponse.put("id","1111");
-        exepectedResponse.put("created_at",new Date());
-        exepectedResponse.put("name","channels_1")
-        exepectedResponse.put("team_id","2222");
+        exepectedResponse.put("id", "1111");
+        exepectedResponse.put("created_at", new Date());
+        exepectedResponse.put("name", "channels_1")
+        exepectedResponse.put("team_id", "2222");
         ChatRoomCreateDto situationRoomDto = new ChatRoomCreateDto();
         def service = Mock(SituationRoomService);
         service.createChannel(_ as ChatRoomCreateDto) >> exepectedResponse;
 
         when: "Calling get token of a user"
         def controller = new ChatRoomController(service);
-        ResponseEntity<Map<String,Object>> responseEntity =controller.addNewChannel(Mock(ChatRoomCreateDto))
+        ResponseEntity<Map<String, Object>> responseEntity = controller.addNewChannel(Mock(ChatRoomCreateDto))
         then:
         responseEntity.getStatusCode().value() == 200
         responseEntity.getBody() == exepectedResponse
@@ -81,13 +80,13 @@ class SituationRoomControllerSpec extends Specification {
         def request = new AddUserToRoomDto();
         request.users == users;
         def exepectedResponse = Maps.newHashMap();
-        exepectedResponse.put("Status","success");
+        exepectedResponse.put("Status", "success");
         def service = Mock(SituationRoomService);
-        service.inviteUsers("abcd",request) >> exepectedResponse;
+        service.inviteUsers("abcd", request) >> exepectedResponse;
 
         when: "Add user to existing channel"
         def controller = new ChatRoomController(service);
-        ResponseEntity<Map<String,Object>> responseEntity =controller.inviteUsers("abcd",request)
+        ResponseEntity<Map<String, Object>> responseEntity = controller.inviteUsers("abcd", request)
         then:
         responseEntity.getStatusCode().value() == 200
     }
@@ -97,26 +96,26 @@ class SituationRoomControllerSpec extends Specification {
         def entity = new ArrayList();
         entity.add("json1");
         def context = Mock(ChatContext);
-        context.getEntity()>>entity;
+        context.getEntity() >> entity;
         def service = Mock(SituationRoomService);
         service.getChannelContext("abcd") >> context;
 
         when: "Add user to existing channel"
         def controller = new ChatRoomController(service);
-        ResponseEntity<ChatContext> responseEntity =controller.getChatRoomContext("abcd")
+        ResponseEntity<ChatContext> responseEntity = controller.getChatRoomContext("abcd")
         then:
         responseEntity.getStatusCode().value() == 200
-        ((List)((ChatContext)responseEntity.getBody()).getEntity())[0] == "json1"
+        ((List) ((ChatContext) responseEntity.getBody()).getEntity())[0] == "json1"
 
     }
 
-    def "test post message" () {
+    def "test post message"() {
         given:
-         def jsonSlurper = new JsonSlurper()
-         Map<String,Object> postObject = jsonSlurper.parseText('{"channel_id": "9k3ebut7ij85db74igboy97a1o",' +
+        def jsonSlurper = new JsonSlurper()
+        Map<String, Object> postObject = jsonSlurper.parseText('{"channel_id": "9k3ebut7ij85db74igboy97a1o",' +
                 '"message": "Sending just like","root_id": "","file_ids":null,"props": ""}')
 
-        Map<String,Object> expectedObj = jsonSlurper.parseText('{"id": "kwysn85zubfpzdno4nzjx7k9ao",' +
+        Map<String, Object> expectedObj = jsonSlurper.parseText('{"id": "kwysn85zubfpzdno4nzjx7k9ao",' +
                 '"create_at": 1547061027479,"update_at": 1547061027479,"edit_at": 0, "delete_at": 0,' +
                 '"is_pinned": false,"user_id": "jtjktxa6n7d7ig1f4a9p9ih9gc","channel_id": "9k3ebut7ij85db74igboy97a1o",' +
                 '"root_id": "","parent_id": "","original_id": "","message": "Sending just like",' +
@@ -127,10 +126,38 @@ class SituationRoomControllerSpec extends Specification {
 
         when:
         def controller = new ChatRoomController(service);
-        ResponseEntity<Map<String,Object>> responseEntity =controller.postMessageToChannel(postObject)
+        ResponseEntity<Map<String, Object>> responseEntity = controller.postMessageToChannel(postObject)
 
         then:
         responseEntity.statusCode.value() == 200
         responseEntity.getBody() == expectedObj
+    }
+
+    def "resolve room should succeed"() {
+        given: "Initialize response context"
+        ChatContext expected = Mock(ChatContext)
+        expected.getCreatedBy() >> "user1"
+        expected.getResolvedAt() >> 123456789
+        expected.getResolution() >> "resolved1"
+        expected.getResolutionRemark() >> "thanks"
+        expected.getRoomStatus() >> ChatRoomStatus.RESOLVED.name()
+        expected.getResolutionType() >> "shipment started"
+        expected.getId() >> "room1"
+
+        ResolveRoomDto dto = new ResolveRoomDto();
+        def service = Mock(SituationRoomService);
+        service.resolve(_ as String, _ as ResolveRoomDto) >> expected;
+
+        when: "Resolve room"
+        def controller = new ChatRoomController(service);
+        ResponseEntity<ChatContext> response = controller.resolve("room1", dto);
+        ChatContext actual = response.getBody();
+        then: "Match expectation"
+        response.statusCode == HttpStatus.OK
+        actual.resolution == expected.resolution
+        actual.resolvedBy == expected.resolvedBy
+        actual.resolutionType == expected.resolutionType
+        actual.resolutionRemark == expected.resolutionRemark
+        actual.getId() == actual.getId();
     }
 }

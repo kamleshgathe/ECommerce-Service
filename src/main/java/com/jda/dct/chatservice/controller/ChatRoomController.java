@@ -11,6 +11,7 @@ package com.jda.dct.chatservice.controller;
 import com.jda.dct.chatservice.dto.upstream.AddUserToRoomDto;
 import com.jda.dct.chatservice.dto.upstream.ChatContext;
 import com.jda.dct.chatservice.dto.upstream.ChatRoomCreateDto;
+import com.jda.dct.chatservice.dto.upstream.ResolveRoomDto;
 import com.jda.dct.chatservice.dto.upstream.TokenDto;
 import com.jda.dct.chatservice.service.SituationRoomService;
 import java.util.List;
@@ -50,8 +51,9 @@ public class ChatRoomController {
     @GetMapping(value = "/channels",
         consumes = MediaType.ALL_VALUE,
         produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<List<ChatContext>> getChannels(@RequestParam(value = "type", required = false) String type) {
-        return ResponseEntity.ok(service.getChannels(type));
+    public ResponseEntity<List<ChatContext>> getChannels(@RequestParam(value = "by",required = false) String by,
+                                                         @RequestParam(value = "type", required = false) String type) {
+        return ResponseEntity.ok(service.getChannels(by,type));
     }
 
     @PostMapping(value = "/posts",
@@ -95,7 +97,15 @@ public class ChatRoomController {
     @GetMapping(value = "/channels/unReadCount",
         consumes = MediaType.ALL_VALUE,
         produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<List<Map<String,Object>>> getUserUnreadCount() {
+    public ResponseEntity<List<Map<String, Object>>> getUserUnreadCount() {
         return ResponseEntity.ok(service.getUnreadCount());
+    }
+
+    @PutMapping(value = "/channels/{channel_id}/resolve",
+        consumes = MediaType.APPLICATION_JSON_VALUE,
+        produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ChatContext> resolve(@PathVariable("channel_id") String roomId,
+                                               @RequestBody ResolveRoomDto resolveRequest) {
+        return ResponseEntity.ok(service.resolve(roomId, resolveRequest));
     }
 }

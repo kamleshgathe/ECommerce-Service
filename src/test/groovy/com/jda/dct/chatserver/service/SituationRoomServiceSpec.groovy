@@ -13,6 +13,7 @@ import com.jda.dct.chatservice.domainreader.EntityReaderFactory
 import com.jda.dct.chatservice.dto.upstream.AddUserToRoomDto
 import com.jda.dct.chatservice.dto.upstream.ChatContext
 import com.jda.dct.chatservice.dto.upstream.ChatRoomCreateDto
+import com.jda.dct.chatservice.dto.upstream.ResolveRoomDto
 import com.jda.dct.chatservice.dto.upstream.TokenDto
 import com.jda.dct.chatservice.repository.ChatRoomParticipantRepository
 import com.jda.dct.chatservice.repository.ProxyTokenMappingRepository
@@ -23,6 +24,7 @@ import com.jda.dct.contexts.AuthContext
 import com.jda.dct.domain.ChatRoom
 import com.jda.dct.domain.ChatRoomParticipant
 import com.jda.dct.domain.ChatRoomParticipantStatus
+import com.jda.dct.domain.ChatRoomStatus
 import com.jda.dct.domain.ProxyTokenMapping
 import org.assertj.core.util.Lists
 import org.springframework.http.HttpEntity
@@ -152,6 +154,21 @@ class SituationRoomServiceSpec extends Specification {
         "123"     | Optional.empty() | IllegalArgumentException
     }
 
+    def "test post message should failed if room is already resolved"() {
+        given: "Intialize mocks"
+        mock()
+        ChatRoom mockedRoom = Mock(ChatRoom);
+        mockedRoom.getStatus() >> ChatRoomStatus.RESOLVED;
+        roomRepository.findById(_ as String) >> Optional.of(mockedRoom);
+        Map<String, Object> chat = new HashMap<>();
+        chat.put("channel_id", "1")
+        when: "Calling post message"
+        initNewSituationRoomService();
+        service.postMessage(chat)
+
+        then: "Should get exception"
+        thrown(IllegalArgumentException)
+    }
 
     def "test post message should pass"() {
         given: "Intialize mocks"
@@ -334,12 +351,12 @@ class SituationRoomServiceSpec extends Specification {
         def user = "1"
         def ptm1 = proxyTokenMapping("1", "remote_user1", "token1");
         def ptm2 = proxyTokenMapping("2", "remote_user2", "token1");
+        def participants = Sets.newHashSet();
         def room = Mock(ChatRoom);
         room.getCreatedBy() >> user
-        def participants = Sets.newHashSet();
+        room.getParticipants() >> participants
         participants.add(chatParticipant(room, "1", ChatRoomParticipantStatus.PENDING))
         participants.add(chatParticipant(room, "2", ChatRoomParticipantStatus.PENDING))
-        room.getParticipants() >> participants
 
         authContext.getCurrentUser() >> user
 
@@ -430,22 +447,35 @@ class SituationRoomServiceSpec extends Specification {
         thrown(IllegalArgumentException)
     }
 
+    def "test resolv room expect exception if room already resolved"() {
+        given: "Setup request"
+        mock()
+        def users = Lists.newArrayList("user1");
+        def request = new AddUserToRoomDto();
+        request.setUsers(users);
+        ChatRoom mockdRoom = Mock(ChatRoom);
+        mockdRoom.getStatus() >> ChatRoomStatus.RESOLVED
+        roomRepository.findById("abcd") >> Optional.of(mockdRoom)
+        when: "Calling create channel"
+        initNewSituationRoomService()
+        service.inviteUsers("abcd", request)
+        then: "Should get exception"
+        thrown(IllegalArgumentException)
+    }
+
     def "test add user to existing channel and should add user in remote"() {
         given: "Setup request"
-
 
         def user = "newUser"
         def users = Lists.newArrayList(user);
         def request = new AddUserToRoomDto();
         request.setUsers(users);
         mock()
-        def mockChatRoom = Mock(ChatRoom);
-        mockChatRoom.getParticipants() >> Lists.newArrayList("user1")
+        def mockChatRoom = mockedChatRoom("abcd", byte[], Lists.newArrayList("user1"), "newUser", ChatRoomStatus.NEW)
         _ * authContext.getCurrentUser() >> user
         1 * tokenRepository.findByAppUserId(user) >> null;
         tokenRepository.save(_ as ProxyTokenMapping) >> Mock(ProxyTokenMapping)
         roomRepository.findById("abcd") >> Optional.of(mockChatRoom)
-        //tokenRepository.save(_ as ProxyTokenMapping) >> proxyTokenMappingWithToken("token")
         tokenRepository.findByAppUserId(user) >> proxyTokenMappingWithoutToken();
         restTemplate.exchange(_ as String, _ as HttpMethod, _ as HttpEntity, Map.class, *_) >>
                 {
@@ -476,10 +506,9 @@ class SituationRoomServiceSpec extends Specification {
         def request = new AddUserToRoomDto();
         request.setUsers(users);
         mock()
-        def mockChatRoom = Mock(ChatRoom);
         def participant = Mock(ChatRoomParticipant)
         participant.getUserName() >> "user1";
-        mockChatRoom.getParticipants() >> Lists.newArrayList(participant)
+        def mockChatRoom = mockedChatRoom("abcd", byte[], Lists.newArrayList(participant), "user1", ChatRoomStatus.NEW)
         mockChatRoom.getRoomName() >> "test"
 
         _ * authContext.getCurrentUser() >> user
@@ -510,6 +539,118 @@ class SituationRoomServiceSpec extends Specification {
         })
     }
 
+    def "test use all channels should succeed"() {
+        given:
+        mock()
+        def user = "1"
+        def participants1 = Sets.newHashSet()
+        def participants2 = Sets.newHashSet()
+        def participants3 = Sets.newHashSet()
+
+        def allRooms = Lists.newArrayList();
+
+        byte[] snapshot = getDummySnapshot();
+
+        def openRoom1 = mockedChatRoom("room1", snapshot, participants1, user, ChatRoomStatus.NEW)
+        def openRoom2 = mockedChatRoom("room2", snapshot, participants2, user, ChatRoomStatus.NEW)
+
+        def resolvedRoom = mockedChatRoom("room3", snapshot, participants3, user, ChatRoomStatus.RESOLVED)
+
+        ChatRoomParticipant r1p1 = chatParticipant(openRoom1, "1", ChatRoomParticipantStatus.JOINED)
+        ChatRoomParticipant r2p1 = chatParticipant(openRoom2, "1", ChatRoomParticipantStatus.PENDING)
+        ChatRoomParticipant r3p1 = chatParticipant(resolvedRoom, "1", ChatRoomParticipantStatus.JOINED)
+
+        allRooms.add(r1p1)
+        allRooms.add(r2p1)
+        allRooms.add(r3p1)
+
+        authContext.getCurrentUser() >> "1"
+
+        when:
+        initNewSituationRoomService()
+        List<ChatContext> channels = service.getChannels(null, null);
+        then:
+        1 * participantRepository.findByUserName(_ as String) >> allRooms
+        channels.size() == 3
+        channels.stream().filter({
+            ChatContext context ->
+                context.getRoomStatus() == ChatRoomStatus.NEW.name()
+        }).count() == 2
+
+        channels.stream().filter({
+            ChatContext context ->
+                context.getRoomStatus() == ChatRoomStatus.RESOLVED.name()
+        }).count() == 1
+    }
+
+    def "test use all channels should succeed when by room status"() {
+        given:
+        mock()
+        def user = "1"
+        def participants1 = Sets.newHashSet()
+
+        def allRooms = Lists.newArrayList();
+
+        byte[] snapshot = getDummySnapshot();
+
+        def openRoom1 = mockedChatRoom("room1", snapshot, participants1, user, ChatRoomStatus.RESOLVED)
+
+
+        ChatRoomParticipant r1p1 = chatParticipant(openRoom1, "1", ChatRoomParticipantStatus.JOINED)
+
+        allRooms.add(r1p1)
+
+        authContext.getCurrentUser() >> "1"
+
+        when:
+        initNewSituationRoomService()
+        List<ChatContext> channels = service.getChannels("room", "RESOLVED");
+        then:
+        1 * participantRepository.findByUserNameAndRoomStatus("1", ChatRoomStatus.RESOLVED) >> allRooms
+        channels.size() == 1
+        channels.stream().filter({
+            ChatContext context ->
+                context.getRoomStatus() == ChatRoomStatus.RESOLVED.name()
+        }).count() == 1
+
+    }
+
+    def "test use all channels should succeed when by user status"() {
+        given:
+        mock()
+        def user = "1"
+        def participants1 = Sets.newHashSet()
+
+        def allRooms = Lists.newArrayList();
+
+        byte[] snapshot = getDummySnapshot();
+
+        def openRoom1 = mockedChatRoom("room1", snapshot, participants1, user, ChatRoomStatus.NEW)
+
+
+        ChatRoomParticipant r1p1 = chatParticipant(openRoom1, "1", ChatRoomParticipantStatus.PENDING)
+
+        allRooms.add(r1p1)
+
+        authContext.getCurrentUser() >> "1"
+
+        when:
+        initNewSituationRoomService()
+        List<ChatContext> channels = service.getChannels("user", "PENDING");
+        then:
+        1 * participantRepository.findByUserNameAndStatus("1", ChatRoomParticipantStatus.PENDING) >> allRooms
+        channels.size() == 1
+        channels.stream().filter({
+            ChatContext context ->
+                context.getRoomStatus() == ChatRoomStatus.NEW.name()
+        }).count() == 1
+
+        channels.stream().filter({
+            ChatContext context ->
+                context.getYourStatus() == ChatRoomParticipantStatus.PENDING
+        }).count() == 1
+    }
+
     @Unroll
     def "test get chat context should get exception if input is invalid"() {
         given: "Setup request"
@@ -530,16 +671,8 @@ class SituationRoomServiceSpec extends Specification {
     def "test get chat context should succeed"() {
         given: "Setup request"
         mock()
-        def entity = new ArrayList();
-        entity.add("json1");
-        String jsonString = ChatRoomUtil.objectToJson(entity);
-        byte[] bytes = ChatRoomUtil.objectToByteArray(jsonString);
-        def mockRoom = Mock(ChatRoom)
-        mockRoom.getContexts() >> bytes
-        mockRoom.getCreationDate() >> new Date()
-        mockRoom.getLastPostAt() >> new Date()
-        mockRoom.getLmd() >> new Date()
-        mockRoom.getParticipants() >> new ArrayList<>()
+        byte[] bytes = getDummySnapshot()
+        def mockRoom = mockedChatRoom("1", bytes, Lists.newArrayList(), "1", ChatRoomStatus.NEW)
         roomRepository.findById("1") >> Optional.of(mockRoom);
         when: "Calling get channel context"
         initNewSituationRoomService()
@@ -548,6 +681,95 @@ class SituationRoomServiceSpec extends Specification {
         ((List) ((ChatContext) actual).getEntity()).get(0) == "json1";
     }
 
+
+    @Unroll
+    def "resolve room should fail if inputs are not valid"() {
+        given: "Initialize inputs"
+        mock()
+        ResolveRoomDto request = new ResolveRoomDto()
+        request.resolutionType = resolutionType
+        request.resolution = resolution;
+        request.remark = remark;
+
+        when: "Calling resolve room"
+        initNewSituationRoomService()
+        service.resolve(roomId, request)
+        then:
+        thrown(IllegalArgumentException.class)
+        where: "Expect IllegalArgumentException"
+        roomId | resolutionType | resolution    | remark
+        null   | "type1"        | "resolution1" | "thanks"
+        "1"    | null           | "resolution1" | "thanks"
+        "1"    | "type1"        | null          | "thanks"
+        "1"    | "type1"        | "resolution1" | null
+        "1"    | " "            | "resolution1" | null
+
+    }
+
+    def "resolve room should fail if room does not exists"() {
+        given: "Initialize inputs"
+        mock()
+        authContext.getCurrentUser() >> "user1"
+        ResolveRoomDto request = new ResolveRoomDto()
+        request.resolutionType = "type1"
+        request.resolution = "resolution1";
+        request.remark = "thanks";
+        roomRepository.findById("1") >> Optional.empty()
+        when: "Calling resolve room"
+        initNewSituationRoomService()
+        service.resolve("1", request)
+        then: "Expect IllegalArgumentException"
+        thrown(IllegalArgumentException.class)
+    }
+
+    def "resolve room should fail if room already resolved"() {
+        given: "Initialize inputs"
+        mock()
+        authContext.getCurrentUser() >> "user1"
+        ResolveRoomDto request = new ResolveRoomDto()
+        request.resolutionType = "type1"
+        request.resolution = "resolution1";
+        request.remark = "thanks";
+        ChatRoom mockedRoom = Mock(ChatRoom);
+        mockedRoom.getStatus() >> ChatRoomStatus.RESOLVED
+        roomRepository.findById("1") >> Optional.of(mockedRoom)
+        when: "Calling resolve room"
+        initNewSituationRoomService()
+        service.resolve("1", request)
+        then: "Expect IllegalArgumentException"
+        thrown(IllegalArgumentException.class)
+    }
+
+    def "resolve room should succeed"() {
+        given: "Initialize inputs"
+        mock()
+        authContext.getCurrentUser() >> "user1"
+        ResolveRoomDto request = new ResolveRoomDto()
+        request.resolutionType = "type1"
+        request.resolution = "resolution1";
+        request.remark = "thanks";
+
+        def entity = new ArrayList();
+        entity.add("json1");
+        String jsonString = ChatRoomUtil.objectToJson(entity);
+        byte[] bytes = ChatRoomUtil.objectToByteArray(jsonString);
+
+        def mockRoom = mockedChatRoom("1", bytes, Lists.newArrayList(), "user1", ChatRoomStatus.NEW)
+        roomRepository.findById("1") >> Optional.of(mockRoom)
+        when: "Calling resolve room"
+        initNewSituationRoomService()
+        service.resolve("1", request)
+        then: "Save room should get called"
+        1 * roomRepository.save(_ as ChatRoom) >> {
+            ChatRoom newStateRoom ->
+                newStateRoom.resolutionType == request.resolutionType
+                newStateRoom.resolution == request.resolution
+                newStateRoom.resolutionRemark == request.remark
+                newStateRoom.resolvedBy == authContext.getCurrentUser()
+                newStateRoom.status == ChatRoomStatus.RESOLVED
+                return newStateRoom
+        }
+    }
 
     def initNewSituationRoomService() {
         service = new SituationRoomServiceImpl(authContext,
@@ -559,6 +781,7 @@ class SituationRoomServiceSpec extends Specification {
         service.setChannelTeamId(CHANNEL_TEAM_ID)
         service.setMattermostUrl("http://localhost:80/api/v4")
     }
+
 
     def mock() {
         authContext = Mock(AuthContext)
@@ -601,7 +824,29 @@ class SituationRoomServiceSpec extends Specification {
         ChatRoomParticipant p = new ChatRoomParticipant()
         p.setUserName(userName);
         p.setRoom(chatRoom)
-        p.status = ChatRoomParticipantStatus.PENDING;
+        p.status = status;
+        chatRoom.getParticipants().add(p)
         return p;
+    }
+
+    def mockedChatRoom(def roomId, def snapshot, def participants, def createdBy, def roomStatus) {
+        def room = Mock(ChatRoom)
+        room.getId() >> roomId;
+        room.getContexts() >> snapshot
+        room.getCreationDate() >> new Date()
+        room.getLastPostAt() >> new Date()
+        room.getLmd() >> new Date()
+        room.getParticipants() >> participants
+        room.getCreatedBy() >> createdBy
+        room.getStatus() >> roomStatus;
+        return room;
+    }
+
+    def byte[] getDummySnapshot() {
+        def entity = new ArrayList();
+        entity.add("json1");
+        String jsonString = ChatRoomUtil.objectToJson(entity);
+        byte[] bytes = ChatRoomUtil.objectToByteArray(jsonString);
+        bytes
     }
 }

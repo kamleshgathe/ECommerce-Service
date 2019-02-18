@@ -19,6 +19,7 @@ import com.jda.dct.chatservice.dto.downstream.TeamDto;
 import com.jda.dct.chatservice.dto.upstream.AddUserToRoomDto;
 import com.jda.dct.chatservice.dto.upstream.ChatContext;
 import com.jda.dct.chatservice.dto.upstream.ChatRoomCreateDto;
+import com.jda.dct.chatservice.dto.upstream.ResolveRoomDto;
 import com.jda.dct.chatservice.dto.upstream.TokenDto;
 import com.jda.dct.chatservice.repository.ChatRoomParticipantRepository;
 import com.jda.dct.chatservice.repository.ProxyTokenMappingRepository;
@@ -66,12 +67,15 @@ import org.springframework.web.util.UriComponentsBuilder;
 @Service
 public class SituationRoomServiceImpl implements SituationRoomService {
 
-    public static final String MATTERMOST_POSTS = "/posts";
     private static final Logger LOGGER = LoggerFactory.getLogger(SituationRoomServiceImpl.class);
 
     private static final int MAX_REMOTE_USERNAME_LENGTH = 30;
-    public static final String MATTERMOST_USERS = "/users";
-    public static final String MATTERMOST_CHANNELS = "/channels";
+
+    private static final String FILTER_BY_USER = "user";
+
+    private static final String MATTERMOST_POSTS = "/posts";
+    private static final String MATTERMOST_USERS = "/users";
+    private static final String MATTERMOST_CHANNELS = "/channels";
 
     @Value("${dct.situationRoom.mattermost.host}")
     private String mattermostUrl;
@@ -187,13 +191,9 @@ public class SituationRoomServiceImpl implements SituationRoomService {
      * @return Map containing status
      */
     @Override
+    @Transactional
     public Map<String, Object> inviteUsers(String channel, AddUserToRoomDto request) {
-        Assert.isTrue(!StringUtils.isEmpty(channel), "Channel can't be null or empty");
-        Assert.notNull(request, "Request can't be null");
-        Assert.notEmpty(request.getUsers(), "Users can't be empty");
-        Assert.isTrue(getChatRoomById(channel).isPresent(),
-            String.format("Invalid chat room id %s", channel));
-
+        validateInviteUsersInputs(channel, request);
         setupParticipantsIfNotBefore(request.getUsers(), channelTeamId);
         updateParticipantOfRooms(request.getUsers(), channel);
         Map<String, Object> status = new HashMap<>();
@@ -221,17 +221,19 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     }
 
     @Override
-    public List<ChatContext> getChannels(String type) {
+    public List<ChatContext> getChannels(String by, String type) {
         String currentUser = authContext.getCurrentUser();
         List<ChatRoomParticipant> participants;
-        if (!StringUtils.isEmpty(type)) {
-            LOGGER.info("Fetching chat rooms for user {} with filter {}", currentUser, type);
-            participants = getUserRoomsByType(type, currentUser);
-        } else {
+        if (StringUtils.isEmpty(type)) {
             LOGGER.info("Fetching all chat rooms for user {}", currentUser);
             participants = getUserAllRooms(currentUser);
+        } else if (StringUtils.isEmpty(by) || FILTER_BY_USER.equals(by.trim())) {
+            LOGGER.info("Fetching {} chat rooms for user {}", type, currentUser);
+            participants = getRoomsByParticipantStatus(type, currentUser);
+        } else {
+            LOGGER.info("Fetching {} chat rooms for user {}", type, currentUser);
+            participants = getUserAllRoomsOfType(type,currentUser);
         }
-
         return participants
             .stream()
             .map(ChatRoomParticipant::getRoom)
@@ -240,6 +242,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     }
 
     @Override
+    @Transactional
     public Map<String, Object> acceptInvitation(String roomId) {
         String currentUser = authContext.getCurrentUser();
         Assert.isTrue(!StringUtils.isEmpty(roomId), "Room id can't be null");
@@ -256,7 +259,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         ProxyTokenMapping proxyTokenMapping = getUserTokenMapping(currentUser);
         String remoteUserId = proxyTokenMapping.getRemoteUserId();
         List<ChatRoomParticipant> userRooms =
-            getUserRoomsByType(ChatRoomParticipantStatus.JOINED.name(), currentUser);
+            getRoomsByParticipantStatus(ChatRoomParticipantStatus.JOINED.name(), currentUser);
         LOGGER.info("Fetching total {} number of room unread count for user {} as remote user is {}",
             userRooms.size(),
             currentUser,
@@ -287,19 +290,46 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         return response;
     }
 
+
+    @Override
+    public ChatContext resolve(String roomId, ResolveRoomDto request) {
+        validateResolveRoomInputs(roomId, request);
+        String currentUser = authContext.getCurrentUser();
+        LOGGER.info("User {} is resolving room {} with details {}", currentUser, roomId, request);
+        Optional<ChatRoom> record = getChatRoomById(roomId);
+        Assert.isTrue(record.isPresent(), "Invalid room");
+
+        ChatRoom room = record.get();
+
+        Assert.isTrue(room.getStatus() != ChatRoomStatus.RESOLVED,
+            String.format("Room %s already resolved by %s", room.getRoomName(), room.getResolvedBy()));
+
+        room.setStatus(ChatRoomStatus.RESOLVED);
+        room.setResolution(request.getResolution());
+        room.setResolutionType(request.getResolutionType());
+        room.setResolutionRemark(request.getRemark());
+        room.setResolvedBy(currentUser);
+        Date date = new Date();
+        room.setResolutionDate(date);
+        room.setLmd(date);
+        ChatRoom resolvedRoom = saveChatRoom(room);
+        LOGGER.info("Room {} status has changed to resolved by user {}", roomId, currentUser);
+        return toChatContext(resolvedRoom, currentUser);
+    }
+
     private void validateChannelCreationRequest(ChatRoomCreateDto request) {
-        Assert.notNull(request, "Channel creation input can't be null");
+        Assert.notNull(request, "Room creation input can't be null");
         Assert.notEmpty(request.getObjectIds(), "Reference domain object can't be null or empty");
         Assert.notEmpty(request.getParticipants(), "Participants can't be null");
         Assert.isTrue(!StringUtils.isEmpty(request.getEntityType()), "Entity type can't be null or empty");
-        Assert.isTrue(!StringUtils.isEmpty(request.getName()), "Channel name can't be null or empty");
+        Assert.isTrue(!StringUtils.isEmpty(request.getName()), "Room name can't be null or empty");
         Assert.isTrue(!StringUtils.isEmpty(request.getPurpose()), "Purpose can't be null or empty");
         Assert.isTrue(!StringUtils.isEmpty(request.getSituationType()),
             "Situation type can't be null or empty");
         Assert.isTrue(!StringUtils.containsWhitespace(request.getName()),
             "Room name should not contain space");
         Assert.isTrue(!getChatRoomByName(request.getName()).isPresent(),
-            String.format("Situation room %s already exists, try with different name",request.getName()));
+            String.format("Situation room %s already exists, try with different name", request.getName()));
     }
 
     private void validatePostMessageRequest(Map<String, Object> request) {
@@ -309,10 +339,32 @@ public class SituationRoomServiceImpl implements SituationRoomService {
             "Channel can't be null");
         Assert.isTrue(getRoomIdFromPostMessage(request).trim().length() > 0,
             "Channel can't be empty");
-        Assert.isTrue(getChatRoomById(getRoomIdFromPostMessage(request)).isPresent(),
-            String.format("Invalid chat room id %s", getRoomIdFromPostMessage(request)));
+        validateRoomState(getRoomIdFromPostMessage(request));
     }
 
+    private void validateInviteUsersInputs(String roomId, AddUserToRoomDto request) {
+        Assert.isTrue(!StringUtils.isEmpty(roomId), "Room can't be null or empty");
+        Assert.notNull(request, "Request can't be null");
+        Assert.notEmpty(request.getUsers(), "Users can't be empty");
+        validateRoomState(roomId);
+    }
+
+    private void validateResolveRoomInputs(String roomId, ResolveRoomDto request) {
+        Assert.isTrue(!StringUtils.isEmpty(roomId), "Room can't be null or empty");
+        Assert.isTrue(!StringUtils.isEmpty(request.getResolutionType()),
+            "Resolution type can't be null or empty");
+        Assert.isTrue(!StringUtils.isEmpty(request.getResolution()),
+            "Resolution can't be null or empty");
+        Assert.isTrue(!StringUtils.isEmpty(request.getRemark()), "Remark can't be null or empty");
+    }
+
+    private void validateRoomState(String roomId) {
+        Optional<ChatRoom> room = getChatRoomById(roomId);
+        Assert.isTrue(room.isPresent(),
+            String.format("Invalid chat room id %s", roomId));
+        Assert.isTrue(room.get().getStatus() != ChatRoomStatus.RESOLVED,
+            "Message can't be post to a resolved room");
+    }
 
     private HttpEntity<Map> createRemoteServerChatRoom(ChatRoomCreateDto request) {
         LOGGER.info("Creating new situation room {} by user {} requested, with details {}", request.getName(),
@@ -351,15 +403,22 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         return room != null ? Optional.of(room) : Optional.empty();
     }
 
+    private List<ChatRoomParticipant> getUserAllRoomsOfType(String type,String currentUser) {
+        List<ChatRoomParticipant> participants;
+        participants = participantRepository.findByUserNameAndRoomStatus(currentUser,
+            ChatRoomStatus.valueOf(type));
+        return participants;
+    }
+
     private List<ChatRoomParticipant> getUserAllRooms(String currentUser) {
         List<ChatRoomParticipant> participants;
         participants = participantRepository.findByUserName(currentUser);
         return participants;
     }
 
-    private List<ChatRoomParticipant> getUserRoomsByType(String type, String currentUser) {
+    private List<ChatRoomParticipant> getRoomsByParticipantStatus(String type, String currentUser) {
         List<ChatRoomParticipant> participants;
-        participants = participantRepository.findByUserNameAndStatusLike(currentUser,
+        participants = participantRepository.findByUserNameAndStatus(currentUser,
             ChatRoomParticipantStatus.valueOf(type));
         return participants;
     }
@@ -408,7 +467,6 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         Optional<ChatRoom> roomRecord = getChatRoomById(roomId);
         Assert.isTrue(roomRecord.isPresent(), String.format("Invalid %s room id", roomId));
         ChatRoom room = roomRecord.get();
-
 
         Optional<ChatRoomParticipant> participantRecord = room.getParticipants()
             .stream().filter(p -> p.getUserName().equals(user)).findFirst();
@@ -576,10 +634,15 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         context.setTeamId(room.getTeamId());
         context.setCreatedBy(room.getCreatedBy());
         context.setEntityType(room.getEntityType());
+        context.setRoomStatus(room.getStatus().name());
+        context.setResolution(room.getResolution());
+        context.setResolutionType(room.getResolutionType());
+        context.setResolutionRemark(room.getResolutionRemark());
+        context.setResolvedBy(room.getResolvedBy());
         List<String> channelUsers = new ArrayList<>();
         room.getParticipants().forEach(participant -> {
             if (participant.getUserName().equals(caller)) {
-                context.setStatus(participant.getStatus());
+                context.setYourStatus(participant.getStatus());
             }
             channelUsers.add(participant.getUserName());
         });
@@ -592,6 +655,9 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         context.setCreatedAt(room.getCreationDate().getTime());
         context.setUpdatedAt(room.getLmd().getTime());
         context.setLastPostAt(room.getLastPostAt().getTime());
+
+        context.setResolvedAt(room.getResolutionDate() != null ? room.getResolutionDate().getTime() :
+            0);
         context.setDeletedAt(0);
         context.setExpiredAt(0);
         context.setExtraUpdateAt(0);
@@ -699,7 +765,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     }
 
     private RoleDto buildRoles() {
-        return new RoleDto("system_user team_admin team_user system_post_all team_post_all channel_admin "
+        return new RoleDto("team_user channel_admin "
             + "channel_user system_user_access_token");
     }
 
