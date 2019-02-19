@@ -123,7 +123,7 @@ public class ChatContext {
         return resolvedBy;
     }
 
-    @JsonProperty(value = "your_status")
+    @JsonProperty(value = "status")
     public ChatRoomParticipantStatus getYourStatus() {
         return yourStatus;
     }
