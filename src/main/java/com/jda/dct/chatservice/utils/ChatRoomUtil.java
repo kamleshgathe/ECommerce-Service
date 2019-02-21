@@ -16,7 +16,10 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.net.URI;
 import java.util.List;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.util.UriComponentsBuilder;
 
 public class ChatRoomUtil {
 
@@ -93,5 +96,29 @@ public class ChatRoomUtil {
         } catch (IOException e) {
             throw new IllegalArgumentException("Unable to restore snapshot as object");
         }
+    }
+
+    /**
+     * Construct the URI for given base and context path.
+     *
+     * @param baseUrl Base url.
+     * @param cxtPath context path.
+     * @return URI.
+     */
+    public static URI buildUrlString(String baseUrl, String cxtPath) {
+        return buildUrlString(baseUrl, cxtPath, null);
+    }
+
+    /**
+     * Construct the URI for given base and context path along with query params.
+     *
+     * @param baseUrl Base url.
+     * @param cxtPath context path.
+     * @param params  query params.
+     * @return URI
+     */
+    public static URI buildUrlString(String baseUrl, String cxtPath, String params) {
+        return UriComponentsBuilder.fromHttpUrl(baseUrl)
+            .path(cxtPath).query(params).build(true).toUri();
     }
 }

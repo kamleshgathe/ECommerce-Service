@@ -13,6 +13,7 @@ import static com.jda.dct.chatservice.constants.ChatRoomConstants.MATTERMOST_CHA
 import static com.jda.dct.chatservice.constants.ChatRoomConstants.MATTERMOST_POSTS;
 import static com.jda.dct.chatservice.constants.ChatRoomConstants.MATTERMOST_USERS;
 import static com.jda.dct.chatservice.constants.ChatRoomConstants.MAX_REMOTE_USERNAME_LENGTH;
+import static com.jda.dct.chatservice.utils.ChatRoomUtil.buildUrlString;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Maps;
@@ -64,7 +65,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.web.util.UriComponentsBuilder;
 
 
 /**
@@ -782,8 +782,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     }
 
     private String getRemoteActionUrl(String cxtPath) {
-        return UriComponentsBuilder.fromHttpUrl(mattermostUrl)
-            .path(cxtPath).toUriString();
+        return buildUrlString(mattermostUrl,cxtPath).toString();
     }
 
     private static String getUsersPath() {
