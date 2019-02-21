@@ -8,6 +8,12 @@
 
 package com.jda.dct.chatservice.service;
 
+import static com.jda.dct.chatservice.constants.ChatRoomConstants.FILTER_BY_USER;
+import static com.jda.dct.chatservice.constants.ChatRoomConstants.MATTERMOST_CHANNELS;
+import static com.jda.dct.chatservice.constants.ChatRoomConstants.MATTERMOST_POSTS;
+import static com.jda.dct.chatservice.constants.ChatRoomConstants.MATTERMOST_USERS;
+import static com.jda.dct.chatservice.constants.ChatRoomConstants.MAX_REMOTE_USERNAME_LENGTH;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Maps;
 import com.jda.dct.chatservice.domainreader.EntityReaderFactory;
@@ -29,6 +35,7 @@ import com.jda.dct.contexts.AuthContext;
 import com.jda.dct.domain.ChatRoom;
 import com.jda.dct.domain.ChatRoomParticipant;
 import com.jda.dct.domain.ChatRoomParticipantStatus;
+import com.jda.dct.domain.ChatRoomResolution;
 import com.jda.dct.domain.ChatRoomStatus;
 import com.jda.dct.domain.ProxyTokenMapping;
 import com.jda.dct.ignitecaches.springimpl.Tenants;
@@ -69,13 +76,6 @@ public class SituationRoomServiceImpl implements SituationRoomService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SituationRoomServiceImpl.class);
 
-    private static final int MAX_REMOTE_USERNAME_LENGTH = 30;
-
-    private static final String FILTER_BY_USER = "user";
-
-    private static final String MATTERMOST_POSTS = "/posts";
-    private static final String MATTERMOST_USERS = "/users";
-    private static final String MATTERMOST_CHANNELS = "/channels";
 
     @Value("${dct.situationRoom.mattermost.host}")
     private String mattermostUrl;
@@ -232,7 +232,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
             participants = getRoomsByParticipantStatus(type, currentUser);
         } else {
             LOGGER.info("Fetching {} chat rooms for user {}", type, currentUser);
-            participants = getUserAllRoomsOfType(type,currentUser);
+            participants = getUserAllRoomsOfType(type, currentUser);
         }
         return participants
             .stream()
@@ -284,7 +284,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
                 }
 
             } catch (Exception t) {
-                LOGGER.error("Unable to fetch unread count for channel {} for user {}", roomId, currentUser);
+                LOGGER.error("Unable to fetch unread count for channel {} for user {}", roomId, currentUser, t);
             }
         }
         return response;
@@ -301,17 +301,13 @@ public class SituationRoomServiceImpl implements SituationRoomService {
 
         ChatRoom room = record.get();
 
-        Assert.isTrue(room.getStatus() != ChatRoomStatus.RESOLVED,
-            String.format("Room %s already resolved by %s", room.getRoomName(), room.getResolvedBy()));
-
+        if (room.getStatus() == ChatRoomStatus.RESOLVED) {
+            throw new IllegalArgumentException(String.format("Room %s already resolved by %s", room.getRoomName(),
+                room.getResolution().getResolvedBy()));
+        }
         room.setStatus(ChatRoomStatus.RESOLVED);
-        room.setResolution(request.getResolution());
-        room.setResolutionType(request.getResolutionType());
-        room.setResolutionRemark(request.getRemark());
-        room.setResolvedBy(currentUser);
-        Date date = new Date();
-        room.setResolutionDate(date);
-        room.setLmd(date);
+        room.setResolution(buildResolution(request, currentUser));
+        room.setLmd(room.getResolution().getDate());
         ChatRoom resolvedRoom = saveChatRoom(room);
         LOGGER.info("Room {} status has changed to resolved by user {}", roomId, currentUser);
         return toChatContext(resolvedRoom, currentUser);
@@ -351,10 +347,13 @@ public class SituationRoomServiceImpl implements SituationRoomService {
 
     private void validateResolveRoomInputs(String roomId, ResolveRoomDto request) {
         Assert.isTrue(!StringUtils.isEmpty(roomId), "Room can't be null or empty");
-        Assert.isTrue(!StringUtils.isEmpty(request.getResolutionType()),
-            "Resolution type can't be null or empty");
         Assert.isTrue(!StringUtils.isEmpty(request.getResolution()),
             "Resolution can't be null or empty");
+        Assert.notNull(request.getResolutionTypes(),
+            "Resolution type can't be null");
+        Assert.notEmpty(request.getResolutionTypes(), "Resolution type can't be empty");
+        request.getResolutionTypes()
+            .forEach(type -> Assert.isTrue(!StringUtils.isEmpty(type), "Invalid resolution type"));
         Assert.isTrue(!StringUtils.isEmpty(request.getRemark()), "Remark can't be null or empty");
     }
 
@@ -403,7 +402,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         return room != null ? Optional.of(room) : Optional.empty();
     }
 
-    private List<ChatRoomParticipant> getUserAllRoomsOfType(String type,String currentUser) {
+    private List<ChatRoomParticipant> getUserAllRoomsOfType(String type, String currentUser) {
         List<ChatRoomParticipant> participants;
         participants = participantRepository.findByUserNameAndRoomStatus(currentUser,
             ChatRoomStatus.valueOf(type));
@@ -635,10 +634,15 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         context.setCreatedBy(room.getCreatedBy());
         context.setEntityType(room.getEntityType());
         context.setRoomStatus(room.getStatus().name());
-        context.setResolution(room.getResolution());
-        context.setResolutionType(room.getResolutionType());
-        context.setResolutionRemark(room.getResolutionRemark());
-        context.setResolvedBy(room.getResolvedBy());
+        if (room.getResolution() != null) {
+            ChatRoomResolution resolution = room.getResolution();
+            context.setResolution(resolution.getResolution());
+            context.setResolutionTypes(resolution.getTypes());
+            context.setResolutionRemark(resolution.getRemark());
+            context.setResolvedBy(resolution.getResolvedBy());
+            context.setResolvedAt(resolution.getDate().getTime());
+        }
+
         List<String> channelUsers = new ArrayList<>();
         room.getParticipants().forEach(participant -> {
             if (participant.getUserName().equals(caller)) {
@@ -656,8 +660,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         context.setUpdatedAt(room.getLmd().getTime());
         context.setLastPostAt(room.getLastPostAt().getTime());
 
-        context.setResolvedAt(room.getResolutionDate() != null ? room.getResolutionDate().getTime() :
-            0);
+
         context.setDeletedAt(0);
         context.setExpiredAt(0);
         context.setExtraUpdateAt(0);
@@ -767,6 +770,15 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     private RoleDto buildRoles() {
         return new RoleDto("team_user channel_admin "
             + "channel_user system_user_access_token");
+    }
+
+    private ChatRoomResolution buildResolution(ResolveRoomDto request, String resolveBy) {
+        ChatRoomResolution resolution = new ChatRoomResolution();
+        resolution.setDate(new Date());
+        resolution.setRemark(request.getRemark());
+        resolution.setResolvedBy(resolveBy);
+        resolution.setTypes(request.getResolutionTypes());
+        return resolution;
     }
 
     private String getRemoteActionUrl(String cxtPath) {

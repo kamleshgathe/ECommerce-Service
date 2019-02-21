@@ -9,10 +9,12 @@ package com.jda.dct.chatservice.dto.upstream;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.List;
+import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
 
 public class ResolveRoomDto {
-    private String resolutionType;
+    private List<String> resolutionTypes;
     private String resolution;
     private String remark;
 
@@ -21,8 +23,8 @@ public class ResolveRoomDto {
         //this has been kept blank to get initialize by jackson
     }
 
-    public String getResolutionType() {
-        return resolutionType;
+    public List<String> getResolutionTypes() {
+        return resolutionTypes;
     }
 
     public String getResolution() {
@@ -35,8 +37,9 @@ public class ResolveRoomDto {
 
     @JsonProperty(value = "resolution_type", required = true)
     @NotNull(message = "Resolution type can't be null")
-    public void setResolutionType(String resolutionType) {
-        this.resolutionType = resolutionType;
+    @NotEmpty(message = "Resolution type can't be empty")
+    public void setResolutionTypes(List<String> resolutionTypes) {
+        this.resolutionTypes = resolutionTypes;
     }
 
     @JsonProperty(value = "resolution", required = true)
@@ -54,7 +57,7 @@ public class ResolveRoomDto {
     @Override
     public String toString() {
         final StringBuilder sb = new StringBuilder("ResolveRoomDto{");
-        sb.append("resolutionType='").append(resolutionType).append('\'');
+        sb.append("resolutionTypes='").append(resolutionTypes).append('\'');
         sb.append(", resolution='").append(resolution).append('\'');
         sb.append(", remark='").append(remark).append('\'');
         sb.append('}');

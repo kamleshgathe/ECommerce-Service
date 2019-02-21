@@ -141,7 +141,7 @@ class SituationRoomControllerSpec extends Specification {
         expected.getResolution() >> "resolved1"
         expected.getResolutionRemark() >> "thanks"
         expected.getRoomStatus() >> ChatRoomStatus.RESOLVED.name()
-        expected.getResolutionType() >> "shipment started"
+        expected.getResolutionTypes() >> Lists.newArrayList("shipment started")
         expected.getId() >> "room1"
 
         ResolveRoomDto dto = new ResolveRoomDto();
@@ -156,7 +156,7 @@ class SituationRoomControllerSpec extends Specification {
         response.statusCode == HttpStatus.OK
         actual.resolution == expected.resolution
         actual.resolvedBy == expected.resolvedBy
-        actual.resolutionType == expected.resolutionType
+        actual.getResolutionTypes() == expected.getResolutionTypes()
         actual.resolutionRemark == expected.resolutionRemark
         actual.getId() == actual.getId();
     }

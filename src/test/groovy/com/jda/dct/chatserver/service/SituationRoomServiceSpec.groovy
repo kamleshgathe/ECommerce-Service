@@ -24,6 +24,7 @@ import com.jda.dct.contexts.AuthContext
 import com.jda.dct.domain.ChatRoom
 import com.jda.dct.domain.ChatRoomParticipant
 import com.jda.dct.domain.ChatRoomParticipantStatus
+import com.jda.dct.domain.ChatRoomResolution
 import com.jda.dct.domain.ChatRoomStatus
 import com.jda.dct.domain.ProxyTokenMapping
 import org.assertj.core.util.Lists
@@ -687,7 +688,7 @@ class SituationRoomServiceSpec extends Specification {
         given: "Initialize inputs"
         mock()
         ResolveRoomDto request = new ResolveRoomDto()
-        request.resolutionType = resolutionType
+        request.resolutionTypes = resolutionType
         request.resolution = resolution;
         request.remark = remark;
 
@@ -697,12 +698,14 @@ class SituationRoomServiceSpec extends Specification {
         then:
         thrown(IllegalArgumentException.class)
         where: "Expect IllegalArgumentException"
-        roomId | resolutionType | resolution    | remark
-        null   | "type1"        | "resolution1" | "thanks"
-        "1"    | null           | "resolution1" | "thanks"
-        "1"    | "type1"        | null          | "thanks"
-        "1"    | "type1"        | "resolution1" | null
-        "1"    | " "            | "resolution1" | null
+        roomId | resolutionType                   | resolution    | remark
+        null   | Lists.newArrayList("type1")      | "resolution1" | "thanks"
+        "1"    | null                             | "resolution1" | "thanks"
+        "1"    | Lists.newArrayList("type1")      | null          | "thanks"
+        "1"    | Lists.newArrayList("type1")      | "resolution1" | null
+        "1"    | Lists.newArrayList(" ")          | "resolution1" | null
+        "1"    | Lists.newArrayList("type1", "") | "resolution1" | "thanks"
+        "1"    | Lists.newArrayList() | "resolution1" | "thanks"
 
     }
 
@@ -711,7 +714,7 @@ class SituationRoomServiceSpec extends Specification {
         mock()
         authContext.getCurrentUser() >> "user1"
         ResolveRoomDto request = new ResolveRoomDto()
-        request.resolutionType = "type1"
+        request.resolutionTypes = Lists.newArrayList("type1")
         request.resolution = "resolution1";
         request.remark = "thanks";
         roomRepository.findById("1") >> Optional.empty()
@@ -727,11 +730,12 @@ class SituationRoomServiceSpec extends Specification {
         mock()
         authContext.getCurrentUser() >> "user1"
         ResolveRoomDto request = new ResolveRoomDto()
-        request.resolutionType = "type1"
+        request.resolutionTypes = Lists.newArrayList("type1")
         request.resolution = "resolution1";
         request.remark = "thanks";
         ChatRoom mockedRoom = Mock(ChatRoom);
         mockedRoom.getStatus() >> ChatRoomStatus.RESOLVED
+        mockedRoom.getResolution() >> buildResolution(request, "user1")
         roomRepository.findById("1") >> Optional.of(mockedRoom)
         when: "Calling resolve room"
         initNewSituationRoomService()
@@ -745,9 +749,10 @@ class SituationRoomServiceSpec extends Specification {
         mock()
         authContext.getCurrentUser() >> "user1"
         ResolveRoomDto request = new ResolveRoomDto()
-        request.resolutionType = "type1"
+        request.resolutionTypes = Lists.newArrayList("type1")
         request.resolution = "resolution1";
         request.remark = "thanks";
+
 
         def entity = new ArrayList();
         entity.add("json1");
@@ -755,6 +760,7 @@ class SituationRoomServiceSpec extends Specification {
         byte[] bytes = ChatRoomUtil.objectToByteArray(jsonString);
 
         def mockRoom = mockedChatRoom("1", bytes, Lists.newArrayList(), "user1", ChatRoomStatus.NEW)
+        mockRoom.getResolution() >> buildResolution(request, "user1")
         roomRepository.findById("1") >> Optional.of(mockRoom)
         when: "Calling resolve room"
         initNewSituationRoomService()
@@ -762,10 +768,10 @@ class SituationRoomServiceSpec extends Specification {
         then: "Save room should get called"
         1 * roomRepository.save(_ as ChatRoom) >> {
             ChatRoom newStateRoom ->
-                newStateRoom.resolutionType == request.resolutionType
-                newStateRoom.resolution == request.resolution
-                newStateRoom.resolutionRemark == request.remark
-                newStateRoom.resolvedBy == authContext.getCurrentUser()
+                newStateRoom.getResolution().types == request.resolutionTypes
+                newStateRoom.getResolution().getResolution() == request.resolution
+                newStateRoom.getResolution().remark == request.remark
+                newStateRoom.getResolution().resolvedBy == authContext.getCurrentUser()
                 newStateRoom.status == ChatRoomStatus.RESOLVED
                 return newStateRoom
         }
@@ -848,5 +854,15 @@ class SituationRoomServiceSpec extends Specification {
         String jsonString = ChatRoomUtil.objectToJson(entity);
         byte[] bytes = ChatRoomUtil.objectToByteArray(jsonString);
         bytes
+    }
+
+    def buildResolution(ResolveRoomDto request, String resolveBy) {
+        ChatRoomResolution resolution = new ChatRoomResolution()
+        resolution.setResolvedBy(resolveBy)
+        resolution.setDate(new Date())
+        resolution.setTypes(request.getResolutionTypes())
+        resolution.setResolution(request.getResolution())
+        resolution.setRemark(resolution.getRemark())
+        return resolution;
     }
 }

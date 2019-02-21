@@ -101,7 +101,7 @@ public class ChatRoomController {
         return ResponseEntity.ok(service.getUnreadCount());
     }
 
-    @PutMapping(value = "/channels/{channel_id}/resolve",
+    @PostMapping(value = "/channels/{channel_id}/resolve",
         consumes = MediaType.APPLICATION_JSON_VALUE,
         produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ChatContext> resolve(@PathVariable("channel_id") String roomId,

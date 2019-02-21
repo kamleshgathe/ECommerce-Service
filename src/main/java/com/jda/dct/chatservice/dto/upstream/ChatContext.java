@@ -28,7 +28,7 @@ public class ChatContext {
     private String entityType;
     private String createdBy;
     private String roomStatus;
-    private String resolutionType;
+    private List<String> resolutionTypes;
     private String resolution;
     private String resolutionRemark;
     private String resolvedBy;
@@ -103,9 +103,9 @@ public class ChatContext {
         return roomStatus;
     }
 
-    @JsonProperty(value = "resolution_type")
-    public String getResolutionType() {
-        return resolutionType;
+    @JsonProperty(value = "resolution_types")
+    public List<String> getResolutionTypes() {
+        return resolutionTypes;
     }
 
     @JsonProperty("resolution")
@@ -233,8 +233,8 @@ public class ChatContext {
         this.roomStatus = roomStatus;
     }
 
-    public void setResolutionType(String resolutionType) {
-        this.resolutionType = resolutionType;
+    public void setResolutionTypes(List<String> resolutionTypes) {
+        this.resolutionTypes = resolutionTypes;
     }
 
     public void setResolution(String resolution) {
