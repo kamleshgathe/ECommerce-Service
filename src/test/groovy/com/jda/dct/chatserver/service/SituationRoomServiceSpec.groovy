@@ -313,38 +313,6 @@ class SituationRoomServiceSpec extends Specification {
         thrown(IllegalArgumentException)
     }
 
-    def "test create channel with room name having space"() {
-        given:
-        def channel = new ChatRoomCreateDto();
-        channel.setObjectIds(Lists.newArrayList("1", "2"))
-        channel.setParticipants(Lists.newArrayList("1", "2"))
-        channel.setEntityType("shipment")
-        channel.setName("name1 aa")
-        channel.setPurpose("situation room for shipment delayed")
-        when: "Calling create channel"
-        initNewSituationRoomService()
-        service.createChannel(channel)
-        then: "Should get exception"
-        thrown(IllegalArgumentException)
-    }
-
-    def "test create channel with duplicate room name"() {
-        given:
-        mock()
-        def channel = new ChatRoomCreateDto();
-        channel.setObjectIds(Lists.newArrayList("1", "2"))
-        channel.setParticipants(Lists.newArrayList("1", "2"))
-        channel.setEntityType("shipment")
-        channel.setName("name1")
-        channel.setPurpose("situation room for shipment delayed")
-        roomRepository.findByRoomName("name1") >> Mock(ChatRoom)
-        when: "Calling create channel"
-        initNewSituationRoomService()
-        service.createChannel(channel)
-        then: "Should get exception"
-        thrown(IllegalArgumentException)
-    }
-
     def "test create channel should succeed"() {
         given:
         mock()

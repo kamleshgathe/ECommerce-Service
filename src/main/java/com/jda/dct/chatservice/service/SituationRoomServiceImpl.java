@@ -322,10 +322,6 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         Assert.isTrue(!StringUtils.isEmpty(request.getPurpose()), "Purpose can't be null or empty");
         Assert.isTrue(!StringUtils.isEmpty(request.getSituationType()),
             "Situation type can't be null or empty");
-        Assert.isTrue(!StringUtils.containsWhitespace(request.getName()),
-            "Room name should not contain space");
-        Assert.isTrue(!getChatRoomByName(request.getName()).isPresent(),
-            String.format("Situation room %s already exists, try with different name", request.getName()));
     }
 
     private void validatePostMessageRequest(Map<String, Object> request) {
@@ -396,11 +392,6 @@ public class SituationRoomServiceImpl implements SituationRoomService {
 
     }
 
-    private Optional<ChatRoom> getChatRoomByName(String name) {
-        LOGGER.debug("Fetching chat room by name {}", name);
-        ChatRoom room = roomRepository.findByRoomName(name);
-        return room != null ? Optional.of(room) : Optional.empty();
-    }
 
     private List<ChatRoomParticipant> getUserAllRoomsOfType(String type, String currentUser) {
         List<ChatRoomParticipant> participants;
@@ -729,7 +720,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     private CreateChannelDto buildRemoteChannelCreationRequest(ChatRoomCreateDto request) {
         CreateChannelDto dto = new CreateChannelDto();
         dto.setTeamId(channelTeamId);
-        dto.setName(request.getName());
+        dto.setName(processRoomNameForRemote(request.getName()));
         dto.setHeader(request.getHeader());
         dto.setPurpose(request.getPurpose());
         dto.setRoomType(request.getRoomType());
@@ -832,6 +823,10 @@ public class SituationRoomServiceImpl implements SituationRoomService {
 
     private String getRoomIdFromPostMessage(Map<String, Object> request) {
         return (String) request.get("channel_id");
+    }
+
+    private String processRoomNameForRemote(String name) {
+        return name.toLowerCase().replaceAll("\\s+", "") + "_" + System.currentTimeMillis();
     }
 
     private HttpHeaders getHttpHeader(String token) {
