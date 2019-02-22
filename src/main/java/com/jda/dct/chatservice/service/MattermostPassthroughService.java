@@ -11,6 +11,7 @@ package com.jda.dct.chatservice.service;
 import static com.jda.dct.chatservice.utils.ChatRoomUtil.buildUrlString;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.jda.dct.chatservice.constants.ChatRoomConstants;
 import com.jda.dct.chatservice.repository.ProxyTokenMappingRepository;
 import com.jda.dct.contexts.AuthContext;
 import com.jda.dct.domain.ProxyTokenMapping;
@@ -81,9 +82,6 @@ public class MattermostPassthroughService {
                 method, requestUrl, queryString);
         }
 
-        LOGGER.info("User {} called for {}-{} with query param {}", currentUser,
-            method, requestUrl, queryString);
-
         ProxyTokenMapping proxyTokenMapping = getToken(currentUser);
         if (Objects.isNull(proxyTokenMapping)) {
             return ResponseEntity
@@ -107,7 +105,7 @@ public class MattermostPassthroughService {
     }
 
     private String getRemoteUrl(String requestUrl, String queryParams) {
-        requestUrl = requestUrl.replaceFirst("/chat/passthrough", "");
+        requestUrl = requestUrl.replaceFirst(ChatRoomConstants.PASSTHROUGH_PREFIX, "");
         return buildUrlString(mattermostUrl, requestUrl, queryParams).toString();
     }
 

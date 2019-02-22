@@ -30,13 +30,14 @@ public class MattermostPassthroughController {
     private final MattermostPassthroughService service;
 
     public MattermostPassthroughController(@Autowired MattermostPassthroughService service) {
-        Assert.notNull(service,"Proxy service can't null");
+        Assert.notNull(service, "Proxy service can't null");
         this.service = service;
     }
+
     @RequestMapping("/**")
     public ResponseEntity passthrough(@RequestBody(required = false) String body,
                                       HttpMethod method,
-                                      HttpServletRequest request) throws URISyntaxException {
-        return service.passthrough(body,method,request);
+                                      HttpServletRequest request) {
+        return service.passthrough(body, method, request);
     }
 }
