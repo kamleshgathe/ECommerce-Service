@@ -27,7 +27,13 @@ public class ChatContext {
     private String situationType;
     private String entityType;
     private String createdBy;
-    private ChatRoomParticipantStatus status;
+    private String roomStatus;
+    private List<String> resolutionTypes;
+    private String resolution;
+    private String resolutionRemark;
+    private String resolvedBy;
+
+    private ChatRoomParticipantStatus yourStatus;
 
     private long totalMessageCount;
 
@@ -37,6 +43,7 @@ public class ChatContext {
     private long lastPostAt;
     private long expiredAt;
     private long extraUpdateAt;
+    private long resolvedAt;
 
     private List<String> participants;
     private Object entity;
@@ -91,9 +98,34 @@ public class ChatContext {
         return entityType;
     }
 
+    @JsonProperty(value = "room_status", required = true)
+    public String getRoomStatus() {
+        return roomStatus;
+    }
+
+    @JsonProperty(value = "resolution_types")
+    public List<String> getResolutionTypes() {
+        return resolutionTypes;
+    }
+
+    @JsonProperty("resolution")
+    public String getResolution() {
+        return resolution;
+    }
+
+    @JsonProperty("resolution_remark")
+    public String getResolutionRemark() {
+        return resolutionRemark;
+    }
+
+    @JsonProperty("resolved_by")
+    public String getResolvedBy() {
+        return resolvedBy;
+    }
+
     @JsonProperty(value = "status")
-    public ChatRoomParticipantStatus getStatus() {
-        return status;
+    public ChatRoomParticipantStatus getYourStatus() {
+        return yourStatus;
     }
 
     @JsonProperty(value = "total_msg_count")
@@ -134,6 +166,11 @@ public class ChatContext {
     @JsonProperty(value = "extra_update_at")
     public long getExtraUpdateAt() {
         return extraUpdateAt;
+    }
+
+    @JsonProperty(value = "resolved_at")
+    public long getResolvedAt() {
+        return resolvedAt;
     }
 
     @JsonProperty(value = "participants")
@@ -188,8 +225,28 @@ public class ChatContext {
         this.createdBy = createdBy;
     }
 
-    public void setStatus(ChatRoomParticipantStatus status) {
-        this.status = status;
+    public void setYourStatus(ChatRoomParticipantStatus yourStatus) {
+        this.yourStatus = yourStatus;
+    }
+
+    public void setRoomStatus(String roomStatus) {
+        this.roomStatus = roomStatus;
+    }
+
+    public void setResolutionTypes(List<String> resolutionTypes) {
+        this.resolutionTypes = resolutionTypes;
+    }
+
+    public void setResolution(String resolution) {
+        this.resolution = resolution;
+    }
+
+    public void setResolutionRemark(String resolutionRemark) {
+        this.resolutionRemark = resolutionRemark;
+    }
+
+    public void setResolvedBy(String resolvedBy) {
+        this.resolvedBy = resolvedBy;
     }
 
     public void setTotalMessageCount(long totalMessageCount) {
@@ -218,6 +275,10 @@ public class ChatContext {
 
     public void setExtraUpdateAt(long extraUpdateAt) {
         this.extraUpdateAt = extraUpdateAt;
+    }
+
+    public void setResolvedAt(long resolvedAt) {
+        this.resolvedAt = resolvedAt;
     }
 
     public void setParticipants(List<String> participants) {

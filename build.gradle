@@ -167,10 +167,11 @@ jacocoTestCoverageVerification {
 			excludes = ['com.jda.dct.chatservice.dto.downstream.*',
 						'com.jda.dct.chatservice.dto.upstream.*',
 						'com.jda.dct.chatservice.config.*',
+                        'com.jda.dct.chatservice.constants.*',
 						'com.jda.dct.chatservice.ChatServiceApplication']
 			limit {
 				counter = 'LINE'
-				minimum = 0.7
+				minimum = 0.75
 			}
 		}
 	}
