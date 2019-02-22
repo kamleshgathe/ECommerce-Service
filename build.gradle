@@ -1,61 +1,232 @@
 buildscript {
 	ext {
-		springBootVersion = '2.1.0.RELEASE'
+
+		springBootVersion = '2.0.3.RELEASE'
 	}
 	repositories {
 		mavenLocal()
-		repositories {
-			mavenLocal()
-			maven {
-				url "${artifactoryContextUrl}/jda-dev-repositories"
-				credentials {
-					username = artifactoryUsername
-					password = artifactoryPassword
-				}
+		maven {
+			url "${artifactoryContextUrl}/jda-dev-repositories"
+			credentials {
+				username = artifactoryUsername
+				password = artifactoryPassword
 			}
 		}
 	}
 	dependencies {
-		classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}")
+		classpath "org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}"
 	}
 }
 
-apply plugin: 'java'
+plugins {
+	id "com.jfrog.artifactory" version "4.6.2"
+	id "org.sonarqube" version "2.6.2"
+	id "com.github.hierynomus.license" version "0.14.0"
+//    id 'nebula.release' version '9.0.0'
+//    id 'nebula.maven-publish' version '8.0.0'
+
+}
+
+
+apply plugin: 'groovy'
 apply plugin: 'maven'
 apply plugin: 'org.springframework.boot'
 apply plugin: 'io.spring.dependency-management'
-apply plugin: 'checkstyle'
+apply plugin: 'jacoco'
+apply plugin: 'com.jfrog.artifactory'
+//apply plugin: 'nebula.release'
+//apply plugin: 'nebula.maven-publish'
 apply plugin: 'maven-publish'
-
-group = 'com.jda.dct'
-version = '0.0.1-SNAPSHOT'
-sourceCompatibility = 1.8
+apply plugin: 'checkstyle'
 
 checkstyle {
 	toolVersion "8.8"
 }
 
+version "${version}"
+
+depVersion = "${depVersion}"
+
+group 'com.jda.dct'
+
+artifactory {
+	contextUrl = "${artifactoryContextUrl}"
+	publish {
+		repository {
+			if (version.contains('rc'))
+				repoKey = 'libs-release-local'
+			else if (version.contains('ga'))
+				repoKey = 'libs-release-local'
+			else
+				repoKey = 'libs-snapshot-local'
+			username = "${artifactoryUsername}"
+			password = "${artifactoryPassword}"
+		}
+		defaults {
+			publishArtifacts = true
+			publications('mavenJava')
+		}
+	}
+}
+publishing {
+	publications {
+		mavenJava(MavenPublication) {
+			from components.java
+		}
+	}
+}
+
+
+configurations {
+	runtime.exclude group: "com.zaxxer", module: "HikariCP"
+
+	all {
+		resolutionStrategy {
+			eachDependency {
+				DependencyResolveDetails drd ->
+					if (drd.requested.group == 'org.springframework.kafka') {
+						drd.useVersion '2.1.4.RELEASE'
+					}
+			}
+			cacheChangingModulesFor 0, 'seconds'
+		}
+	}
+	zip
+}
+
 repositories {
-	mavenCentral()
+	mavenLocal()
+	maven {
+		url "${artifactoryContextUrl}/jda-dev-repositories"
+		credentials {
+			username = artifactoryUsername
+			password = artifactoryPassword
+		}
+	}
 }
 
 
 dependencies {
+	compile 'org.codehaus.groovy:groovy-all:2.4.13'
 
-	compile('org.springframework.boot:spring-boot-starter-web')
-	compile group: 'commons-codec', name: 'commons-codec', version: '1.9'
-	compile group: 'org.springframework.boot', name: 'spring-boot-starter-data-jpa'
-	runtime group: 'com.h2database', name: 'h2', version: '1.4.197'
+	compile 'org.springframework.data:spring-data-commons'
+	compile 'org.springframework.boot:spring-boot-starter-web'
+	compile 'org.springframework.boot:spring-boot-starter-actuator'
+	compile 'org.springframework.boot:spring-boot-starter-data-jpa'
+	compile 'org.springframework.boot:spring-boot-starter-security'
+    compile group: "com.jda.dct", name: "domain", version: "${depVersion}", changing: true
+	compile group: "com.jda.dct", name: "toys", version: "${depVersion}", changing: true
+	compile group: "com.jda.dct", name: "persist", version: "${depVersion}", changing: true
+	compile group: "com.jda.dct", name: "security", version: "${depVersion}", changing: true
+	compile group: "com.jda.dct", name: "tenantutils", version: "${depVersion}", changing: true
+	compile group: "com.jda.dct", name: "kafkaclient", version: "${depVersion}", changing: true
+	compile group: "com.jda.dct", name: "search", version: "${depVersion}", changing: true
+	compile group: "com.jda.dct", name: "tracing", version: "${depVersion}", changing: true
+	compile group: "com.jda.dct", name: "exec", version: "${depVersion}", changing: true
+	compile group: "com.jda.dct", name: "ingest", version: "${depVersion}", changing: true
 
-	compile('org.springframework.boot:spring-boot-starter-security')
+	compile 'org.elasticsearch:elasticsearch:5.6.6'
+	compile 'org.elasticsearch.client:elasticsearch-rest-high-level-client:5.6.6'
+	compile 'org.elasticsearch.client:elasticsearch-rest-client:5.6.6'
+	compile 'com.jsoniter:jsoniter:0.9.19'
 
-	compile 'org.springframework.security:spring-security-jwt:1.0.9.RELEASE'
-	compile 'org.springframework.security.oauth:spring-security-oauth2:2.3.4.RELEASE'
-	compile 'com.nimbusds:nimbus-jose-jwt:6.3'
+	zip group: 'com.jda.dct', name: 'cicd', version: '0.0.1-SNAPSHOT', classifier: 'appdynamics-container-config', ext: 'zip'
 
-	compile group: 'org.yaml', name: 'snakeyaml', version: '1.23'
-	compile group: 'com.fasterxml.jackson.dataformat', name: 'jackson-dataformat-yaml', version: '2.9.7'
+	runtime group: 'org.mariadb.jdbc', name: 'mariadb-java-client', version: '2.2.6'
 
-	testImplementation('org.springframework.boot:spring-boot-starter-test')
+	testCompile 'org.mockito:mockito-core'
+	testCompile 'org.springframework.boot:spring-boot-starter-test'
+	testCompile 'junit:junit'
+
+	// mandatory dependencies for using Spock
+	testCompile "org.spockframework:spock-core:1.1-groovy-2.4"
+
+	// optional dependencies for using Spock
+	testRuntime "net.bytebuddy:byte-buddy:1.6.5"          // allows mocking of classes (in addition to interfaces)
+
+	testCompile group: 'com.h2database', name: 'h2', version: '1.4.196'
+	testCompile 'org.spockframework:spock-spring:1.1-groovy-2.4'
 }
 
+jacocoTestReport {
+	group = "Reporting"
+	reports {
+		xml.enabled true
+		html.enabled true
+		csv.enabled false
+		html.destination file("${buildDir}/reports/coverage")
+	}
+}
+
+jacocoTestCoverageVerification {
+	violationRules {
+		rule {
+			enabled = true
+			element = 'CLASS'
+			includes = ['com.jda.dct.*']
+			excludes = ['com.jda.dct.chatservice.dto.downstream.*',
+						'com.jda.dct.chatservice.dto.upstream.*',
+						'com.jda.dct.chatservice.config.*',
+                        'com.jda.dct.chatservice.constants.*',
+						'com.jda.dct.chatservice.ChatServiceApplication']
+			limit {
+				counter = 'LINE'
+				minimum = 0.75
+			}
+		}
+	}
+}
+
+test {
+	finalizedBy jacocoTestReport
+	finalizedBy jacocoTestCoverageVerification
+}
+
+repositories {
+	mavenLocal()
+	maven {
+		url "${artifactoryContextUrl}/jda-dev-repositories"
+		credentials {
+			username = artifactoryUsername
+			password = artifactoryPassword
+		}
+	}
+}
+
+task unzip {
+	doLast {
+		println "Dependencies:"
+		configurations.zip.each {
+			println it
+			def zipFile = file(it)
+			def outputDir = file("${buildDir}")
+			copy {
+				from zipTree(zipFile)
+				into outputDir
+			}
+		}
+	}
+}
+
+bootRun {
+	systemProperties = System.properties
+	systemProperty 'spring.profiles.active', 'development'
+	jvmArgs('-Djava.util.logging.config.file=none')
+}
+
+test {
+	systemProperties = System.properties
+	systemProperty 'spring.profiles.active', 'development'
+	jvmArgs('-Djava.util.logging.config.file=none')
+}
+
+license {
+	ext.year = Calendar.getInstance().get(Calendar.YEAR)
+	includes(["**/*.java", "**/*.groovy"])
+}
+classes.dependsOn(licenseFormat)
+
+bootJar.dependsOn unzip
+jar.enabled = true
+
+// tasks.release.dependsOn tasks.bootJar

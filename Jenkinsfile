@@ -3,9 +3,8 @@
 @Library('jenkins-lib@master-ci') _
 
 svcPipeline {
-    deployToDCT = 'false'
-    skipDeployment = 'true'
+    targetHelmCharts = 'chat'
+    deployToDCT = 'true'
     shouldTest = 'false'
-    skipSonarAnalysis = 'true'
 }
 
