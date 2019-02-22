@@ -9,7 +9,6 @@
 package com.jda.dct.chatservice.controller;
 
 import com.jda.dct.chatservice.service.MattermostPassthroughService;
-import java.net.URISyntaxException;
 import javax.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpMethod;
