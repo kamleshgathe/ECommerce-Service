@@ -14,7 +14,9 @@ public final class ChatRoomConstants {
     public static final String MATTERMOST_POSTS = "/posts";
     public static final String MATTERMOST_USERS = "/users";
     public static final String MATTERMOST_CHANNELS = "/channels";
-    
+
+    public static final String PASSTHROUGH_PREFIX = "/chat/passthrough";
+
     private ChatRoomConstants() {
         //private constructor to make to avoid mistaken initialization
     }
