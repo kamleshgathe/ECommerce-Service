@@ -709,7 +709,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
 
     private ChatRoomParticipant buildParticipant(ChatRoom room, String userName) {
         ChatRoomParticipant participant = new ChatRoomParticipant();
-        participant.setId(userName + "-" + room.getId());
+        participant.setId(toParticipantId(userName, room));
         participant.setRoom(room);
         participant.setUserName(userName);
         participant.setInvitedAt(new Date());
@@ -720,7 +720,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     private CreateChannelDto buildRemoteChannelCreationRequest(ChatRoomCreateDto request) {
         CreateChannelDto dto = new CreateChannelDto();
         dto.setTeamId(channelTeamId);
-        dto.setName(processRoomNameForRemote(request.getName()));
+        dto.setName(buildRemoteRoomName(request.getName()));
         dto.setHeader(request.getHeader());
         dto.setPurpose(request.getPurpose());
         dto.setRoomType(request.getRoomType());
@@ -825,8 +825,12 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         return (String) request.get("channel_id");
     }
 
-    private String processRoomNameForRemote(String name) {
+    private String buildRemoteRoomName(String name) {
         return name.toLowerCase().replaceAll("\\s+", "") + "_" + System.currentTimeMillis();
+    }
+
+    private String toParticipantId(String userName,ChatRoom room) {
+        return userName + "-" + room.getId();
     }
 
     private HttpHeaders getHttpHeader(String token) {
