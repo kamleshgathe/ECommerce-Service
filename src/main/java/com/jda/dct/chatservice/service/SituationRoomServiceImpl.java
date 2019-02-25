@@ -709,7 +709,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
 
     private ChatRoomParticipant buildParticipant(ChatRoom room, String userName) {
         ChatRoomParticipant participant = new ChatRoomParticipant();
-        participant.setId(userName + "-" + room.getRoomName());
+        participant.setId(userName + "-" + room.getId());
         participant.setRoom(room);
         participant.setUserName(userName);
         participant.setInvitedAt(new Date());
