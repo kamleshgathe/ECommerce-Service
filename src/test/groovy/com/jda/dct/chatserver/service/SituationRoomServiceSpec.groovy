@@ -7,6 +7,7 @@
  */
 package com.jda.dct.chatserver.service
 
+import com.google.common.collect.Lists
 import com.google.common.collect.Maps
 import com.google.common.collect.Sets
 import com.jda.dct.chatservice.domainreader.EntityReaderFactory
@@ -27,7 +28,6 @@ import com.jda.dct.domain.ChatRoomParticipantStatus
 import com.jda.dct.domain.ChatRoomResolution
 import com.jda.dct.domain.ChatRoomStatus
 import com.jda.dct.domain.ProxyTokenMapping
-import org.assertj.core.util.Lists
 import org.springframework.http.HttpEntity
 import org.springframework.http.HttpMethod
 import org.springframework.http.HttpStatus
@@ -448,7 +448,7 @@ class SituationRoomServiceSpec extends Specification {
         thrown(IllegalArgumentException)
     }
 
-    def "test resolv room expect exception if room already resolved"() {
+    def "test resolve room expect exception if room already resolved"() {
         given: "Setup request"
         mock()
         def users = Lists.newArrayList("user1");
@@ -698,14 +698,14 @@ class SituationRoomServiceSpec extends Specification {
         then:
         thrown(IllegalArgumentException.class)
         where: "Expect IllegalArgumentException"
-        roomId | resolutionType                   | resolution    | remark
-        null   | Lists.newArrayList("type1")      | "resolution1" | "thanks"
-        "1"    | null                             | "resolution1" | "thanks"
-        "1"    | Lists.newArrayList("type1")      | null          | "thanks"
-        "1"    | Lists.newArrayList("type1")      | "resolution1" | null
-        "1"    | Lists.newArrayList(" ")          | "resolution1" | null
+        roomId | resolutionType                  | resolution    | remark
+        null   | Lists.newArrayList("type1")     | "resolution1" | "thanks"
+        "1"    | null                            | "resolution1" | "thanks"
+        "1"    | Lists.newArrayList("type1")     | null          | "thanks"
+        "1"    | Lists.newArrayList("type1")     | "resolution1" | null
+        "1"    | Lists.newArrayList(" ")         | "resolution1" | null
         "1"    | Lists.newArrayList("type1", "") | "resolution1" | "thanks"
-        "1"    | Lists.newArrayList() | "resolution1" | "thanks"
+        "1"    | Lists.newArrayList()            | "resolution1" | "thanks"
 
     }
 
@@ -775,6 +775,101 @@ class SituationRoomServiceSpec extends Specification {
                 newStateRoom.status == ChatRoomStatus.RESOLVED
                 return newStateRoom
         }
+    }
+
+    def "test unread should return nothing on remote call exception"() {
+        given: "Initialize"
+        mock()
+        def user = "user1";
+        authContext.getCurrentUser() >> user
+        def token = proxyTokenMappingWithToken("abcd")
+        tokenRepository.findByAppUserId(user) >> token
+
+        def participants = Sets.newHashSet()
+        def allRooms = Lists.newArrayList();
+        byte[] snapshot = getDummySnapshot();
+        def room = mockedChatRoom("room1", snapshot, participants, user, ChatRoomStatus.NEW)
+        ChatRoomParticipant participant = chatParticipant(room, user, ChatRoomParticipantStatus.JOINED)
+        allRooms.add(participant)
+
+
+        participantRepository.findByUserNameAndStatus(user, ChatRoomParticipantStatus.JOINED) >> Lists.newArrayList(participant)
+
+        restTemplate.exchange(*_) >> {
+            throw new RuntimeException("error")
+        }
+
+        when: "Calling unread"
+        initNewSituationRoomService()
+        List response = service.getUnreadCount();
+        then: "Shoud match"
+        response != null
+        response.isEmpty()
+    }
+
+    def "test unread should return nothing on remote error"() {
+        given: "Initialize"
+        mock()
+        def user = "user1";
+        authContext.getCurrentUser() >> user
+        def token = proxyTokenMappingWithToken("abcd")
+        tokenRepository.findByAppUserId(user) >> token
+
+        def participants = Sets.newHashSet()
+        def allRooms = Lists.newArrayList();
+        byte[] snapshot = getDummySnapshot();
+        def room = mockedChatRoom("room1", snapshot, participants, user, ChatRoomStatus.NEW)
+        ChatRoomParticipant participant = chatParticipant(room, user, ChatRoomParticipantStatus.JOINED)
+        allRooms.add(participant)
+
+
+        participantRepository.findByUserNameAndStatus(user, ChatRoomParticipantStatus.JOINED) >> Lists.newArrayList(participant)
+
+        restTemplate.exchange(*_) >> ResponseEntity.status(HttpStatus.BAD_REQUEST).body("{\"status\":\"error\"}")
+
+        when: "Calling unread"
+        initNewSituationRoomService()
+        List response = service.getUnreadCount();
+        then: "Shoud match"
+        response != null
+        response.isEmpty()
+    }
+
+
+    def "test unread should succeed"() {
+        given: "Initialize"
+        mock()
+        def user = "user1";
+        authContext.getCurrentUser() >> user
+        def token = proxyTokenMappingWithToken("abcd")
+        tokenRepository.findByAppUserId(user) >> token
+
+        def participants = Sets.newHashSet()
+        def allRooms = Lists.newArrayList();
+        byte[] snapshot = getDummySnapshot();
+        def room = mockedChatRoom("room1", snapshot, participants, user, ChatRoomStatus.NEW)
+        ChatRoomParticipant participant = chatParticipant(room, user, ChatRoomParticipantStatus.JOINED)
+        allRooms.add(participant)
+
+
+        participantRepository.findByUserNameAndStatus(user, ChatRoomParticipantStatus.JOINED) >> Lists.newArrayList(participant)
+        def room1UnreadResponse = Maps.newHashMap();
+        room1UnreadResponse.put("team_id", "lct")
+        room1UnreadResponse.put("channel_id", "1234")
+        room1UnreadResponse.put("msg_count", 5)
+        room1UnreadResponse.put("mention_count", 0)
+
+        restTemplate.exchange(*_) >> ResponseEntity.status(HttpStatus.OK).body(room1UnreadResponse)
+
+        when: "Calling unread"
+        initNewSituationRoomService()
+        List response = service.getUnreadCount();
+        then: "Shoud match"
+        response != null
+        response.size() == 1
+        response[0].get("team_id") == "lct"
+        response[0].get("channel_id") == "1234"
+        response[0].get("msg_count") == 5
     }
 
     def initNewSituationRoomService() {
