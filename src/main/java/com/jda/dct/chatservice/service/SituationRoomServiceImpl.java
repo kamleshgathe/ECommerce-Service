@@ -669,7 +669,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         room.setCreatedBy(authContext.getCurrentUser());
         room.setDescription(request.getPurpose());
         room.setTeamId(channelTeamId);
-        room.setStatus(ChatRoomStatus.NEW);
+        room.setStatus(ChatRoomStatus.OPEN);
         room.setResolution(null);
         room.setSituationType(request.getSituationType());
         room.setParticipants(buildParticipantsIncludingCreator(room, request.getParticipants()));
