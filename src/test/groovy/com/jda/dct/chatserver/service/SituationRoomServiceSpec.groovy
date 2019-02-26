@@ -473,7 +473,7 @@ class SituationRoomServiceSpec extends Specification {
         def request = new AddUserToRoomDto();
         request.setUsers(users);
         mock()
-        def mockChatRoom = mockedChatRoom("abcd", byte[], Lists.newArrayList("user1"), "newUser", ChatRoomStatus.NEW)
+        def mockChatRoom = mockedChatRoom("abcd", byte[], Lists.newArrayList("user1"), "newUser", ChatRoomStatus.OPEN)
         _ * authContext.getCurrentUser() >> user
         1 * tokenRepository.findByAppUserId(user) >> null;
         tokenRepository.save(_ as ProxyTokenMapping) >> Mock(ProxyTokenMapping)
@@ -510,7 +510,7 @@ class SituationRoomServiceSpec extends Specification {
         mock()
         def participant = Mock(ChatRoomParticipant)
         participant.getUserName() >> "user1";
-        def mockChatRoom = mockedChatRoom("abcd", byte[], Lists.newArrayList(participant), "user1", ChatRoomStatus.NEW)
+        def mockChatRoom = mockedChatRoom("abcd", byte[], Lists.newArrayList(participant), "user1", ChatRoomStatus.OPEN)
         mockChatRoom.getRoomName() >> "test"
 
         _ * authContext.getCurrentUser() >> user
@@ -553,8 +553,8 @@ class SituationRoomServiceSpec extends Specification {
 
         byte[] snapshot = getDummySnapshot();
 
-        def openRoom1 = mockedChatRoom("room1", snapshot, participants1, user, ChatRoomStatus.NEW)
-        def openRoom2 = mockedChatRoom("room2", snapshot, participants2, user, ChatRoomStatus.NEW)
+        def openRoom1 = mockedChatRoom("room1", snapshot, participants1, user, ChatRoomStatus.OPEN)
+        def openRoom2 = mockedChatRoom("room2", snapshot, participants2, user, ChatRoomStatus.OPEN)
 
         def resolvedRoom = mockedChatRoom("room3", snapshot, participants3, user, ChatRoomStatus.RESOLVED)
 
@@ -576,7 +576,7 @@ class SituationRoomServiceSpec extends Specification {
         channels.size() == 3
         channels.stream().filter({
             ChatContext context ->
-                context.getRoomStatus() == ChatRoomStatus.NEW.name()
+                context.getRoomStatus() == ChatRoomStatus.OPEN.name()
         }).count() == 2
 
         channels.stream().filter({
@@ -627,7 +627,7 @@ class SituationRoomServiceSpec extends Specification {
 
         byte[] snapshot = getDummySnapshot();
 
-        def openRoom1 = mockedChatRoom("room1", snapshot, participants1, user, ChatRoomStatus.NEW)
+        def openRoom1 = mockedChatRoom("room1", snapshot, participants1, user, ChatRoomStatus.OPEN)
 
 
         ChatRoomParticipant r1p1 = chatParticipant(openRoom1, "1", ChatRoomParticipantStatus.PENDING)
@@ -644,7 +644,7 @@ class SituationRoomServiceSpec extends Specification {
         channels.size() == 1
         channels.stream().filter({
             ChatContext context ->
-                context.getRoomStatus() == ChatRoomStatus.NEW.name()
+                context.getRoomStatus() == ChatRoomStatus.OPEN.name()
         }).count() == 1
 
         channels.stream().filter({
@@ -674,7 +674,7 @@ class SituationRoomServiceSpec extends Specification {
         given: "Setup request"
         mock()
         byte[] bytes = getDummySnapshot()
-        def mockRoom = mockedChatRoom("1", bytes, Lists.newArrayList(), "1", ChatRoomStatus.NEW)
+        def mockRoom = mockedChatRoom("1", bytes, Lists.newArrayList(), "1", ChatRoomStatus.OPEN)
         roomRepository.findById("1") >> Optional.of(mockRoom);
         when: "Calling get channel context"
         initNewSituationRoomService()
@@ -760,7 +760,7 @@ class SituationRoomServiceSpec extends Specification {
         String jsonString = ChatRoomUtil.objectToJson(entity);
         byte[] bytes = ChatRoomUtil.objectToByteArray(jsonString);
 
-        def mockRoom = mockedChatRoom("1", bytes, Lists.newArrayList(), "user1", ChatRoomStatus.NEW)
+        def mockRoom = mockedChatRoom("1", bytes, Lists.newArrayList(), "user1", ChatRoomStatus.OPEN)
         mockRoom.getResolution() >> buildResolution(request, "user1")
         roomRepository.findById("1") >> Optional.of(mockRoom)
         when: "Calling resolve room"
@@ -789,7 +789,7 @@ class SituationRoomServiceSpec extends Specification {
         def participants = Sets.newHashSet()
         def allRooms = Lists.newArrayList();
         byte[] snapshot = getDummySnapshot();
-        def room = mockedChatRoom("room1", snapshot, participants, user, ChatRoomStatus.NEW)
+        def room = mockedChatRoom("room1", snapshot, participants, user, ChatRoomStatus.OPEN)
         ChatRoomParticipant participant = chatParticipant(room, user, ChatRoomParticipantStatus.JOINED)
         allRooms.add(participant)
 
@@ -819,7 +819,7 @@ class SituationRoomServiceSpec extends Specification {
         def participants = Sets.newHashSet()
         def allRooms = Lists.newArrayList();
         byte[] snapshot = getDummySnapshot();
-        def room = mockedChatRoom("room1", snapshot, participants, user, ChatRoomStatus.NEW)
+        def room = mockedChatRoom("room1", snapshot, participants, user, ChatRoomStatus.OPEN)
         ChatRoomParticipant participant = chatParticipant(room, user, ChatRoomParticipantStatus.JOINED)
         allRooms.add(participant)
 
@@ -848,7 +848,7 @@ class SituationRoomServiceSpec extends Specification {
         def participants = Sets.newHashSet()
         def allRooms = Lists.newArrayList();
         byte[] snapshot = getDummySnapshot();
-        def room = mockedChatRoom("room1", snapshot, participants, user, ChatRoomStatus.NEW)
+        def room = mockedChatRoom("room1", snapshot, participants, user, ChatRoomStatus.OPEN)
         ChatRoomParticipant participant = chatParticipant(room, user, ChatRoomParticipantStatus.JOINED)
         allRooms.add(participant)
 
@@ -922,6 +922,50 @@ class SituationRoomServiceSpec extends Specification {
         })
     }
 
+    def "test channel creation status should be OPEN"() {
+        given:
+        mock()
+        def channel = new ChatRoomCreateDto();
+        def user = "1"
+        def ptm = proxyTokenMapping("1", "remote_user1", "token1");
+        def participants = Sets.newHashSet();
+        def room = Mock(ChatRoom);
+        room.getCreatedBy() >> user
+        room.getParticipants() >> participants
+        participants.add(chatParticipant(room, "1", ChatRoomParticipantStatus.PENDING))
+
+        authContext.getCurrentUser() >> user
+
+        tokenRepository.findByAppUserId("1") >> ptm
+
+        roomRepository.findById(_ as String) >> Optional.of(room)
+        tokenRepository.save(_) >> ptm
+
+        restTemplate.exchange(_ as String, _ as HttpMethod, _ as HttpEntity, Map.class, *_) >>
+                {
+                    args ->
+                        Map body = Maps.newHashMap();
+                        if (args[0].contains("/channels")) {
+                            body.put("id", "1")
+                        }
+                        return mockedResponseEntity(HttpStatus.OK, body)
+                }
+
+        channel.setObjectIds(Lists.newArrayList("1", "2"))
+        channel.setParticipants(Lists.newArrayList("1", "2"))
+        channel.setEntityType("shipment")
+        channel.setName("name1")
+        channel.setSituationType("shipment_delayed")
+        channel.setPurpose("situation room for shipment delayed")
+        when: "Calling create channel"
+        initNewSituationRoomService()
+        service.createChannel(channel)
+        then: "Should succeed and participant ID should be unique"
+        1 * roomRepository.save({
+            ChatRoom chatroom ->
+                chatroom.status == ChatRoomStatus.OPEN
+        })
+    }
 
 
     def initNewSituationRoomService() {
