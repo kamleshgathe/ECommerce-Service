@@ -346,6 +346,52 @@ class SituationRoomServiceSpec extends Specification {
         1 * generator.next() >> "abcdhahsmss"
     }
 
+    def "test create room name with space should succeed"() {
+        given:
+        mock()
+        def channel = new ChatRoomCreateDto();
+        def user = "1"
+        def ptm1 = proxyTokenMapping("1", "remote_user1", "token1");
+        def ptm2 = proxyTokenMapping("2", "remote_user2", "token1");
+        def participants = Sets.newHashSet();
+        def room = Mock(ChatRoom);
+        room.getCreatedBy() >> user
+        room.getParticipants() >> participants
+        participants.add(chatParticipant(room, "1", ChatRoomParticipantStatus.PENDING))
+        participants.add(chatParticipant(room, "2", ChatRoomParticipantStatus.PENDING))
+
+        authContext.getCurrentUser() >> user
+
+        tokenRepository.findByAppUserId("1") >> ptm1
+        tokenRepository.findByAppUserId("2") >> ptm2
+
+        roomRepository.findById(_ as String) >> Optional.of(room)
+        tokenRepository.save({
+            ProxyTokenMapping ptm -> ptm.getAppUserId() == "1" ? ptm1 : ptm2
+        });
+        restTemplate.exchange(_ as String, _ as HttpMethod, _ as HttpEntity, Map.class, *_) >>
+                {
+                    args ->
+                        Map body = Maps.newHashMap();
+                        if (args[0].contains("/channels")) {
+                            body.put("id", "1")
+                        }
+                        return mockedResponseEntity(HttpStatus.OK, body)
+                }
+
+        channel.setObjectIds(Lists.newArrayList("1", "2"))
+        channel.setParticipants(Lists.newArrayList("1", "2"))
+        channel.setEntityType("shipment")
+        channel.setName("name with space")
+        channel.setSituationType("shipment_delayed")
+        channel.setPurpose("situation room for shipment delayed")
+        when: "Calling create channel"
+        initNewSituationRoomService()
+        service.createChannel(channel)
+        then: "Should succeed"
+        true
+    }
+
     def "test add users to existing channel expect exception if channel is missing"() {
         given: "Setup request"
         def request = new AddUserToRoomDto();
