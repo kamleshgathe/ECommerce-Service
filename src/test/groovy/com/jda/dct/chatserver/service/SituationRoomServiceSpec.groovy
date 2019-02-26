@@ -20,6 +20,7 @@ import com.jda.dct.chatservice.repository.ChatRoomParticipantRepository
 import com.jda.dct.chatservice.repository.ProxyTokenMappingRepository
 import com.jda.dct.chatservice.repository.SituationRoomRepository
 import com.jda.dct.chatservice.service.SituationRoomServiceImpl
+import com.jda.dct.chatservice.service.UniqueRoomNameGenerator
 import com.jda.dct.chatservice.utils.ChatRoomUtil
 import com.jda.dct.contexts.AuthContext
 import com.jda.dct.domain.ChatRoom
@@ -46,6 +47,7 @@ class SituationRoomServiceSpec extends Specification {
     ChatRoomParticipantRepository participantRepository;
     RestTemplate restTemplate;
     EntityReaderFactory entityReaderFactory
+    UniqueRoomNameGenerator generator;
 
     @Subject
     SituationRoomServiceImpl service;
@@ -298,21 +300,6 @@ class SituationRoomServiceSpec extends Specification {
         thrown(IllegalArgumentException)
     }
 
-    def "test create channel with user"() {
-        given:
-        def channel = new ChatRoomCreateDto();
-        channel.setObjectIds(Lists.newArrayList("1", "2"))
-        channel.setParticipants(Lists.newArrayList("1", "2"))
-        channel.setEntityType("shipment")
-        channel.setName("name1")
-        channel.setPurpose("situation room for shipment delayed")
-        when: "Calling create channel"
-        initNewSituationRoomService()
-        service.createChannel(channel)
-        then: "Should get exception"
-        thrown(IllegalArgumentException)
-    }
-
     def "test create channel should succeed"() {
         given:
         mock()
@@ -356,7 +343,7 @@ class SituationRoomServiceSpec extends Specification {
         initNewSituationRoomService()
         service.createChannel(channel)
         then: "Should succeed"
-        true
+        1 * generator.next() >> "abcdhahsmss"
     }
 
     def "test add users to existing channel expect exception if channel is missing"() {
@@ -840,11 +827,63 @@ class SituationRoomServiceSpec extends Specification {
         response[0].get("msg_count") == 5
     }
 
+    def "test channel creation adds participants with unique ID"() {
+        given:
+        mock()
+        def channel = new ChatRoomCreateDto();
+        def user = "1"
+        def ptm1 = proxyTokenMapping("1", "remote_user1", "token1");
+        def ptm2 = proxyTokenMapping("2", "remote_user2", "token1");
+        def participants = Sets.newHashSet();
+        def room = Mock(ChatRoom);
+        room.getCreatedBy() >> user
+        room.getParticipants() >> participants
+        participants.add(chatParticipant(room, "1", ChatRoomParticipantStatus.PENDING))
+        participants.add(chatParticipant(room, "2", ChatRoomParticipantStatus.PENDING))
+
+        authContext.getCurrentUser() >> user
+
+        tokenRepository.findByAppUserId("1") >> ptm1
+        tokenRepository.findByAppUserId("2") >> ptm2
+
+        roomRepository.findById(_ as String) >> Optional.of(room)
+        tokenRepository.save({
+            ProxyTokenMapping ptm -> ptm.getAppUserId() == "1" ? ptm1 : ptm2
+        });
+        restTemplate.exchange(_ as String, _ as HttpMethod, _ as HttpEntity, Map.class, *_) >>
+                {
+                    args ->
+                        Map body = Maps.newHashMap();
+                        if (args[0].contains("/channels")) {
+                            body.put("id", "1")
+                        }
+                        return mockedResponseEntity(HttpStatus.OK, body)
+                }
+
+        channel.setObjectIds(Lists.newArrayList("1", "2"))
+        channel.setParticipants(Lists.newArrayList("1", "2"))
+        channel.setEntityType("shipment")
+        channel.setName("name1")
+        channel.setSituationType("shipment_delayed")
+        channel.setPurpose("situation room for shipment delayed")
+        when: "Calling create channel"
+        initNewSituationRoomService()
+        service.createChannel(channel)
+        then: "Should succeed and participant ID should be unique"
+        1 * roomRepository.save({
+            ChatRoom chatroom ->
+                chatroom.getParticipants().getAt(0).getId() == "1" + "-" + chatroom.getId()
+        })
+    }
+
+
+
     def initNewSituationRoomService() {
         service = new SituationRoomServiceImpl(authContext,
                 roomRepository,
                 tokenRepository,
                 participantRepository,
+                generator,
                 entityReaderFactory)
         service.setRestTemplate(restTemplate)
         service.setChannelTeamId(CHANNEL_TEAM_ID)
@@ -859,6 +898,7 @@ class SituationRoomServiceSpec extends Specification {
         restTemplate = Mock(RestTemplate)
         participantRepository = Mock(ChatRoomParticipantRepository)
         entityReaderFactory = Mock(EntityReaderFactory)
+        generator = Mock(UniqueRoomNameGenerator)
     }
 
     def mockedResponseEntity(status, body) {
@@ -908,6 +948,7 @@ class SituationRoomServiceSpec extends Specification {
         room.getParticipants() >> participants
         room.getCreatedBy() >> createdBy
         room.getStatus() >> roomStatus;
+        room.getRoomName() >> "test1"
         return room;
     }
 

@@ -91,6 +91,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     private final ProxyTokenMappingRepository tokenRepository;
     private final ChatRoomParticipantRepository participantRepository;
     private final EntityReaderFactory entityReaderFactory;
+    private final UniqueRoomNameGenerator generator;
 
     private RestTemplate restTemplate = new RestTemplate();
 
@@ -105,11 +106,13 @@ public class SituationRoomServiceImpl implements SituationRoomService {
                                     @Autowired SituationRoomRepository roomRepository,
                                     @Autowired ProxyTokenMappingRepository tokenRepository,
                                     @Autowired ChatRoomParticipantRepository participantRepository,
+                                    @Autowired UniqueRoomNameGenerator generator,
                                     @Autowired EntityReaderFactory entityReaderFactory) {
         this.authContext = authContext;
         this.roomRepository = roomRepository;
         this.tokenRepository = tokenRepository;
         this.participantRepository = participantRepository;
+        this.generator = generator;
         this.entityReaderFactory = entityReaderFactory;
     }
 
@@ -720,7 +723,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     private CreateChannelDto buildRemoteChannelCreationRequest(ChatRoomCreateDto request) {
         CreateChannelDto dto = new CreateChannelDto();
         dto.setTeamId(channelTeamId);
-        dto.setName(buildRemoteRoomName(request.getName()));
+        dto.setName(generator.next());
         dto.setHeader(request.getHeader());
         dto.setPurpose(request.getPurpose());
         dto.setRoomType(request.getRoomType());
@@ -822,10 +825,6 @@ public class SituationRoomServiceImpl implements SituationRoomService {
 
     private String getRoomIdFromPostMessage(Map<String, Object> request) {
         return (String) request.get("channel_id");
-    }
-
-    private String buildRemoteRoomName(String name) {
-        return name.toLowerCase().replaceAll("\\s+", "") + "_" + System.currentTimeMillis();
     }
 
     private String toParticipantId(String userName,ChatRoom room) {
