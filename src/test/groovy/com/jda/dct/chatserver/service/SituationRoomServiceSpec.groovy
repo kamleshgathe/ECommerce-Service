@@ -778,6 +778,34 @@ class SituationRoomServiceSpec extends Specification {
         }
     }
 
+    def "test resolution info should come in context"() {
+        given: "Initialize inputs"
+        mock()
+        authContext.getCurrentUser() >> "user1"
+        ResolveRoomDto resolutionRequestDto = new ResolveRoomDto()
+        resolutionRequestDto.resolutionTypes = Lists.newArrayList("type1")
+        resolutionRequestDto.resolution = "resolution1";
+        resolutionRequestDto.remark = "thanks";
+
+        def entity = new ArrayList();
+        entity.add("json1");
+        String jsonString = ChatRoomUtil.objectToJson(entity);
+        byte[] bytes = ChatRoomUtil.objectToByteArray(jsonString);
+
+        def mockRoom = mockedChatRoom("1", bytes, Lists.newArrayList(), "user1", ChatRoomStatus.RESOLVED)
+        mockRoom.getResolution() >> buildResolution(resolutionRequestDto, "user1")
+        roomRepository.findById(_) >> Optional.of(mockRoom)
+        when: "Calling resolve room"
+        initNewSituationRoomService()
+        ChatContext context = service.getChannelContext("1")
+        then: "Save room should get called"
+        context.getResolution() == resolutionRequestDto.getResolution()
+        context.getResolutionTypes() == resolutionRequestDto.getResolutionTypes()
+        context.getResolutionRemark() == resolutionRequestDto.getRemark()
+        context.getResolvedBy() == "user1"
+        new Date(context.getResolvedAt()) != null
+    }
+
     def "test unread should return nothing on remote call exception"() {
         given: "Initialize"
         mock()
@@ -1056,7 +1084,7 @@ class SituationRoomServiceSpec extends Specification {
         resolution.setDate(new Date())
         resolution.setTypes(request.getResolutionTypes())
         resolution.setResolution(request.getResolution())
-        resolution.setRemark(resolution.getRemark())
+        resolution.setRemark(request.getRemark());
         return resolution;
     }
 }
