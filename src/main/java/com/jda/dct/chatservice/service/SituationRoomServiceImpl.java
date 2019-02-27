@@ -768,6 +768,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
 
     private ChatRoomResolution buildResolution(ResolveRoomDto request, String resolveBy) {
         ChatRoomResolution resolution = new ChatRoomResolution();
+        resolution.setResolution(resolution.getResolution());
         resolution.setDate(new Date());
         resolution.setRemark(request.getRemark());
         resolution.setResolvedBy(resolveBy);
