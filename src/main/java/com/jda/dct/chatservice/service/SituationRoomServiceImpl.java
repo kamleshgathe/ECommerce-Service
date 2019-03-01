@@ -145,9 +145,10 @@ public class SituationRoomServiceImpl implements SituationRoomService {
      */
     @Override
     public Map<String, Object> postMessage(Map<String, Object> chat) {
-        validatePostMessageRequest(chat);
+        String currentUser = authContext.getCurrentUser();
+        validatePostMessageRequest(currentUser, chat);
         Map<String, Object> chatCopy = Maps.newHashMap(chat);
-        LOGGER.info("User {} posting message to channel {}", authContext.getCurrentUser(),
+        LOGGER.info("User {} posting message to channel {}", currentUser,
             getRoomIdFromPostMessage(chatCopy));
         ProxyTokenMapping proxyTokenMapping = getUserTokenMapping(authContext.getCurrentUser());
         HttpHeaders headers = getHttpHeader(proxyTokenMapping.getProxyToken());
@@ -196,7 +197,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     @Override
     @Transactional
     public Map<String, Object> inviteUsers(String channel, AddUserToRoomDto request) {
-        validateInviteUsersInputs(channel, request);
+        validateInviteUsersInputs(channel, authContext.getCurrentUser(), request);
         setupParticipantsIfNotBefore(request.getUsers(), channelTeamId);
         updateParticipantOfRooms(request.getUsers(), channel);
         Map<String, Object> status = new HashMap<>();
@@ -296,18 +297,13 @@ public class SituationRoomServiceImpl implements SituationRoomService {
 
     @Override
     public ChatContext resolve(String roomId, ResolveRoomDto request) {
-        validateResolveRoomInputs(roomId, request);
         String currentUser = authContext.getCurrentUser();
         LOGGER.info("User {} is resolving room {} with details {}", currentUser, roomId, request);
+        validateResolveRoomInputs(roomId, currentUser, request);
         Optional<ChatRoom> record = getChatRoomById(roomId);
         Assert.isTrue(record.isPresent(), "Invalid room");
-
         ChatRoom room = record.get();
 
-        if (room.getStatus() == ChatRoomStatus.RESOLVED) {
-            throw new IllegalArgumentException(String.format("Room %s already resolved by %s", room.getRoomName(),
-                room.getResolution().getResolvedBy()));
-        }
         room.setStatus(ChatRoomStatus.RESOLVED);
         room.setResolution(buildResolution(request, currentUser));
         room.setLmd(room.getResolution().getDate());
@@ -327,24 +323,27 @@ public class SituationRoomServiceImpl implements SituationRoomService {
             "Situation type can't be null or empty");
     }
 
-    private void validatePostMessageRequest(Map<String, Object> request) {
+    private void validatePostMessageRequest(String currentUser, Map<String, Object> request) {
+        LOGGER.debug("Validating post message request");
         Assert.notNull(request, "Post message can't be null");
         Assert.notEmpty(request, "Post message can't be empty");
         Assert.notNull(getRoomIdFromPostMessage(request),
             "Channel can't be null");
         Assert.isTrue(getRoomIdFromPostMessage(request).trim().length() > 0,
             "Channel can't be empty");
-        validateRoomState(getRoomIdFromPostMessage(request));
+        validateRoomState(getRoomIdFromPostMessage(request), currentUser, "Message can't be post to a resolved room");
     }
 
-    private void validateInviteUsersInputs(String roomId, AddUserToRoomDto request) {
+    private void validateInviteUsersInputs(String roomId, String currentUser, AddUserToRoomDto request) {
+        LOGGER.debug("Validating invite user request");
         Assert.isTrue(!StringUtils.isEmpty(roomId), "Room can't be null or empty");
         Assert.notNull(request, "Request can't be null");
         Assert.notEmpty(request.getUsers(), "Users can't be empty");
-        validateRoomState(roomId);
+        validateRoomState(roomId, currentUser, "New invitation can't be sent for resolved room");
     }
 
-    private void validateResolveRoomInputs(String roomId, ResolveRoomDto request) {
+    private void validateResolveRoomInputs(String roomId, String currentUser, ResolveRoomDto request) {
+        LOGGER.debug("Validating resolve room request");
         Assert.isTrue(!StringUtils.isEmpty(roomId), "Room can't be null or empty");
         Assert.isTrue(!StringUtils.isEmpty(request.getResolution()),
             "Resolution can't be null or empty");
@@ -354,14 +353,28 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         request.getResolutionTypes()
             .forEach(type -> Assert.isTrue(!StringUtils.isEmpty(type), "Invalid resolution type"));
         Assert.isTrue(!StringUtils.isEmpty(request.getRemark()), "Remark can't be null or empty");
+        validateRoomState(roomId, currentUser, "Room is already resolved");
+        Optional<ChatRoom> room = getChatRoomById(roomId);
+        Assert.isTrue(room.isPresent(),
+            String.format("Invalid chat room id %s", roomId));
+        boolean present = room.get()
+            .getParticipants()
+            .stream()
+            .anyMatch(p -> p.getUserName().equals(currentUser)
+                && p.getStatus().equals(ChatRoomParticipantStatus.PENDING));
+        Assert.isTrue(!present, String.format("You are not authorize to resolve room %s", room.get().getRoomName()));
     }
 
-    private void validateRoomState(String roomId) {
+    private void validateRoomState(String roomId,
+                                   String currentUser,
+                                   String invalidStatusMsg) {
         Optional<ChatRoom> room = getChatRoomById(roomId);
         Assert.isTrue(room.isPresent(),
             String.format("Invalid chat room id %s", roomId));
         Assert.isTrue(room.get().getStatus() != ChatRoomStatus.RESOLVED,
-            "Message can't be post to a resolved room");
+            invalidStatusMsg);
+        boolean present = room.get().getParticipants().stream().anyMatch(p -> p.getUserName().equals(currentUser));
+        Assert.isTrue(present, String.format("You are not part of %s room", room.get().getRoomName()));
     }
 
     private HttpEntity<Map> createRemoteServerChatRoom(ChatRoomCreateDto request) {
@@ -777,7 +790,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     }
 
     private String getRemoteActionUrl(String cxtPath) {
-        return buildUrlString(mattermostUrl,cxtPath).toString();
+        return buildUrlString(mattermostUrl, cxtPath).toString();
     }
 
     private static String getUsersPath() {
@@ -828,7 +841,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         return (String) request.get("channel_id");
     }
 
-    private String toParticipantId(String userName,ChatRoom room) {
+    private String toParticipantId(String userName, ChatRoom room) {
         return userName + "-" + room.getId();
     }
 
