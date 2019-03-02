@@ -312,6 +312,22 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         return toChatContext(resolvedRoom, currentUser);
     }
 
+    @Override
+    @Transactional
+    public Map<String, Object> removeParticipant(String roomId, String targetUser) {
+        String currentUser = authContext.getCurrentUser();
+        LOGGER.info("Remove participant {} from room {} has been called by user {}", targetUser, roomId, currentUser);
+        validateRemoveUserRequest(roomId, currentUser);
+        ChatRoomParticipant participant = removeParticipantInApp(roomId, targetUser);
+        if (ChatRoomParticipantStatus.JOINED.equals(participant.getStatus())) {
+            removeParticipantInRemote(roomId, targetUser, currentUser);
+        }
+        Map<String, Object> status = new HashMap<>();
+        status.put("Status", "Success");
+        LOGGER.info("User {} removed participant {} from room {} successfully", currentUser, targetUser, roomId);
+        return status;
+    }
+
     private void validateChannelCreationRequest(ChatRoomCreateDto request) {
         Assert.notNull(request, "Room creation input can't be null");
         Assert.notEmpty(request.getObjectIds(), "Reference domain object can't be null or empty");
@@ -365,6 +381,22 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         Assert.isTrue(!present, String.format("You are not authorize to resolve room %s", room.get().getRoomName()));
     }
 
+    private void validateRemoveUserRequest(String roomId, String currentUser) {
+        LOGGER.debug("Validating resolve room request");
+        Assert.isTrue(!StringUtils.isEmpty(roomId), "Room can't be null or empty");
+        validateRoomState(roomId, currentUser, "Room is already resolved,user can't be removed");
+        Optional<ChatRoom> room = getChatRoomById(roomId);
+        Assert.isTrue(room.isPresent(),
+            String.format("Invalid chat room id %s", roomId));
+        boolean present = room.get()
+            .getParticipants()
+            .stream()
+            .anyMatch(p -> p.getUserName().equals(currentUser)
+                && p.getStatus().equals(ChatRoomParticipantStatus.PENDING));
+        Assert.isTrue(!present, String.format("You are not authorize to remove room %s", room.get().getRoomName()));
+
+    }
+
     private void validateRoomState(String roomId,
                                    String currentUser,
                                    String invalidStatusMsg) {
@@ -400,6 +432,47 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         LOGGER.debug("Going to create chat room {} meta information into system", chatRoom.getRoomName());
         saveChatRoom(chatRoom);
         LOGGER.debug("Chat room {} meta information persisted successfully", chatRoom.getRoomName());
+    }
+
+    private ChatRoomParticipant removeParticipantInApp(String roomId, String targetUser) {
+        Optional<ChatRoom> roomRecord = getChatRoomById(roomId);
+        Assert.isTrue(roomRecord.isPresent(),
+            String.format("Invalid chat room id %s", roomId));
+        ChatRoom room = roomRecord.get();
+        Set<ChatRoomParticipant> participants = room.getParticipants();
+        Optional<ChatRoomParticipant> targetParticipant = participants
+            .stream()
+            .filter(p -> p.getUserName().equals(targetUser)).findAny();
+
+        Assert.isTrue(targetParticipant.isPresent(), "Participant does not belong to room");
+        room.getParticipants().remove(targetParticipant.get());
+        room.setLmd(new Date());
+        saveChatRoom(room);
+        return targetParticipant.get();
+    }
+
+    private void removeParticipantInRemote(String roomId, String targetUser, String currentUser) {
+        ProxyTokenMapping callerTokenMapping = getUserTokenMapping(currentUser);
+        ProxyTokenMapping targetUserTokenMapping = getUserTokenMapping(targetUser);
+        HttpHeaders headers = getHttpHeader(callerTokenMapping.getProxyToken());
+        headers.setAccept(Arrays.asList(MediaType.APPLICATION_JSON));
+        HttpEntity<CreateChannelDto> requestEntity
+            = new HttpEntity<>(null, headers);
+        ResponseEntity<Map> response = restTemplate.exchange(
+            getRemoteActionUrl(removeParticipantPath(roomId, targetUserTokenMapping.getRemoteUserId())),
+            HttpMethod.DELETE,
+            requestEntity,
+            Map.class);
+
+        if (!response.getStatusCode().is2xxSuccessful()) {
+            LOGGER.error("Error {} while fetching unread count for channel {} for user {}",
+                response.getBody(),
+                roomId,
+                currentUser);
+            throw new IllegalArgumentException(response.getBody() != null
+                ? response.getBody().toString() :
+                "Information missing in remote system");
+        }
     }
 
     private Optional<ChatRoom> getChatRoomById(String id) {
@@ -725,7 +798,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
 
     private ChatRoomParticipant buildParticipant(ChatRoom room, String userName) {
         ChatRoomParticipant participant = new ChatRoomParticipant();
-        participant.setId(toParticipantId(userName, room));
+        participant.setId(toParticipantId(userName, room.getId()));
         participant.setRoom(room);
         participant.setUserName(userName);
         participant.setInvitedAt(new Date());
@@ -809,6 +882,10 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         return getChannelPath() + "/" + roomId + "/members";
     }
 
+    private static String removeParticipantPath(String room, String user) {
+        return getAddParticipantPath(room) + "/" + user;
+    }
+
     private static String getTeamsPath(String teamId) {
         return "/teams/" + teamId + "/members";
     }
@@ -841,8 +918,8 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         return (String) request.get("channel_id");
     }
 
-    private String toParticipantId(String userName, ChatRoom room) {
-        return userName + "-" + room.getId();
+    private String toParticipantId(String userName, String roomId) {
+        return userName + "-" + roomId;
     }
 
     private HttpHeaders getHttpHeader(String token) {

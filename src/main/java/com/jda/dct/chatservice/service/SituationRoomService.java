@@ -27,6 +27,8 @@ public interface SituationRoomService {
 
     Map<String, Object> inviteUsers(String roomId, AddUserToRoomDto users);
 
+    Map<String,Object> removeParticipant(String roomId,String targetUser);
+
     Map<String, Object> postMessage(Map<String, Object> chat);
 
     Map<String, Object> acceptInvitation(String roomId);
