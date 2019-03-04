@@ -624,7 +624,6 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         Set<ChatRoomParticipant> existingUsers = room.getParticipants();
         existingUsers.addAll(buildParticipants(room, users));
         room.setParticipants(existingUsers);
-        room.setLmd(new Date());
         saveChatRoom(room);
         LOGGER.debug("Participants updated successfully {}", room);
     }

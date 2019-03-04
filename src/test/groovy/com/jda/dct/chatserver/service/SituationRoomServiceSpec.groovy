@@ -464,7 +464,7 @@ class SituationRoomServiceSpec extends Specification {
     def "getting all the channels should return in sorted order"(){
         given:
         mock()
-        def user = "1"
+        def user = "appUser"
         def participants1 = Sets.newHashSet()
         def participants2 = Sets.newHashSet()
         def participants3 = Sets.newHashSet()
@@ -480,9 +480,9 @@ class SituationRoomServiceSpec extends Specification {
         def openRoom2 = mockedChatRoomWithInputLmd("room2", snapshot, participants2, user, ChatRoomStatus.NEW, lmd2)
         def resolvedRoom = mockedChatRoomWithInputLmd("room3", snapshot, participants3, user, ChatRoomStatus.RESOLVED, lmd3)
 
-        ChatRoomParticipant r1p1 = addChatParticipant(openRoom1, "1", ChatRoomParticipantStatus.JOINED)
-        ChatRoomParticipant r2p1 = addChatParticipant(openRoom2, "1", ChatRoomParticipantStatus.PENDING)
-        ChatRoomParticipant r3p1 = addChatParticipant(resolvedRoom, "1", ChatRoomParticipantStatus.JOINED)
+        ChatRoomParticipant r1p1 = addChatParticipant(openRoom1, "appUser", ChatRoomParticipantStatus.JOINED)
+        ChatRoomParticipant r2p1 = addChatParticipant(openRoom2, "appUser", ChatRoomParticipantStatus.PENDING)
+        ChatRoomParticipant r3p1 = addChatParticipant(resolvedRoom, "appUser", ChatRoomParticipantStatus.JOINED)
 
         allParticipantsInRepo.add(r1p1)
         allParticipantsInRepo.add(r2p1)
