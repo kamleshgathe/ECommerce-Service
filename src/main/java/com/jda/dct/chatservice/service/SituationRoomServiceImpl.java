@@ -42,6 +42,7 @@ import com.jda.dct.domain.ProxyTokenMapping;
 import com.jda.dct.ignitecaches.springimpl.Tenants;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -317,7 +318,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     public Map<String, Object> removeParticipant(String roomId, String targetUser) {
         String currentUser = authContext.getCurrentUser();
         LOGGER.info("Remove participant {} from room {} has been called by user {}", targetUser, roomId, currentUser);
-        validateRemoveUserRequest(roomId, currentUser);
+        validateRemoveUserRequest(roomId, currentUser,targetUser);
         ChatRoomParticipant participant = removeParticipantInApp(roomId, targetUser);
         if (ChatRoomParticipantStatus.JOINED.equals(participant.getStatus())) {
             removeParticipantInRemote(roomId, targetUser, currentUser);
@@ -352,7 +353,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
 
     private void validateInviteUsersInputs(String roomId, String currentUser, AddUserToRoomDto request) {
         LOGGER.debug("Validating invite user request");
-        Assert.isTrue(!StringUtils.isEmpty(roomId), "Room can't be null or empty");
+        roomIdInputValidation(roomId);
         Assert.notNull(request, "Request can't be null");
         Assert.notEmpty(request.getUsers(), "Users can't be empty");
         validateRoomState(roomId, currentUser, "New invitation can't be sent for resolved room");
@@ -360,7 +361,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
 
     private void validateResolveRoomInputs(String roomId, String currentUser, ResolveRoomDto request) {
         LOGGER.debug("Validating resolve room request");
-        Assert.isTrue(!StringUtils.isEmpty(roomId), "Room can't be null or empty");
+        roomIdInputValidation(roomId);
         Assert.isTrue(!StringUtils.isEmpty(request.getResolution()),
             "Resolution can't be null or empty");
         Assert.notNull(request.getResolutionTypes(),
@@ -369,10 +370,8 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         request.getResolutionTypes()
             .forEach(type -> Assert.isTrue(!StringUtils.isEmpty(type), "Invalid resolution type"));
         Assert.isTrue(!StringUtils.isEmpty(request.getRemark()), "Remark can't be null or empty");
-        validateRoomState(roomId, currentUser, "Room is already resolved");
         Optional<ChatRoom> room = getChatRoomById(roomId);
-        Assert.isTrue(room.isPresent(),
-            String.format("Invalid chat room id %s", roomId));
+        validateRoomState(roomId, currentUser, "Room is already resolved");
         boolean present = room.get()
             .getParticipants()
             .stream()
@@ -381,20 +380,22 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         Assert.isTrue(!present, String.format("You are not authorize to resolve room %s", room.get().getRoomName()));
     }
 
-    private void validateRemoveUserRequest(String roomId, String currentUser) {
+    private void validateRemoveUserRequest(String roomId, String currentUser,String targetUser) {
         LOGGER.debug("Validating resolve room request");
-        Assert.isTrue(!StringUtils.isEmpty(roomId), "Room can't be null or empty");
+        roomIdInputValidation(roomId);
         validateRoomState(roomId, currentUser, "Room is already resolved,user can't be removed");
         Optional<ChatRoom> room = getChatRoomById(roomId);
-        Assert.isTrue(room.isPresent(),
-            String.format("Invalid chat room id %s", roomId));
         boolean present = room.get()
             .getParticipants()
             .stream()
             .anyMatch(p -> p.getUserName().equals(currentUser)
                 && p.getStatus().equals(ChatRoomParticipantStatus.PENDING));
         Assert.isTrue(!present, String.format("You are not authorize to remove room %s", room.get().getRoomName()));
+        Assert.isTrue(!room.get().getCreatedBy().equals(targetUser),"Creator of can't be remove");
+    }
 
+    private void roomIdInputValidation(String roomId) {
+        Assert.isTrue(!StringUtils.isEmpty(roomId), "Room can't be null or empty");
     }
 
     private void validateRoomState(String roomId,
@@ -455,7 +456,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         ProxyTokenMapping callerTokenMapping = getUserTokenMapping(currentUser);
         ProxyTokenMapping targetUserTokenMapping = getUserTokenMapping(targetUser);
         HttpHeaders headers = getHttpHeader(callerTokenMapping.getProxyToken());
-        headers.setAccept(Arrays.asList(MediaType.APPLICATION_JSON));
+        headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
         HttpEntity<CreateChannelDto> requestEntity
             = new HttpEntity<>(null, headers);
         ResponseEntity<Map> response = restTemplate.exchange(
