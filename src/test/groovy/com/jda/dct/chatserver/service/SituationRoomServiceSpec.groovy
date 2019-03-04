@@ -495,7 +495,7 @@ class SituationRoomServiceSpec extends Specification {
                 return d2-d1;
             }
         })
-        authContext.getCurrentUser() >> "1"
+        authContext.getCurrentUser() >> "appUser"
 
         when:  "getting all the channels from the service"
         initNewSituationRoomService()
