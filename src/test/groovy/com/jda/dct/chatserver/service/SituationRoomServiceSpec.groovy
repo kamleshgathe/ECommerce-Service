@@ -461,6 +461,53 @@ class SituationRoomServiceSpec extends Specification {
         true
     }
 
+    def "getting all the channels should return in sorted order"(){
+        given:
+        mock()
+        def user = "1"
+        def participants1 = Sets.newHashSet()
+        def participants2 = Sets.newHashSet()
+        def participants3 = Sets.newHashSet()
+
+        def allParticipantsInRepo = Lists.newArrayList();
+        byte[] snapshot = getDummySnapshot();
+
+        def lmd1 = new Date(1551615877000)
+        def lmd2 = new Date(1551443077000)
+        def lmd3 = new Date(1551702277000)
+
+        def openRoom1 = mockedChatRoomWithInputLmd("room1", snapshot, participants1, user, ChatRoomStatus.NEW, lmd1)
+        def openRoom2 = mockedChatRoomWithInputLmd("room2", snapshot, participants2, user, ChatRoomStatus.NEW, lmd2)
+        def resolvedRoom = mockedChatRoomWithInputLmd("room3", snapshot, participants3, user, ChatRoomStatus.RESOLVED, lmd3)
+
+        ChatRoomParticipant r1p1 = addChatParticipant(openRoom1, "1", ChatRoomParticipantStatus.JOINED)
+        ChatRoomParticipant r2p1 = addChatParticipant(openRoom2, "1", ChatRoomParticipantStatus.PENDING)
+        ChatRoomParticipant r3p1 = addChatParticipant(resolvedRoom, "1", ChatRoomParticipantStatus.JOINED)
+
+        allParticipantsInRepo.add(r1p1)
+        allParticipantsInRepo.add(r2p1)
+        allParticipantsInRepo.add(r3p1)
+        Collections.sort(allParticipantsInRepo, new Comparator<ChatRoomParticipant>() {
+            @Override
+            int compare(ChatRoomParticipant p1, ChatRoomParticipant p2) {
+                Date d1 = p1.getRoom().getLmd();
+                Date d2 = p2.getRoom().getLmd();
+                return d2-d1;
+            }
+        })
+        authContext.getCurrentUser() >> "1"
+
+        when:  "getting all the channels from the service"
+        initNewSituationRoomService()
+        List<ChatContext> channels = service.getChannels(null, null);
+        then: "should return channels in sorted order"
+        1 * participantRepository.findByUserNameOrderByRoomLmdDesc(_ as String) >> allParticipantsInRepo
+        channels.size() == 3
+        channels.get(0).getId() == "room3"
+        channels.get(1).getId() == "room1"
+        channels.get(2).getId() == "room2"
+    }
+
     def "test add users to existing channel expect exception if channel is missing"() {
         given: "Setup request"
         mock()
@@ -649,7 +696,7 @@ class SituationRoomServiceSpec extends Specification {
         initNewSituationRoomService()
         List<ChatContext> channels = service.getChannels(null, null);
         then:
-        1 * participantRepository.findByUserName(_ as String) >> participantAllEntries
+        1 * participantRepository.findByUserNameOrderByRoomLmdDesc(_ as String) >> participantAllEntries
         channels.size() == 3
         channels.stream().filter({
             ChatContext context ->
@@ -677,7 +724,7 @@ class SituationRoomServiceSpec extends Specification {
         initNewSituationRoomService()
         List<ChatContext> channels = service.getChannels("room", "RESOLVED");
         then:
-        1 * participantRepository.findByUserNameAndRoomStatus("1", ChatRoomStatus.RESOLVED) >> participantAllEntries
+        1 * participantRepository.findByUserNameAndRoomStatusOrderByRoomLmdDesc("1", ChatRoomStatus.RESOLVED) >> participantAllEntries
         channels.size() == 1
         channels.stream().filter({
             ChatContext context ->
@@ -701,7 +748,7 @@ class SituationRoomServiceSpec extends Specification {
         initNewSituationRoomService()
         List<ChatContext> channels = service.getChannels("user", "PENDING");
         then:
-        1 * participantRepository.findByUserNameAndStatus("1", ChatRoomParticipantStatus.PENDING) >> participantAllEntries
+        1 * participantRepository.findByUserNameAndStatusOrderByRoomLmdDesc("1", ChatRoomParticipantStatus.PENDING) >> participantAllEntries
         channels.size() == 1
         channels.stream().filter({
             ChatContext context ->
@@ -932,7 +979,7 @@ class SituationRoomServiceSpec extends Specification {
         def participants = Sets.newHashSet()
         def room = mockedChatRoom("room1", getDummySnapshot(), participants, user, ChatRoomStatus.OPEN)
         ChatRoomParticipant participant = addChatParticipant(room, user, ChatRoomParticipantStatus.JOINED)
-        participantRepository.findByUserNameAndStatus(user, ChatRoomParticipantStatus.JOINED) >> Lists.newArrayList(participant)
+        participantRepository.findByUserNameAndStatusOrderByRoomLmdDesc(user, ChatRoomParticipantStatus.JOINED) >> Lists.newArrayList(participant)
 
         restTemplate.exchange(*_) >> {
             throw new RuntimeException("error")
@@ -958,7 +1005,7 @@ class SituationRoomServiceSpec extends Specification {
         def room = mockedChatRoom("room1",  getDummySnapshot(), participants, user, ChatRoomStatus.OPEN)
         ChatRoomParticipant participant = addChatParticipant(room, user, ChatRoomParticipantStatus.JOINED)
 
-        participantRepository.findByUserNameAndStatus(user, ChatRoomParticipantStatus.JOINED) >> Lists.newArrayList(participant)
+        participantRepository.findByUserNameAndStatusOrderByRoomLmdDesc(user, ChatRoomParticipantStatus.JOINED) >> Lists.newArrayList(participant)
 
         restTemplate.exchange(*_) >> ResponseEntity.status(HttpStatus.BAD_REQUEST).body("{\"status\":\"error\"}")
 
@@ -983,7 +1030,7 @@ class SituationRoomServiceSpec extends Specification {
         def room = mockedChatRoom("room1", getDummySnapshot(), participants, user, ChatRoomStatus.OPEN)
         ChatRoomParticipant participant = addChatParticipant(room, user, ChatRoomParticipantStatus.JOINED)
 
-        participantRepository.findByUserNameAndStatus(user, ChatRoomParticipantStatus.JOINED) >> Lists.newArrayList(participant)
+        participantRepository.findByUserNameAndStatusOrderByRoomLmdDesc(user, ChatRoomParticipantStatus.JOINED) >> Lists.newArrayList(participant)
         def room1UnreadResponse = Maps.newHashMap();
         room1UnreadResponse.put("team_id", "lct")
         room1UnreadResponse.put("channel_id", "1234")
@@ -1167,6 +1214,20 @@ class SituationRoomServiceSpec extends Specification {
         room.getCreationDate() >> new Date()
         room.getLastPostAt() >> new Date()
         room.getLmd() >> new Date()
+        room.getParticipants() >> participants
+        room.getCreatedBy() >> createdBy
+        room.getStatus() >> roomStatus;
+        room.getRoomName() >> "test1"
+        return room;
+    }
+
+    def mockedChatRoomWithInputLmd(def roomId, def snapshot, def participants, def createdBy, def roomStatus, def customLmd) {
+        def room = Mock(ChatRoom)
+        room.getId() >> roomId;
+        room.getContexts() >> snapshot
+        room.getCreationDate() >> new Date()
+        room.getLastPostAt() >> new Date()
+        room.getLmd() >> customLmd
         room.getParticipants() >> participants
         room.getCreatedBy() >> createdBy
         room.getStatus() >> roomStatus;

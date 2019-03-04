@@ -17,9 +17,10 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface ChatRoomParticipantRepository extends CrudRepository<ChatRoomParticipant, String> {
-    List<ChatRoomParticipant> findByUserName(String userName);
+    List<ChatRoomParticipant> findByUserNameOrderByRoomLmdDesc(String userName);
 
-    List<ChatRoomParticipant> findByUserNameAndStatus(String userName, ChatRoomParticipantStatus status);
+    List<ChatRoomParticipant> findByUserNameAndStatusOrderByRoomLmdDesc(String userName,
+                                                                        ChatRoomParticipantStatus status);
 
-    List<ChatRoomParticipant> findByUserNameAndRoomStatus(String userName, ChatRoomStatus status);
+    List<ChatRoomParticipant> findByUserNameAndRoomStatusOrderByRoomLmdDesc(String userName, ChatRoomStatus status);
 }

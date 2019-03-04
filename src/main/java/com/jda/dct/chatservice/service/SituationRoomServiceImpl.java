@@ -411,20 +411,20 @@ public class SituationRoomServiceImpl implements SituationRoomService {
 
     private List<ChatRoomParticipant> getUserAllRoomsOfType(String type, String currentUser) {
         List<ChatRoomParticipant> participants;
-        participants = participantRepository.findByUserNameAndRoomStatus(currentUser,
+        participants = participantRepository.findByUserNameAndRoomStatusOrderByRoomLmdDesc(currentUser,
             ChatRoomStatus.valueOf(type));
         return participants;
     }
 
     private List<ChatRoomParticipant> getUserAllRooms(String currentUser) {
         List<ChatRoomParticipant> participants;
-        participants = participantRepository.findByUserName(currentUser);
+        participants = participantRepository.findByUserNameOrderByRoomLmdDesc(currentUser);
         return participants;
     }
 
     private List<ChatRoomParticipant> getRoomsByParticipantStatus(String type, String currentUser) {
         List<ChatRoomParticipant> participants;
-        participants = participantRepository.findByUserNameAndStatus(currentUser,
+        participants = participantRepository.findByUserNameAndStatusOrderByRoomLmdDesc(currentUser,
             ChatRoomParticipantStatus.valueOf(type));
         return participants;
     }
@@ -607,7 +607,9 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         chats.add(chat);
         room.setTotalMessageCount(room.getTotalMessageCount() + 1);
         room.setChats(ChatRoomUtil.objectToByteArray(chats));
-        room.setLastPostAt(new Date());
+        Date date = new Date();
+        room.setLastPostAt(date);
+        room.setLmd(date);
         saveChatRoom(room);
         LOGGER.debug("Chat archived successfully for room {}", getRoomIdFromPostMessage(chat));
     }
@@ -622,6 +624,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         Set<ChatRoomParticipant> existingUsers = room.getParticipants();
         existingUsers.addAll(buildParticipants(room, users));
         room.setParticipants(existingUsers);
+        room.setLmd(new Date());
         saveChatRoom(room);
         LOGGER.debug("Participants updated successfully {}", room);
     }
