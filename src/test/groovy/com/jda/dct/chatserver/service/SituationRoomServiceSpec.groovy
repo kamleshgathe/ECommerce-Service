@@ -237,6 +237,39 @@ class SituationRoomServiceSpec extends Specification {
         thrown(IllegalArgumentException)
     }
 
+    def "test post message should failed if user is not yet joined room"() {
+        given: "Intialize mocks"
+        mock()
+        Set<ChatRoomParticipant> participants = Sets.newHashSet();
+        def mockChatRoom = mockedChatRoom("room1", getDummySnapshot(), participants, "user1", ChatRoomStatus.OPEN)
+        mockChatRoom.getChats() >> ChatRoomUtil.objectToByteArray(new ArrayList())
+        addChatParticipant(mockChatRoom, "user1", ChatRoomParticipantStatus.JOINED)
+        addChatParticipant(mockChatRoom, "user2", ChatRoomParticipantStatus.PENDING)
+
+        def tokenMapping = new ProxyTokenMapping()
+        tokenMapping.setAppUserId("user2")
+        tokenMapping.setRemoteUserId("abcd")
+        tokenMapping.setProxyToken("token1")
+        authContext.getCurrentUser() >> "user2"
+        roomRepository.findById(_ as String) >> Optional.of(mockChatRoom);
+        tokenRepository.findByAppUserId("user2") >> tokenMapping;
+        restTemplate.exchange(_ as String, _ as HttpMethod, _ as HttpEntity, Map.class, *_) >>
+                {
+                    Map body = Maps.newHashMap();
+                    body.put("id", "111")
+                    return mockedResponseEntity(HttpStatus.OK, body)
+                }
+        Map<String, Object> chat = new HashMap<>();
+        chat.put("channel_id", "channel1")
+        chat.put("message", "msg1")
+        when: "Calling post message"
+        initNewSituationRoomService();
+        service.postMessage(chat)
+
+        then: "Expect exception"
+        thrown(IllegalArgumentException)
+    }
+
 
     def "test post message should pass"() {
         given: "Intialize mocks"

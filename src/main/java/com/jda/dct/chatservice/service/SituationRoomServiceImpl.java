@@ -348,7 +348,17 @@ public class SituationRoomServiceImpl implements SituationRoomService {
             "Channel can't be null");
         Assert.isTrue(getRoomIdFromPostMessage(request).trim().length() > 0,
             "Channel can't be empty");
-        validateRoomState(getRoomIdFromPostMessage(request), currentUser, "Message can't be post to a resolved room");
+        String roomId = getRoomIdFromPostMessage(request);
+        validateRoomState(roomId, currentUser, "Message can't be post to a resolved room");
+        Optional<ChatRoom> room = getChatRoomById(roomId);
+        Assert.isTrue(room.isPresent(),"Room does not exists,wrong room name for post message");
+        boolean present = room.get()
+            .getParticipants()
+            .stream()
+            .anyMatch(p -> p.getUserName().equals(currentUser)
+                && p.getStatus().equals(ChatRoomParticipantStatus.PENDING));
+        Assert.isTrue(!present, String.format("You are not authorize to resolve room %s", room.get().getRoomName()));
+
     }
 
     private void validateInviteUsersInputs(String roomId, String currentUser, AddUserToRoomDto request) {
