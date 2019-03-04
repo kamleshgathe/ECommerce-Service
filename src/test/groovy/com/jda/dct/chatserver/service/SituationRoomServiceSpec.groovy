@@ -460,7 +460,7 @@ class SituationRoomServiceSpec extends Specification {
         true
     }
 
-    def "getting all the channels should return in sorted order"(){
+    def "getting all the channels should return in sorted order"() {
         given:
         mock()
         def user = "appUser"
@@ -491,12 +491,12 @@ class SituationRoomServiceSpec extends Specification {
             int compare(ChatRoomParticipant p1, ChatRoomParticipant p2) {
                 Date d1 = p1.getRoom().getLmd();
                 Date d2 = p2.getRoom().getLmd();
-                return d2-d1;
+                return d2 - d1;
             }
         })
         authContext.getCurrentUser() >> "appUser"
 
-        when:  "getting all the channels from the service"
+        when: "getting all the channels from the service"
         initNewSituationRoomService()
         List<ChatContext> channels = service.getChannels(null, null);
         then: "should return channels in sorted order"
@@ -1155,16 +1155,14 @@ class SituationRoomServiceSpec extends Specification {
         then: "Expect exception"
         thrown(IllegalArgumentException.class)
         where: "Defined invalid inputs"
-        id   | snapshot           | participants      | createdBy | roomStatus              | room | targetUser
-        null | getDummySnapshot() | Sets.newHashSet() | "user1"   | ChatRoomStatus.RESOLVED |
-                Optional.empty()                                                                   | "user3"
-        null | getDummySnapshot() | Sets.newHashSet() | "user1"   | ChatRoomStatus.RESOLVED |
-                Optional.empty()                                                                   | "user3"
+        id   | roomStatus              | room                                                                                        | targetUser
+        null | ChatRoomStatus.RESOLVED | Optional.empty()                                                                            | "user3"
 
-        "1"  | getDummySnapshot() | Sets.newHashSet() | "user1"   | ChatRoomStatus.RESOLVED |
-                Optional.of(mockedChatRoom(id, snapshot, participants, createdBy, roomStatus))     | "user3"
-        "1"  | getDummySnapshot() | Sets.newHashSet() | "user1"   | ChatRoomStatus.OPEN     |
-                Optional.of(mockedChatRoom(id, snapshot, participants, createdBy, roomStatus))     | "user3"
+        "1"  | ChatRoomStatus.RESOLVED | Optional.empty()                                                                            | "user3"
+
+        "1"  | ChatRoomStatus.RESOLVED | Optional.of(mockedChatRoom(id, getDummySnapshot(), Sets.newHashSet(), "user1", roomStatus)) | "user3"
+
+        "1"  | ChatRoomStatus.OPEN     | Optional.of(mockedChatRoom(id, getDummySnapshot(), Sets.newHashSet(), "user1", roomStatus)) | "user3"
     }
 
     def "test remove participant should failed when caller is not yet joined room"() {
@@ -1324,7 +1322,7 @@ class SituationRoomServiceSpec extends Specification {
         return new ResponseEntity<>(body, status)
     }
 
-    def mockedResponseEntity(status,body) {
+    def mockedResponseEntity(status, body) {
         return new ResponseEntity<>(body, status)
     }
 
@@ -1373,7 +1371,8 @@ class SituationRoomServiceSpec extends Specification {
         return room;
     }
 
-    def mockedChatRoomWithInputLmd(def roomId, def snapshot, def participants, def createdBy, def roomStatus, def customLmd) {
+    def mockedChatRoomWithInputLmd(
+            def roomId, def snapshot, def participants, def createdBy, def roomStatus, def customLmd) {
         def room = Mock(ChatRoom)
         room.getId() >> roomId;
         room.getContexts() >> snapshot

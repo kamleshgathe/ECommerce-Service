@@ -370,8 +370,9 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         request.getResolutionTypes()
             .forEach(type -> Assert.isTrue(!StringUtils.isEmpty(type), "Invalid resolution type"));
         Assert.isTrue(!StringUtils.isEmpty(request.getRemark()), "Remark can't be null or empty");
-        Optional<ChatRoom> room = getChatRoomById(roomId);
         validateRoomState(roomId, currentUser, "Room is already resolved");
+        Optional<ChatRoom> room = getChatRoomById(roomId);
+        Assert.isTrue(room.isPresent(),"Room does not exists,wrong room name for resolve");
         boolean present = room.get()
             .getParticipants()
             .stream()
@@ -385,6 +386,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         roomIdInputValidation(roomId);
         validateRoomState(roomId, currentUser, "Room is already resolved,user can't be removed");
         Optional<ChatRoom> room = getChatRoomById(roomId);
+        Assert.isTrue(room.isPresent(),"Room does not exists,wrong room for remove participant");
         boolean present = room.get()
             .getParticipants()
             .stream()
