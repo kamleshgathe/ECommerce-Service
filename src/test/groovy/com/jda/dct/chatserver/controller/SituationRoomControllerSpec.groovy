@@ -160,4 +160,20 @@ class SituationRoomControllerSpec extends Specification {
         actual.resolutionRemark == expected.resolutionRemark
         actual.getId() == actual.getId();
     }
+
+    def "Deatche user from room should succeed"() {
+        given: "Initialize response context"
+
+        Map status = Maps.newHashMap();
+        status.put("Status", "Success")
+        def service = Mock(SituationRoomService);
+        service.removeParticipant(_ as String, _ as String) >> status;
+
+        when: "Resolve room"
+        def controller = new ChatRoomController(service);
+        ResponseEntity<Map> response = controller.removeUser("room1", "user2");
+        then: "Match expectation"
+        response.statusCode == HttpStatus.OK
+        response.body.get("Status") == "Success"
+    }
 }
