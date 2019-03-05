@@ -65,6 +65,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
 
@@ -482,9 +483,9 @@ public class SituationRoomServiceImpl implements SituationRoomService {
                 response.getBody(),
                 roomId,
                 currentUser);
-            throw new IllegalArgumentException(response.getBody() != null
+            throw new ResourceAccessException(response.getBody() != null
                 ? response.getBody().toString() :
-                "Information missing in remote system");
+                "Remote system unknown error.");
         }
     }
 
