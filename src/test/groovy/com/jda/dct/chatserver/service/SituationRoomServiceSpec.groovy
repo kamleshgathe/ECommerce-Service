@@ -1316,6 +1316,81 @@ class SituationRoomServiceSpec extends Specification {
 
     }
 
+    @Unroll
+    def "test accept invitation should failed if room invalid room id"() {
+        given: "Initialize"
+        mock()
+        when: "Calling accept invitation"
+        initNewSituationRoomService()
+        service.acceptInvitation(roomId)
+        then: "Expect exception"
+        thrown(exception)
+        where:
+        roomId | exception
+        null   | IllegalArgumentException
+        ""     | IllegalArgumentException
+    }
+
+    def "test accept invitation should pass and not call remote system"() {
+        given: "Initialize"
+        mock()
+        def participants = Sets.newHashSet()
+        def room = mockedChatRoom("room1", getDummySnapshot(), participants, "user1", ChatRoomStatus.OPEN)
+        addChatParticipant(room, "user1", ChatRoomParticipantStatus.JOINED)
+        ChatRoomParticipant targetParticipant = addChatParticipant(room, "user2", ChatRoomParticipantStatus.PENDING)
+        roomRepository.findById("room1") >> Optional.of(room)
+        authContext.getCurrentUser() >> "user1"
+
+        when: "Calling accept invitation"
+        initNewSituationRoomService()
+        Map<String, Object> response = service.acceptInvitation("room1")
+        then: "Validate response and calls"
+        response.get("channel_id") == "room1"
+        response.get("user_id") == "user1"
+        0 * roomRepository.save(*_)
+        0 * restTemplate.exchange(_ as String, _ as HttpMethod, _ as HttpEntity, Map.class, *_)
+    }
+
+    def "test accept invitation should pass"() {
+        given: "Initialize"
+        mock()
+        def targetUser = "user2"
+        def map = Maps.newHashMap()
+        map.put("channel_id","room1")
+        map.put("user_id","remote_user2")
+
+        def participants = Sets.newHashSet()
+        def room = mockedChatRoom("room1", getDummySnapshot(), participants, "user1", ChatRoomStatus.OPEN)
+        addChatParticipant(room, "user1", ChatRoomParticipantStatus.JOINED)
+        ChatRoomParticipant targetParticipant = addChatParticipant(room, targetUser, ChatRoomParticipantStatus.PENDING)
+        roomRepository.findById("room1") >> Optional.of(room)
+        authContext.getCurrentUser() >> targetUser
+
+        def ptm1 = proxyTokenMapping("user1", "remote_user1", "token1");
+        def ptm2 = proxyTokenMapping(targetUser, "remote_user2", "token1");
+
+        tokenRepository.findByAppUserId("user1") >> ptm1
+        tokenRepository.findByAppUserId(targetUser) >> ptm2
+
+
+        when: "Calling accept invitation"
+        initNewSituationRoomService()
+        Map<String, Object> response = service.acceptInvitation("room1")
+        then: "Validate response and calls"
+        response.get("channel_id") == "room1"
+        response.get("user_id") == "remote_user2"
+        1 * roomRepository.save({
+            ChatRoom chatroom ->
+                chatroom.participants.find { p -> p.userName == targetUser }.status == ChatRoomParticipantStatus.JOINED
+        })
+
+        1 * restTemplate.exchange(*_) >> {
+            args ->
+                assert args[0].contains("/channels/room1/members")
+                return buildReponseEntity(HttpStatus.OK,map)
+        }
+
+    }
 
     def initNewSituationRoomService() {
         service = new SituationRoomServiceImpl(authContext,

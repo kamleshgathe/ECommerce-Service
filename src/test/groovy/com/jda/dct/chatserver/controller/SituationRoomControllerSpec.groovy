@@ -176,4 +176,47 @@ class SituationRoomControllerSpec extends Specification {
         response.statusCode == HttpStatus.OK
         response.body.get("Status") == "Success"
     }
+
+    def "test get channels"() {
+        given: "Initialize response context"
+        def service = Mock(SituationRoomService);
+        def mockChannels = Mock(List)
+        service.getChannels(_,_) >> mockChannels
+        mockChannels.size() >> 5
+
+        when: "Get rooms"
+        def controller = new ChatRoomController(service);
+        ResponseEntity<List> response = controller.getChannels(null, null)
+        then: "Match expectation"
+        response.statusCode == HttpStatus.OK
+        response.body.size() == 5
+    }
+
+    def "test join room"() {
+        given: "Initialize"
+        def map = Maps.newHashMap()
+        map.put("Status","Success")
+        def service = Mock(SituationRoomService);
+        service.acceptInvitation("room1") >> map
+        when: "join rooms"
+        def controller = new ChatRoomController(service);
+        ResponseEntity<Map> response = controller.join("room1")
+        then: "Match expectation"
+        response.statusCode == HttpStatus.OK
+        response.body.get("Status") == "Success"
+    }
+
+    def "test unread count"() {
+        given: "Initialize"
+        def unreadResponse = Mock(List)
+        unreadResponse.size() >> 5
+        def service = Mock(SituationRoomService);
+        service.getUnreadCount() >> unreadResponse
+        when: "unread counts"
+        def controller = new ChatRoomController(service);
+        ResponseEntity<List> response = controller.getUserUnreadCount()
+        then: "Match expectation"
+        response.statusCode == HttpStatus.OK
+        response.body.size() == 5
+    }
 }
