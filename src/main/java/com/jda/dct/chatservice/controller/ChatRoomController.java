@@ -79,6 +79,13 @@ public class ChatRoomController {
         return ResponseEntity.ok(service.inviteUsers(channelId, request));
     }
 
+    @PostMapping(value = "/channels/{channel_id}/members/{user_id}/delete",
+        consumes = MediaType.ALL_VALUE,
+        produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Map<String, Object>> removeUser(@PathVariable("channel_id") String channelId,
+                                                           @PathVariable("user_id") String userId) {
+        return ResponseEntity.ok(service.removeParticipant(channelId, userId));
+    }
 
     @GetMapping(value = "/channels/{channel_id}/context",
         consumes = MediaType.ALL_VALUE,
