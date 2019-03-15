@@ -22,13 +22,13 @@ import com.jda.dct.chatservice.repository.SituationRoomRepository
 import com.jda.dct.chatservice.service.SituationRoomServiceImpl
 import com.jda.dct.chatservice.service.UniqueRoomNameGenerator
 import com.jda.dct.chatservice.utils.ChatRoomUtil
-import com.jda.dct.contexts.AuthContext
 import com.jda.dct.domain.ChatRoom
 import com.jda.dct.domain.ChatRoomParticipant
 import com.jda.dct.domain.ChatRoomParticipantStatus
 import com.jda.dct.domain.ChatRoomResolution
 import com.jda.dct.domain.ChatRoomStatus
 import com.jda.dct.domain.ProxyTokenMapping
+import com.jda.luminate.security.contexts.AuthContext
 import org.springframework.http.HttpEntity
 import org.springframework.http.HttpMethod
 import org.springframework.http.HttpStatus
@@ -831,7 +831,7 @@ class SituationRoomServiceSpec extends Specification {
         mock()
         ResolveRoomDto request = new ResolveRoomDto()
         request.resolutionTypes = resolutionType
-        request.resolution = resolution;
+        request.resolution = ((String) resolutionMsg)
         request.remark = remark;
 
         when: "Calling resolve room"
@@ -840,8 +840,8 @@ class SituationRoomServiceSpec extends Specification {
         then:
         thrown(IllegalArgumentException.class)
         where: "Expect IllegalArgumentException"
-        roomId | resolutionType                  | resolution    | remark
-        null   | Lists.newArrayList("type1")     | "resolution1" | "thanks"
+        roomId | resolutionType              | resolutionMsg | remark
+        null   | Lists.newArrayList("type1") | "resolution1" | "thanks"
         "1"    | null                            | "resolution1" | "thanks"
         "1"    | Lists.newArrayList("type1")     | null          | "thanks"
         "1"    | Lists.newArrayList("type1")     | "resolution1" | null
@@ -1356,8 +1356,8 @@ class SituationRoomServiceSpec extends Specification {
         mock()
         def targetUser = "user2"
         def map = Maps.newHashMap()
-        map.put("channel_id","room1")
-        map.put("user_id","remote_user2")
+        map.put("channel_id", "room1")
+        map.put("user_id", "remote_user2")
 
         def participants = Sets.newHashSet()
         def room = mockedChatRoom("room1", getDummySnapshot(), participants, "user1", ChatRoomStatus.OPEN)
@@ -1387,7 +1387,7 @@ class SituationRoomServiceSpec extends Specification {
         1 * restTemplate.exchange(*_) >> {
             args ->
                 assert args[0].contains("/channels/room1/members")
-                return buildReponseEntity(HttpStatus.OK,map)
+                return buildReponseEntity(HttpStatus.OK, map)
         }
 
     }

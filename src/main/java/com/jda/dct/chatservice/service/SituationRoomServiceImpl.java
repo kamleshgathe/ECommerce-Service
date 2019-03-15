@@ -16,7 +16,6 @@ import static com.jda.dct.chatservice.constants.ChatRoomConstants.MAX_REMOTE_USE
 import static com.jda.dct.chatservice.utils.ChatRoomUtil.buildUrlString;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.Maps;
 import com.jda.dct.chatservice.domainreader.EntityReaderFactory;
 import com.jda.dct.chatservice.dto.downstream.AddParticipantDto;
 import com.jda.dct.chatservice.dto.downstream.CreateChannelDto;
@@ -32,7 +31,6 @@ import com.jda.dct.chatservice.repository.ChatRoomParticipantRepository;
 import com.jda.dct.chatservice.repository.ProxyTokenMappingRepository;
 import com.jda.dct.chatservice.repository.SituationRoomRepository;
 import com.jda.dct.chatservice.utils.ChatRoomUtil;
-import com.jda.dct.contexts.AuthContext;
 import com.jda.dct.domain.ChatRoom;
 import com.jda.dct.domain.ChatRoomParticipant;
 import com.jda.dct.domain.ChatRoomParticipantStatus;
@@ -40,6 +38,7 @@ import com.jda.dct.domain.ChatRoomResolution;
 import com.jda.dct.domain.ChatRoomStatus;
 import com.jda.dct.domain.ProxyTokenMapping;
 import com.jda.dct.ignitecaches.springimpl.Tenants;
+import com.jda.luminate.security.contexts.AuthContext;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -149,7 +148,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     public Map<String, Object> postMessage(Map<String, Object> chat) {
         String currentUser = authContext.getCurrentUser();
         validatePostMessageRequest(currentUser, chat);
-        Map<String, Object> chatCopy = Maps.newHashMap(chat);
+        Map<String, Object> chatCopy = new HashMap<>(chat);
         LOGGER.info("User {} posting message to channel {}", currentUser,
             getRoomIdFromPostMessage(chatCopy));
         ProxyTokenMapping proxyTokenMapping = getUserTokenMapping(authContext.getCurrentUser());
