@@ -9,7 +9,6 @@
 package com.jda.dct.chatservice.config;
 
 import com.jda.dct.chatservice.domainreader.EntityReaderFactory;
-import com.jda.dct.contexts.AuthContext;
 import com.jda.dct.domain.Node;
 import com.jda.dct.domain.stateful.Delivery;
 import com.jda.dct.domain.stateful.PurchaseOrder;
@@ -20,6 +19,7 @@ import com.jda.dct.persist.ignite.dao.NodeDaoImpl;
 import com.jda.dct.persist.ignite.dao.PurchaseOrderDaoImpl;
 import com.jda.dct.persist.ignite.dao.SalesOrderDaoImpl;
 import com.jda.dct.persist.ignite.dao.ShipmentDaoImpl;
+import com.jda.luminate.security.contexts.AuthContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Component;

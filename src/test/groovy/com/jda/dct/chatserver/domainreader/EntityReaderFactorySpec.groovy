@@ -8,9 +8,9 @@
 package com.jda.dct.chatserver.domainreader
 
 import com.jda.dct.chatservice.domainreader.EntityReaderFactory
-import com.jda.dct.contexts.AuthContext
 import com.jda.dct.domain.stateful.Shipment
 import com.jda.dct.persist.ignite.dao.DctDaoBase
+import com.jda.luminate.security.contexts.AuthContext
 import spock.lang.Specification
 
 class EntityReaderFactorySpec extends Specification {

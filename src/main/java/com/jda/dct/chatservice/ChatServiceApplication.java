@@ -8,13 +8,15 @@
 
 package com.jda.dct.chatservice;
 
-import com.jda.dct.contexts.SpringAuthContextConfig;
-import com.jda.dct.oauth.OAuth2ResourceServerConfig;
-import com.jda.dct.tracing.DctTracingConfig;
+import com.jda.luminate.security.contexts.SpringAuthContextConfig;
+import com.jda.luminate.security.oauth.OAuth2ResourceServerConfig;
+import com.jda.luminate.tracing.LuminateTracingConfig;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.data.elasticsearch.ElasticsearchAutoConfiguration;
 import org.springframework.boot.autoconfigure.data.jpa.JpaRepositoriesAutoConfiguration;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
+import org.springframework.boot.autoconfigure.elasticsearch.rest.RestClientAutoConfiguration;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration;
 import org.springframework.context.annotation.ComponentScan;
@@ -24,7 +26,9 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 @SpringBootApplication(exclude = {
     KafkaAutoConfiguration.class,
     DataSourceAutoConfiguration.class,
-    JpaRepositoriesAutoConfiguration.class
+    JpaRepositoriesAutoConfiguration.class,
+    ElasticsearchAutoConfiguration.class,
+    RestClientAutoConfiguration.class
 })
 @ComponentScan(basePackages = {
     "com.jda.dct.kafka",
@@ -36,11 +40,12 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
     "com.jda.dct.foundation.tenantutils",
     "com.jda.dct.exec.lib.actions",
     "com.jda.dct.domain.util",
-    "com.jda.dct.exec.lib.relationships"
+    "com.jda.dct.exec.lib.relationships",
+    "com.jda.luminate.messaging.kafka"
 })
 
 @EntityScan(basePackages = {"com.jda.dct.domain"})
-@Import({SpringAuthContextConfig.class, OAuth2ResourceServerConfig.class, DctTracingConfig.class})
+@Import({SpringAuthContextConfig.class, OAuth2ResourceServerConfig.class, LuminateTracingConfig.class})
 @EnableJpaRepositories(basePackages = {"com.jda.dct.ignitecaches.springimpl",
     "com.jda.dct.chatservice.repository"})
 public class ChatServiceApplication {
