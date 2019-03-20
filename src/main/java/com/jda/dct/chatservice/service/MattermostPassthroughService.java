@@ -13,8 +13,9 @@ import static com.jda.dct.chatservice.utils.ChatRoomUtil.buildUrlString;
 import com.google.common.annotations.VisibleForTesting;
 import com.jda.dct.chatservice.constants.ChatRoomConstants;
 import com.jda.dct.chatservice.repository.ProxyTokenMappingRepository;
-import com.jda.dct.contexts.AuthContext;
+
 import com.jda.dct.domain.ProxyTokenMapping;
+import com.jda.luminate.security.contexts.AuthContext;
 import java.util.Enumeration;
 import java.util.Objects;
 import javax.servlet.http.HttpServletRequest;
