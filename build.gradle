@@ -130,7 +130,7 @@ dependencies {
     compile 'com.jsoniter:jsoniter:0.9.19'
 
     zip group: 'com.jda.dct', name: 'cicd', version: '0.0.1-SNAPSHOT', classifier: 'appdynamics-container-config', ext: 'zip'
-
+    runtime group: 'org.springframework.boot', name: 'spring-boot-starter-actuator'
     runtime group: 'org.mariadb.jdbc', name: 'mariadb-java-client', version: '2.4.0'
 
     testCompile 'org.mockito:mockito-core'
