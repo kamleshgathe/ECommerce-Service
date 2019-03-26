@@ -9,6 +9,7 @@
 package com.jda.dct.chatservice.service;
 
 import static com.jda.dct.chatservice.constants.ChatRoomConstants.FILTER_BY_USER;
+import static com.jda.dct.chatservice.constants.ChatRoomConstants.INVALID_ROOM_FORMATTED_MSG;
 import static com.jda.dct.chatservice.constants.ChatRoomConstants.MATTERMOST_CHANNELS;
 import static com.jda.dct.chatservice.constants.ChatRoomConstants.MATTERMOST_POSTS;
 import static com.jda.dct.chatservice.constants.ChatRoomConstants.MATTERMOST_USERS;
@@ -303,7 +304,10 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         LOGGER.info("User {} is resolving room {} with details {}", currentUser, roomId, request);
         validateResolveRoomInputs(roomId, currentUser, request);
         Optional<ChatRoom> record = getChatRoomById(roomId);
-        AssertUtil.isTrue(record.isPresent(), "Invalid room");
+
+        if (!record.isPresent()) {
+            throw new InvalidChatRequest("Invalid room");
+        }
         ChatRoom room = record.get();
 
         room.setStatus(ChatRoomStatus.RESOLVED);
@@ -319,7 +323,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     public Map<String, Object> removeParticipant(String roomId, String targetUser) {
         String currentUser = authContext.getCurrentUser();
         LOGGER.info("Remove participant {} from room {} has been called by user {}", targetUser, roomId, currentUser);
-        validateRemoveUserRequest(roomId, currentUser,targetUser);
+        validateRemoveUserRequest(roomId, currentUser, targetUser);
         ChatRoomParticipant participant = removeParticipantInApp(roomId, targetUser);
         if (ChatRoomParticipantStatus.JOINED.equals(participant.getStatus())) {
             removeParticipantInRemote(roomId, targetUser, currentUser);
@@ -352,7 +356,9 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         String roomId = getRoomIdFromPostMessage(request);
         validateRoomState(roomId, currentUser, "Message can't be post to a resolved room");
         Optional<ChatRoom> room = getChatRoomById(roomId);
-        AssertUtil.isTrue(room.isPresent(),"Room does not exists,wrong room name for post message");
+        if (!room.isPresent()) {
+            throw new InvalidChatRequest("Room does not exists,wrong room name for post message");
+        }
         boolean present = room.get()
             .getParticipants()
             .stream()
@@ -384,7 +390,9 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         AssertUtil.isTrue(!StringUtils.isEmpty(request.getRemark()), "Remark can't be null or empty");
         validateRoomState(roomId, currentUser, "Room is already resolved");
         Optional<ChatRoom> room = getChatRoomById(roomId);
-        AssertUtil.isTrue(room.isPresent(),"Room does not exists,wrong room name for resolve");
+        if (!room.isPresent()) {
+            throw new InvalidChatRequest("Room does not exists,wrong room name for resolve");
+        }
         boolean present = room.get()
             .getParticipants()
             .stream()
@@ -394,19 +402,22 @@ public class SituationRoomServiceImpl implements SituationRoomService {
             String.format("You are not authorize to resolve room %s", room.get().getRoomName()));
     }
 
-    private void validateRemoveUserRequest(String roomId, String currentUser,String targetUser) {
+    private void validateRemoveUserRequest(String roomId, String currentUser, String targetUser) {
         LOGGER.debug("Validating resolve room request");
         roomIdInputValidation(roomId);
         validateRoomState(roomId, currentUser, "Room is already resolved,user can't be removed");
         Optional<ChatRoom> room = getChatRoomById(roomId);
-        AssertUtil.isTrue(room.isPresent(),"Room does not exists,wrong room for remove participant");
+
+        if (!room.isPresent()) {
+            throw new InvalidChatRequest("Room does not exists,wrong room for remove participant");
+        }
         boolean present = room.get()
             .getParticipants()
             .stream()
             .anyMatch(p -> p.getUserName().equals(currentUser)
                 && p.getStatus().equals(ChatRoomParticipantStatus.PENDING));
         AssertUtil.isTrue(!present, String.format("You are not authorize to remove room %s", room.get().getRoomName()));
-        AssertUtil.isTrue(!room.get().getCreatedBy().equals(targetUser),"Creator of can't be remove");
+        AssertUtil.isTrue(!room.get().getCreatedBy().equals(targetUser), "Creator of can't be remove");
     }
 
     private void roomIdInputValidation(String roomId) {
@@ -417,8 +428,9 @@ public class SituationRoomServiceImpl implements SituationRoomService {
                                    String currentUser,
                                    String invalidStatusMsg) {
         Optional<ChatRoom> room = getChatRoomById(roomId);
-        AssertUtil.isTrue(room.isPresent(),
-            String.format("Invalid chat room id %s", roomId));
+        if (!room.isPresent()) {
+            throw new InvalidChatRequest(String.format(INVALID_ROOM_FORMATTED_MSG, roomId));
+        }
         AssertUtil.isTrue(room.get().getStatus() != ChatRoomStatus.RESOLVED,
             invalidStatusMsg);
         boolean present = room.get().getParticipants().stream().anyMatch(p -> p.getUserName().equals(currentUser));
@@ -452,15 +464,18 @@ public class SituationRoomServiceImpl implements SituationRoomService {
 
     private ChatRoomParticipant removeParticipantInApp(String roomId, String targetUser) {
         Optional<ChatRoom> roomRecord = getChatRoomById(roomId);
-        AssertUtil.isTrue(roomRecord.isPresent(),
-            String.format("Invalid chat room id %s", roomId));
+        if (!roomRecord.isPresent()) {
+            throw new InvalidChatRequest(String.format(INVALID_ROOM_FORMATTED_MSG, roomId));
+        }
         ChatRoom room = roomRecord.get();
         Set<ChatRoomParticipant> participants = room.getParticipants();
         Optional<ChatRoomParticipant> targetParticipant = participants
             .stream()
             .filter(p -> p.getUserName().equals(targetUser)).findAny();
 
-        AssertUtil.isTrue(targetParticipant.isPresent(), "Participant does not belong to room");
+        if (!targetParticipant.isPresent()) {
+            throw new InvalidChatRequest("Participant does not belong to room");
+        }
         room.getParticipants().remove(targetParticipant.get());
         room.setLmd(new Date());
         saveChatRoom(room);
@@ -560,12 +575,17 @@ public class SituationRoomServiceImpl implements SituationRoomService {
 
     private Map<String, Object> addParticipantsToRoom(String user, String roomId) {
         Optional<ChatRoom> roomRecord = getChatRoomById(roomId);
-        AssertUtil.isTrue(roomRecord.isPresent(), String.format("Invalid %s room id", roomId));
+        if (!roomRecord.isPresent()) {
+            throw new InvalidChatRequest(String.format(INVALID_ROOM_FORMATTED_MSG, roomId));
+        }
         ChatRoom room = roomRecord.get();
 
         Optional<ChatRoomParticipant> participantRecord = room.getParticipants()
             .stream().filter(p -> p.getUserName().equals(user)).findFirst();
-        AssertUtil.isTrue(participantRecord.isPresent(), String.format("User %s not invited to room %s", user, roomId));
+
+        if (!participantRecord.isPresent()) {
+            throw new InvalidChatRequest(String.format("User %s not invited to room %s", user, roomId));
+        }
         ChatRoomParticipant participant = participantRecord.get();
         if (participant.getStatus() == ChatRoomParticipantStatus.JOINED) {
             LOGGER.info("User {} already joined to room {} not doing anything", user, roomId);

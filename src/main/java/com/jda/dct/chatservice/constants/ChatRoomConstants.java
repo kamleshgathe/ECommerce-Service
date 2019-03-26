@@ -17,6 +17,8 @@ public final class ChatRoomConstants {
 
     public static final String PASSTHROUGH_PREFIX = "/chat/passthrough";
 
+    public static final String INVALID_ROOM_FORMATTED_MSG = "Invalid chat room id %s";
+
     private ChatRoomConstants() {
         //private constructor to make to avoid mistaken initialization
     }

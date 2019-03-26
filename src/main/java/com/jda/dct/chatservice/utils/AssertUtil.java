@@ -24,6 +24,7 @@ public class AssertUtil {
      *
      * @param condition boolean condition value.
      * @param message   message to use for exception if there is error.
+     * @throws InvalidChatRequest if {@code expression} is {@code false}
      */
     public static void isTrue(boolean condition, String message) {
         if (!condition) {
@@ -37,6 +38,7 @@ public class AssertUtil {
      *
      * @param object  input object.
      * @param message message to use for exception if there is error.
+     * @throws InvalidChatRequest if the object is {@code null}
      */
 
     public static void notNull(Object object, String message) {
@@ -50,6 +52,7 @@ public class AssertUtil {
      *
      * @param list    input list.
      * @param message message to use for exception if there is error.
+     * @throws InvalidChatRequest if the map is {@code null} or contains no entries
      */
     public static void notEmpty(List<String> list, String message) {
         if (list == null || list.isEmpty()) {
