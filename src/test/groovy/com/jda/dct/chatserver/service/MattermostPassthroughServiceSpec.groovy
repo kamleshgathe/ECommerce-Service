@@ -69,7 +69,7 @@ class MattermostPassthroughServiceSpec extends Specification {
 
         def errorResponse = Mock(HttpStatusCodeException)
         errorResponse.getRawStatusCode() >> 500
-        errorResponse.getResponseBodyAsString() >> "error"
+        errorResponse.getResponseBodyAsString() >> "exception"
         restTemplate.exchange(_,_, _ as HttpEntity, Object.class) >>  {
             throw errorResponse
         };
@@ -80,7 +80,7 @@ class MattermostPassthroughServiceSpec extends Specification {
 
         then: "Controller should be initialize"
         actual.statusCode == HttpStatus.INTERNAL_SERVER_ERROR
-        actual.body == "error"
+        actual.body == "exception"
     }
 
 

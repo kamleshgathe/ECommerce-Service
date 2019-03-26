@@ -16,6 +16,7 @@ import com.jda.dct.chatservice.dto.upstream.ChatContext
 import com.jda.dct.chatservice.dto.upstream.ChatRoomCreateDto
 import com.jda.dct.chatservice.dto.upstream.ResolveRoomDto
 import com.jda.dct.chatservice.dto.upstream.TokenDto
+import com.jda.dct.chatservice.exception.InvalidChatRequest
 import com.jda.dct.chatservice.repository.ChatRoomParticipantRepository
 import com.jda.dct.chatservice.repository.ProxyTokenMappingRepository
 import com.jda.dct.chatservice.repository.SituationRoomRepository
@@ -61,7 +62,7 @@ class SituationRoomServiceSpec extends Specification {
         initNewSituationRoomService();
         service.getSessionToken();
         then:
-        thrown IllegalArgumentException
+        thrown InvalidChatRequest
     }
 
     def "test get token"() {
@@ -122,7 +123,7 @@ class SituationRoomServiceSpec extends Specification {
         service.postMessage(chat)
 
         then: "Should get exception"
-        thrown(IllegalArgumentException)
+        thrown(InvalidChatRequest)
     }
 
     def "test post message should throw exception if input is empty"() {
@@ -135,7 +136,7 @@ class SituationRoomServiceSpec extends Specification {
         service.postMessage(chat)
 
         then: "Should get exception"
-        thrown(IllegalArgumentException)
+        thrown(InvalidChatRequest)
     }
 
     def "test post message should throw exception if channel is invalid"() {
@@ -153,9 +154,9 @@ class SituationRoomServiceSpec extends Specification {
 
         where:
         channelId | chatRoom         | exceptionClazz
-        null      | Optional.empty() | IllegalArgumentException
-        ""        | Optional.empty() | IllegalArgumentException
-        "123"     | Optional.empty() | IllegalArgumentException
+        null      | Optional.empty() | InvalidChatRequest
+        ""        | Optional.empty() | InvalidChatRequest
+        "123"     | Optional.empty() | InvalidChatRequest
     }
 
     def "test post message should failed if room is already resolved"() {
@@ -171,7 +172,7 @@ class SituationRoomServiceSpec extends Specification {
         service.postMessage(chat)
 
         then: "Should get exception"
-        thrown(IllegalArgumentException)
+        thrown(InvalidChatRequest)
     }
 
     def "test post message should failed if room is in resolved state"() {
@@ -203,7 +204,7 @@ class SituationRoomServiceSpec extends Specification {
         service.postMessage(chat)
 
         then: "Expect exception"
-        thrown(IllegalArgumentException)
+        thrown(InvalidChatRequest)
     }
 
     def "test post message should failed if user is not part of room"() {
@@ -235,7 +236,7 @@ class SituationRoomServiceSpec extends Specification {
         service.postMessage(chat)
 
         then: "Expect exception"
-        thrown(IllegalArgumentException)
+        thrown(InvalidChatRequest)
     }
 
     def "test post message should failed if user is not yet joined room"() {
@@ -268,7 +269,7 @@ class SituationRoomServiceSpec extends Specification {
         service.postMessage(chat)
 
         then: "Expect exception"
-        thrown(IllegalArgumentException)
+        thrown(InvalidChatRequest)
     }
 
 
@@ -312,7 +313,7 @@ class SituationRoomServiceSpec extends Specification {
         initNewSituationRoomService()
         service.createChannel(channel)
         then: "Should get exception"
-        thrown(IllegalArgumentException)
+        thrown(InvalidChatRequest)
     }
 
     def "test create channel expect exception if no domian entity"() {
@@ -322,7 +323,7 @@ class SituationRoomServiceSpec extends Specification {
         initNewSituationRoomService()
         service.createChannel(channel)
         then: "Should get exception"
-        thrown(IllegalArgumentException)
+        thrown(InvalidChatRequest)
     }
 
     def "test create channel expect exception if no participant"() {
@@ -333,7 +334,7 @@ class SituationRoomServiceSpec extends Specification {
         initNewSituationRoomService()
         service.createChannel(channel)
         then: "Should get exception"
-        thrown(IllegalArgumentException)
+        thrown(InvalidChatRequest)
     }
 
     def "test create channel expect exception if team id missing"() {
@@ -345,7 +346,7 @@ class SituationRoomServiceSpec extends Specification {
         initNewSituationRoomService()
         service.createChannel(channel)
         then: "Should get exception"
-        thrown(IllegalArgumentException)
+        thrown(InvalidChatRequest)
     }
 
     def "test create channel expect exception if entity type missing"() {
@@ -357,7 +358,7 @@ class SituationRoomServiceSpec extends Specification {
         initNewSituationRoomService()
         service.createChannel(channel)
         then: "Should get exception"
-        thrown(IllegalArgumentException)
+        thrown(InvalidChatRequest)
     }
 
     def "test create channel expect exception if name missing"() {
@@ -370,7 +371,7 @@ class SituationRoomServiceSpec extends Specification {
         initNewSituationRoomService()
         service.createChannel(channel)
         then: "Should get exception"
-        thrown(IllegalArgumentException)
+        thrown(InvalidChatRequest)
     }
 
     def "test create channel expect exception if purpose missing"() {
@@ -384,7 +385,7 @@ class SituationRoomServiceSpec extends Specification {
         initNewSituationRoomService()
         service.createChannel(channel)
         then: "Should get exception"
-        thrown(IllegalArgumentException)
+        thrown(InvalidChatRequest)
     }
 
     def "test create channel expect exception if situation type missing"() {
@@ -399,7 +400,7 @@ class SituationRoomServiceSpec extends Specification {
         initNewSituationRoomService()
         service.createChannel(channel)
         then: "Should get exception"
-        thrown(IllegalArgumentException)
+        thrown(InvalidChatRequest)
     }
 
     def "test create channel should succeed"() {
@@ -550,7 +551,7 @@ class SituationRoomServiceSpec extends Specification {
         initNewSituationRoomService()
         service.inviteUsers(null, request)
         then: "Should get exception"
-        thrown(IllegalArgumentException)
+        thrown(InvalidChatRequest)
     }
 
     def "test add users to existing channel expect exception if request is null"() {
@@ -563,7 +564,7 @@ class SituationRoomServiceSpec extends Specification {
         initNewSituationRoomService()
         service.inviteUsers("abcd", request)
         then: "Should get exception"
-        thrown(IllegalArgumentException)
+        thrown(InvalidChatRequest)
     }
 
     def "test add users to existing channel expect exception if users in request null"() {
@@ -576,7 +577,7 @@ class SituationRoomServiceSpec extends Specification {
         initNewSituationRoomService()
         service.inviteUsers("abcd", request)
         then: "Should get exception"
-        thrown(IllegalArgumentException)
+        thrown(InvalidChatRequest)
     }
 
     def "test add users to existing channel expect exception if users in request empty"() {
@@ -589,7 +590,7 @@ class SituationRoomServiceSpec extends Specification {
         initNewSituationRoomService()
         service.inviteUsers("abcd", request)
         then: "Should get exception"
-        thrown(IllegalArgumentException)
+        thrown(InvalidChatRequest)
     }
 
     def "test add users to existing channel expect exception if channel does not exists"() {
@@ -603,7 +604,7 @@ class SituationRoomServiceSpec extends Specification {
         initNewSituationRoomService()
         service.inviteUsers("abcd", request)
         then: "Should get exception"
-        thrown(IllegalArgumentException)
+        thrown(InvalidChatRequest)
     }
 
     def "test resolve room expect exception if room already resolved"() {
@@ -619,7 +620,7 @@ class SituationRoomServiceSpec extends Specification {
         initNewSituationRoomService()
         service.inviteUsers("abcd", request)
         then: "Should get exception"
-        thrown(IllegalArgumentException)
+        thrown(InvalidChatRequest)
     }
 
     def "test add user to existing channel and should add user in remote"() {
@@ -806,9 +807,9 @@ class SituationRoomServiceSpec extends Specification {
         thrown(ex)
         where:
         channel | ex
-        null    | IllegalArgumentException
-        ""      | IllegalArgumentException
-        "1"     | IllegalArgumentException
+        null    | InvalidChatRequest
+        ""      | InvalidChatRequest
+        "1"     | InvalidChatRequest
     }
 
     def "test get chat context should succeed"() {
@@ -838,8 +839,8 @@ class SituationRoomServiceSpec extends Specification {
         initNewSituationRoomService()
         service.resolve(roomId, request)
         then:
-        thrown(IllegalArgumentException.class)
-        where: "Expect IllegalArgumentException"
+        thrown(InvalidChatRequest.class)
+        where: "Expect InvalidChatRequest"
         roomId | resolutionType              | resolutionMsg | remark
         null   | Lists.newArrayList("type1") | "resolution1" | "thanks"
         "1"    | null                            | "resolution1" | "thanks"
@@ -863,8 +864,8 @@ class SituationRoomServiceSpec extends Specification {
         when: "Calling resolve room"
         initNewSituationRoomService()
         service.resolve("1", request)
-        then: "Expect IllegalArgumentException"
-        thrown(IllegalArgumentException.class)
+        then: "Expect InvalidChatRequest"
+        thrown(InvalidChatRequest.class)
     }
 
     def "resolve room should fail if room already resolved"() {
@@ -882,8 +883,8 @@ class SituationRoomServiceSpec extends Specification {
         when: "Calling resolve room"
         initNewSituationRoomService()
         service.resolve("1", request)
-        then: "Expect IllegalArgumentException"
-        thrown(IllegalArgumentException.class)
+        then: "Expect InvalidChatRequest"
+        thrown(InvalidChatRequest.class)
     }
 
     def "resolve room should failed caller is not part of room"() {
@@ -908,7 +909,7 @@ class SituationRoomServiceSpec extends Specification {
         initNewSituationRoomService()
         service.resolve("1", request)
         then: "Save room should get called"
-        thrown(IllegalArgumentException)
+        thrown(InvalidChatRequest)
     }
 
 
@@ -935,7 +936,7 @@ class SituationRoomServiceSpec extends Specification {
         initNewSituationRoomService()
         service.resolve("1", request)
         then: "Save room should get called"
-        thrown(IllegalArgumentException)
+        thrown(InvalidChatRequest)
     }
 
 
@@ -1015,7 +1016,7 @@ class SituationRoomServiceSpec extends Specification {
         participantRepository.findByUserNameAndStatusOrderByRoomLmdDesc(user, ChatRoomParticipantStatus.JOINED) >> Lists.newArrayList(participant)
 
         restTemplate.exchange(*_) >> {
-            throw new RuntimeException("error")
+            throw new RuntimeException("exception")
         }
 
         when: "Calling unread"
@@ -1040,7 +1041,7 @@ class SituationRoomServiceSpec extends Specification {
 
         participantRepository.findByUserNameAndStatusOrderByRoomLmdDesc(user, ChatRoomParticipantStatus.JOINED) >> Lists.newArrayList(participant)
 
-        restTemplate.exchange(*_) >> ResponseEntity.status(HttpStatus.BAD_REQUEST).body("{\"status\":\"error\"}")
+        restTemplate.exchange(*_) >> ResponseEntity.status(HttpStatus.BAD_REQUEST).body("{\"status\":\"exception\"}")
 
         when: "Calling unread"
         initNewSituationRoomService()
@@ -1187,7 +1188,7 @@ class SituationRoomServiceSpec extends Specification {
         initNewSituationRoomService()
         service.removeParticipant(id, targetUser)
         then: "Expect exception"
-        thrown(IllegalArgumentException.class)
+        thrown(InvalidChatRequest.class)
         where: "Defined invalid inputs"
         id   | roomStatus              | room                                                                                        | targetUser
         null | ChatRoomStatus.RESOLVED | Optional.empty()                                                                            | "user3"
@@ -1213,7 +1214,7 @@ class SituationRoomServiceSpec extends Specification {
         initNewSituationRoomService()
         service.removeParticipant("room1", "user2")
         then: "Expect exception"
-        thrown(IllegalArgumentException.class)
+        thrown(InvalidChatRequest.class)
 
     }
 
@@ -1231,7 +1232,7 @@ class SituationRoomServiceSpec extends Specification {
         initNewSituationRoomService()
         service.removeParticipant("room1", "user1")
         then: "Expect exception"
-        thrown(IllegalArgumentException.class)
+        thrown(InvalidChatRequest.class)
 
     }
 
@@ -1311,7 +1312,7 @@ class SituationRoomServiceSpec extends Specification {
         initNewSituationRoomService()
         service.removeParticipant("room1", "user2")
 
-        then: "Should get error"
+        then: "Should get exception"
         thrown(ResourceAccessException)
 
     }
@@ -1327,8 +1328,8 @@ class SituationRoomServiceSpec extends Specification {
         thrown(exception)
         where:
         roomId | exception
-        null   | IllegalArgumentException
-        ""     | IllegalArgumentException
+        null   | InvalidChatRequest
+        ""     | InvalidChatRequest
     }
 
     def "test accept invitation should pass and not call remote system"() {
