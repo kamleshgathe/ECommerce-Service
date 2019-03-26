@@ -14,12 +14,12 @@ import com.jda.dct.chatservice.dto.upstream.ChatRoomCreateDto;
 import com.jda.dct.chatservice.dto.upstream.ResolveRoomDto;
 import com.jda.dct.chatservice.dto.upstream.TokenDto;
 import com.jda.dct.chatservice.service.SituationRoomService;
+import com.jda.dct.chatservice.utils.AssertUtil;
 import java.util.List;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.util.Assert;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -37,7 +37,7 @@ public class ChatRoomController {
     private SituationRoomService service;
 
     public ChatRoomController(@Autowired SituationRoomService service) {
-        Assert.notNull(service, "Situation service can't be null");
+        AssertUtil.notNull(service, "Situation service can't be null");
         this.service = service;
     }
 
@@ -51,9 +51,9 @@ public class ChatRoomController {
     @GetMapping(value = "/channels",
         consumes = MediaType.ALL_VALUE,
         produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<List<ChatContext>> getChannels(@RequestParam(value = "by",required = false) String by,
+    public ResponseEntity<List<ChatContext>> getChannels(@RequestParam(value = "by", required = false) String by,
                                                          @RequestParam(value = "type", required = false) String type) {
-        return ResponseEntity.ok(service.getChannels(by,type));
+        return ResponseEntity.ok(service.getChannels(by, type));
     }
 
     @PostMapping(value = "/posts",
@@ -83,7 +83,7 @@ public class ChatRoomController {
         consumes = MediaType.ALL_VALUE,
         produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Map<String, Object>> removeUser(@PathVariable("channel_id") String channelId,
-                                                           @PathVariable("user_id") String userId) {
+                                                          @PathVariable("user_id") String userId) {
         return ResponseEntity.ok(service.removeParticipant(channelId, userId));
     }
 

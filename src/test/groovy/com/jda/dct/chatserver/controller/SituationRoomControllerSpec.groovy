@@ -11,6 +11,7 @@ import com.google.common.collect.Lists
 import com.google.common.collect.Maps
 import com.jda.dct.chatservice.controller.ChatRoomController
 import com.jda.dct.chatservice.dto.upstream.*
+import com.jda.dct.chatservice.exception.InvalidChatRequest
 import com.jda.dct.chatservice.service.SituationRoomService
 import com.jda.dct.domain.ChatRoomStatus
 import groovy.json.JsonSlurper
@@ -24,7 +25,7 @@ class SituationRoomControllerSpec extends Specification {
         when: "Create the purchase order"
         new ChatRoomController(null)
         then:
-        thrown IllegalArgumentException
+        thrown InvalidChatRequest
     }
 
     def "test no exception"() {
