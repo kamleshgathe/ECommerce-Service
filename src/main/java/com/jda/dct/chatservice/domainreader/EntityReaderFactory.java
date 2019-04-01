@@ -8,13 +8,13 @@
 
 package com.jda.dct.chatservice.domainreader;
 
-import com.jda.dct.contexts.AuthContext;
 import com.jda.dct.domain.Node;
 import com.jda.dct.domain.stateful.Delivery;
 import com.jda.dct.domain.stateful.PurchaseOrder;
 import com.jda.dct.domain.stateful.SalesOrder;
 import com.jda.dct.domain.stateful.Shipment;
 import com.jda.dct.persist.ignite.dao.DctDaoBase;
+import com.jda.luminate.security.contexts.AuthContext;
 import java.util.HashMap;
 import java.util.Map;
 import org.apache.logging.log4j.util.Strings;

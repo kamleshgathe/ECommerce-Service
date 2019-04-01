@@ -7,6 +7,7 @@
  */
 package com.jda.dct.chatserver.service
 
+import com.jda.luminate.security.contexts.AuthContext
 import org.springframework.http.HttpEntity
 import org.springframework.web.client.HttpStatusCodeException
 import spock.lang.Shared
@@ -21,7 +22,6 @@ import javax.servlet.http.HttpServletRequest
 
 import com.jda.dct.chatservice.repository.ProxyTokenMappingRepository
 import com.jda.dct.chatservice.service.MattermostPassthroughService
-import com.jda.dct.contexts.AuthContext
 import com.jda.dct.domain.ProxyTokenMapping
 import org.springframework.http.HttpMethod
 import org.springframework.http.HttpStatus
@@ -69,7 +69,7 @@ class MattermostPassthroughServiceSpec extends Specification {
 
         def errorResponse = Mock(HttpStatusCodeException)
         errorResponse.getRawStatusCode() >> 500
-        errorResponse.getResponseBodyAsString() >> "error"
+        errorResponse.getResponseBodyAsString() >> "exception"
         restTemplate.exchange(_,_, _ as HttpEntity, Object.class) >>  {
             throw errorResponse
         };
@@ -80,7 +80,7 @@ class MattermostPassthroughServiceSpec extends Specification {
 
         then: "Controller should be initialize"
         actual.statusCode == HttpStatus.INTERNAL_SERVER_ERROR
-        actual.body == "error"
+        actual.body == "exception"
     }
 
 
