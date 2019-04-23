@@ -64,4 +64,15 @@ public class ChatRoomUtilSpec extends Specification {
     }
 
 
+    def "test object to json raise Chat exception"() {
+        given: "Initialize Object"
+
+        List<Object> objects = Mock(List)
+        objects.get(_) >> {throw new ChatException(ChatException.ErrorCode.CREATE_SNAPSHOT_ERROR)()}
+        when: "Converting to byte array"
+        ChatRoomUtil.objectToJson(objects);
+
+        then: "Expect exception"
+        thrown(ChatException)
+    }
 }
