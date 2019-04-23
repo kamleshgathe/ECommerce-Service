@@ -11,6 +11,7 @@ package com.jda.dct.chatservice.utils;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.jda.dct.chatservice.exception.ChatException;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -18,8 +19,10 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.URI;
 import java.util.List;
+import org.springframework.stereotype.Component;
 import org.springframework.web.util.UriComponentsBuilder;
 
+@Component
 public class ChatRoomUtil {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
@@ -29,7 +32,6 @@ public class ChatRoomUtil {
     }
 
     private ChatRoomUtil() {
-
     }
 
     /**
@@ -48,7 +50,7 @@ public class ChatRoomUtil {
                 return bos.toByteArray();
             }
         } catch (IOException e) {
-            throw new IllegalArgumentException("Exception occurred when converting from object to byte");
+            throw new ChatException(ChatException.ErrorCode.OBJECT_CONVERSION_ERROR);
         }
     }
 
@@ -79,7 +81,7 @@ public class ChatRoomUtil {
         try {
             return OBJECT_MAPPER.writeValueAsString(object);
         } catch (JsonProcessingException e) {
-            throw new IllegalArgumentException("Unable to create snapshot object");
+            throw new ChatException(ChatException.ErrorCode.CREATE_SNAPSHOT_ERROR);
         }
     }
 
@@ -93,7 +95,7 @@ public class ChatRoomUtil {
         try {
             return OBJECT_MAPPER.readValue(json, List.class);
         } catch (IOException e) {
-            throw new IllegalArgumentException("Unable to restore snapshot as object");
+            throw new ChatException(ChatException.ErrorCode.RESTORE_SNAPSHOT_ERROR);
         }
     }
 
