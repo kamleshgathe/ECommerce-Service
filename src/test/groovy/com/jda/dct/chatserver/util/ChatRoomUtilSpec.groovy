@@ -7,6 +7,7 @@
  */
 package com.jda.dct.chatserver.util
 
+import com.jda.dct.chatservice.exception.ChatException
 import com.jda.dct.chatservice.utils.ChatRoomUtil
 import org.assertj.core.util.Lists
 import org.assertj.core.util.Maps
@@ -59,7 +60,7 @@ public class ChatRoomUtilSpec extends Specification {
         ChatRoomUtil.objectToByteArray(objects);
 
         then: "Expect exception"
-        thrown(IllegalArgumentException)
+        thrown(ChatException)
     }
 
 

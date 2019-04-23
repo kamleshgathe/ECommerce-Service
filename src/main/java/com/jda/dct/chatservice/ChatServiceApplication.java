@@ -8,6 +8,7 @@
 
 package com.jda.dct.chatservice;
 
+import com.jda.luminate.app.i18n.LuminateMessageSourceConfig;
 import com.jda.luminate.security.contexts.SpringAuthContextConfig;
 import com.jda.luminate.security.oauth.OAuth2ResourceServerConfig;
 import com.jda.luminate.tracing.LuminateTracingConfig;
@@ -45,7 +46,8 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 })
 
 @EntityScan(basePackages = {"com.jda.dct.domain"})
-@Import({SpringAuthContextConfig.class, OAuth2ResourceServerConfig.class, LuminateTracingConfig.class})
+@Import({SpringAuthContextConfig.class, OAuth2ResourceServerConfig.class, LuminateTracingConfig.class,
+    LuminateMessageSourceConfig.class})
 @EnableJpaRepositories(basePackages = {"com.jda.dct.ignitecaches.springimpl",
     "com.jda.dct.chatservice.repository"})
 public class ChatServiceApplication {
