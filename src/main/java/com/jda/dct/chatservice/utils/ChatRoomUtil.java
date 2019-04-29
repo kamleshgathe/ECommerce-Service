@@ -62,7 +62,7 @@ public class ChatRoomUtil {
      * @return List of chat objects.
      */
     public static Object byteArrayToObject(byte[] bytes) {
-        Set whiteList = new HashSet<>(Arrays.asList("Object", "ChatContext", "java.util.ArrayList"));
+        Set whiteList = new HashSet<>(Arrays.asList("Object", "ChatContext", "java.util.ArrayList", "java.util.HashMap"));
         try {
             try (ByteArrayInputStream bis = new ByteArrayInputStream(bytes)) {
                 try (WhitelistedObjectInputStream ois = new WhitelistedObjectInputStream(bis, whiteList)) {
