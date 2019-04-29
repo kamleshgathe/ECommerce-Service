@@ -42,7 +42,9 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
     "com.jda.dct.exec.lib.actions",
     "com.jda.dct.domain.util",
     "com.jda.dct.exec.lib.relationships",
-    "com.jda.luminate.messaging.kafka"
+    "com.jda.luminate.messaging.kafka",
+    "com.jda.luminate.common.aspects",
+    "com.jda.luminate.common.cache"    
 })
 
 @EntityScan(basePackages = {"com.jda.dct.domain"})
