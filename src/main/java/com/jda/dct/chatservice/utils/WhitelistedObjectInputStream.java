@@ -7,8 +7,13 @@
  */
 package com.jda.dct.chatservice.utils;
 
-import java.io.*;
-import java.util.*;
+import java.io.ObjectInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.ObjectStreamClass;
+import java.io.InvalidClassException;
+import java.util.Set;
+
 
 public class WhitelistedObjectInputStream extends ObjectInputStream {
     private Set whitelist;
