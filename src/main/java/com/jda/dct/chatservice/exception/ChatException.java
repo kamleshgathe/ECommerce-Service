@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright © 2019, JDA Software Group, Inc. ALL RIGHTS RESERVED.
  * <p>
  * This software is the confidential information of JDA Software, Inc., and is licensed
@@ -22,6 +22,7 @@ public class ChatException extends DctException {
 
     public enum ErrorCode {
         OBJECT_CONVERSION_ERROR("objectconversion", "Exception occurred when converting from object to byte."),
+        BYTE_CONVERSION_ERROR("objectconversion", "Exception occurred when converting from byte to object. {0}"),
         CREATE_SNAPSHOT_ERROR("createsnapshot", "Unable to create snapshot object."),
         RESTORE_SNAPSHOT_ERROR("restoresnapshot", "Unable to restore snapshot as object."),
         CHANNEL_NOT_EXISTS("channelnotexists", "Channel {0} does not exists"),

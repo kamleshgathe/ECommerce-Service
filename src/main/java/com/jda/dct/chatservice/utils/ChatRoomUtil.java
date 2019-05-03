@@ -12,19 +12,18 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.jda.dct.chatservice.exception.ChatException;
+import org.springframework.stereotype.Component;
+import org.springframework.web.util.UriComponentsBuilder;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
-import org.springframework.stereotype.Component;
 import java.util.Set;
-
-import org.springframework.web.util.UriComponentsBuilder;
 
 @Component
 public class ChatRoomUtil {
@@ -69,7 +68,8 @@ public class ChatRoomUtil {
                 "Object",
                 "ChatContext",
                 "java.util.ArrayList",
-                "java.util.HashMap"
+                "java.util.HashMap",
+                "java.util.LinkedHashMap"
         ));
         try {
             try (ByteArrayInputStream bis = new ByteArrayInputStream(bytes)) {
@@ -78,7 +78,7 @@ public class ChatRoomUtil {
                 }
             }
         } catch (Exception e) {
-            throw new IllegalArgumentException(e.getMessage());
+            throw new ChatException(ChatException.ErrorCode.BYTE_CONVERSION_ERROR, e.getMessage());
         }
     }
 
