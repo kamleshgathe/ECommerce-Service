@@ -48,7 +48,7 @@ public class ChatRoomUtilSpec extends Specification {
          ChatRoomUtil.byteArrayToObject(bytes);
 
         then: "Expect exception"
-        thrown(IllegalArgumentException)
+        thrown(ChatException)
     }
 
     def "test byte array from object should raise IO exception"() {
