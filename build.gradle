@@ -77,7 +77,8 @@ publishing {
 
 configurations {
     runtime.exclude group: "com.zaxxer", module: "HikariCP"
-
+    runtime.exclude group: "org.codehaus.groovy", module: "groovy-testng"
+    
     all {
         resolutionStrategy {
             eachDependency {
