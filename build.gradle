@@ -77,7 +77,8 @@ publishing {
 
 configurations {
     runtime.exclude group: "com.zaxxer", module: "HikariCP"
-
+    runtime.exclude group: "org.codehaus.groovy", module: "groovy-testng"
+    
     all {
         resolutionStrategy {
             eachDependency {
@@ -120,6 +121,9 @@ dependencies {
     compile group: "com.jda.dct", name: "kafkaclient", version: "${depVersion}", changing: true
     compile group: "com.jda.dct", name: "search", version: "${depVersion}", changing: true
     compile group: "com.jda.dct", name: "ingest", version: "${depVersion}", changing: true
+    compile group: "com.jda.dct", name: "app", version: "${depVersion}", changing: true
+    compile group: "com.jda.dct", name: "core", version: "${depVersion}", changing: true
+
 
 //    compile group: 'org.elasticsearch', name: 'elasticsearch', version: '5.6.15'
 //    compile group: 'org.elasticsearch.client', name: 'elasticsearch-rest-client', version: '5.6.15'

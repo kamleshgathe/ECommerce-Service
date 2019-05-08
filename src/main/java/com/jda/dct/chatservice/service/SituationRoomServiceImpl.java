@@ -28,7 +28,7 @@ import com.jda.dct.chatservice.dto.upstream.ChatContext;
 import com.jda.dct.chatservice.dto.upstream.ChatRoomCreateDto;
 import com.jda.dct.chatservice.dto.upstream.ResolveRoomDto;
 import com.jda.dct.chatservice.dto.upstream.TokenDto;
-import com.jda.dct.chatservice.exception.InvalidChatRequest;
+import com.jda.dct.chatservice.exception.ChatException;
 import com.jda.dct.chatservice.repository.ChatRoomParticipantRepository;
 import com.jda.dct.chatservice.repository.ProxyTokenMappingRepository;
 import com.jda.dct.chatservice.repository.SituationRoomRepository;
@@ -78,7 +78,6 @@ import org.springframework.web.client.RestTemplate;
 public class SituationRoomServiceImpl implements SituationRoomService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SituationRoomServiceImpl.class);
-
 
     @Value("${dct.situationRoom.mattermost.host}")
     private String mattermostUrl;
@@ -221,7 +220,9 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         Optional<ChatRoom> chatRoom = getChatRoomById(channelId);
         if (!chatRoom.isPresent()) {
             LOGGER.error("Chat room {} does not exists", channelId);
-            throw new InvalidChatRequest(String.format("Channel %s does not exists", channelId));
+            Object[] args = new Object[1];
+            args[0] = channelId;
+            throw new ChatException(ChatException.ErrorCode.CHANNEL_NOT_EXISTS, channelId);
         }
         LOGGER.info("Returning chat room {} context", channelId);
         return toChatContext(chatRoom.get(), authContext.getCurrentUser());
@@ -306,7 +307,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         Optional<ChatRoom> record = getChatRoomById(roomId);
 
         if (!record.isPresent()) {
-            throw new InvalidChatRequest("Invalid room");
+            throw new ChatException(ChatException.ErrorCode.INVALID_ROOM);
         }
         ChatRoom room = record.get();
 
@@ -357,7 +358,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         validateRoomState(roomId, currentUser, "Message can't be post to a resolved room");
         Optional<ChatRoom> room = getChatRoomById(roomId);
         if (!room.isPresent()) {
-            throw new InvalidChatRequest("Room does not exists,wrong room name for post message");
+            throw new ChatException(ChatException.ErrorCode.ROOM_NOT_EXISTS);
         }
         boolean present = room.get()
             .getParticipants()
@@ -391,7 +392,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         validateRoomState(roomId, currentUser, "Room is already resolved");
         Optional<ChatRoom> room = getChatRoomById(roomId);
         if (!room.isPresent()) {
-            throw new InvalidChatRequest("Room does not exists,wrong room name for resolve");
+            throw new ChatException(ChatException.ErrorCode.ROOM_NOT_EXISTS);
         }
         boolean present = room.get()
             .getParticipants()
@@ -409,7 +410,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         Optional<ChatRoom> room = getChatRoomById(roomId);
 
         if (!room.isPresent()) {
-            throw new InvalidChatRequest("Room does not exists,wrong room for remove participant");
+            throw new ChatException(ChatException.ErrorCode.ROOM_NOT_EXISTS);
         }
         boolean present = room.get()
             .getParticipants()
@@ -429,7 +430,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
                                    String invalidStatusMsg) {
         Optional<ChatRoom> room = getChatRoomById(roomId);
         if (!room.isPresent()) {
-            throw new InvalidChatRequest(String.format(INVALID_ROOM_FORMATTED_MSG, roomId));
+            throw new ChatException(ChatException.ErrorCode.INVALID_CHAT_ROOM, roomId);
         }
         AssertUtil.isTrue(room.get().getStatus() != ChatRoomStatus.RESOLVED,
             invalidStatusMsg);
@@ -465,7 +466,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     private ChatRoomParticipant removeParticipantInApp(String roomId, String targetUser) {
         Optional<ChatRoom> roomRecord = getChatRoomById(roomId);
         if (!roomRecord.isPresent()) {
-            throw new InvalidChatRequest(String.format(INVALID_ROOM_FORMATTED_MSG, roomId));
+            throw new ChatException(ChatException.ErrorCode.INVALID_CHAT_ROOM, roomId);
         }
         ChatRoom room = roomRecord.get();
         Set<ChatRoomParticipant> participants = room.getParticipants();
@@ -474,7 +475,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
             .filter(p -> p.getUserName().equals(targetUser)).findAny();
 
         if (!targetParticipant.isPresent()) {
-            throw new InvalidChatRequest("Participant does not belong to room");
+            throw new ChatException(ChatException.ErrorCode.PARTICIPANT_NOT_BELONG);
         }
         room.getParticipants().remove(targetParticipant.get());
         room.setLmd(new Date());
@@ -568,7 +569,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
             requestEntity,
             Map.class);
         if (!((ResponseEntity<Map>) response).getStatusCode().is2xxSuccessful()) {
-            throw new IllegalStateException("Unable to joined situation room");
+            throw new ChatException(ChatException.ErrorCode.UNABLE_TO_JOIN_ROOM);
         }
         LOGGER.info("User {} added to team {} successfully", remoteUserId, teamId);
     }
@@ -576,7 +577,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     private Map<String, Object> addParticipantsToRoom(String user, String roomId) {
         Optional<ChatRoom> roomRecord = getChatRoomById(roomId);
         if (!roomRecord.isPresent()) {
-            throw new InvalidChatRequest(String.format(INVALID_ROOM_FORMATTED_MSG, roomId));
+            throw new ChatException(ChatException.ErrorCode.INVALID_CHAT_ROOM, roomId);
         }
         ChatRoom room = roomRecord.get();
 
@@ -584,7 +585,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
             .stream().filter(p -> p.getUserName().equals(user)).findFirst();
 
         if (!participantRecord.isPresent()) {
-            throw new InvalidChatRequest(String.format("User %s not invited to room %s", user, roomId));
+            throw new ChatException(ChatException.ErrorCode.USER_NOT_INVITED, user, roomId);
         }
         ChatRoomParticipant participant = participantRecord.get();
         if (participant.getStatus() == ChatRoomParticipantStatus.JOINED) {
@@ -620,7 +621,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
             requestEntity,
             Map.class);
         if (!((ResponseEntity<Map>) response).getStatusCode().is2xxSuccessful()) {
-            throw new IllegalStateException("Unable to joined situation room");
+            throw new ChatException(ChatException.ErrorCode.UNABLE_TO_JOIN_ROOM);
         }
         return response.getBody();
     }
@@ -636,7 +637,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
             requestEntity,
             Map.class);
         if (!((ResponseEntity<Map>) response).getStatusCode().is2xxSuccessful()) {
-            throw new IllegalStateException("Unable to update roles.");
+            throw new ChatException(ChatException.ErrorCode.UNABLE_TO_UPDATE_ROLE);
         }
         LOGGER.info("Access token generated successfully for user {}", mapping.getAppUserId());
         mapping.setProxyToken(token(response.getBody()));
@@ -675,7 +676,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
             requestEntity,
             Map.class);
         if (!((ResponseEntity<Map>) response).getStatusCode().is2xxSuccessful()) {
-            throw new IllegalStateException("Unable to update roles.");
+            throw new ChatException(ChatException.ErrorCode.UNABLE_TO_UPDATE_ROLE);
         }
         LOGGER.info("Roles assigned successfully to user {}", userId);
     }
@@ -709,7 +710,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         LOGGER.debug("Going to archive conversion for room {}", roomId);
         Optional<ChatRoom> record = getChatRoomById(getRoomIdFromPostMessage(chat));
         if (!record.isPresent()) {
-            throw new InvalidChatRequest(String.format("Invalid chat room %s", roomId));
+            throw new ChatException(ChatException.ErrorCode.INVALID_CHAT_ROOM, roomId);
         }
         ChatRoom room = record.get();
         List<Object> chats = (List<Object>) ChatRoomUtil.byteArrayToObject(room.getChats());
@@ -727,7 +728,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         LOGGER.debug("Going to add new participants for room {}", roomId);
         Optional<ChatRoom> record = getChatRoomById(roomId);
         if (!record.isPresent()) {
-            throw new InvalidChatRequest(String.format("Invalid chat room %s", roomId));
+            throw new ChatException(ChatException.ErrorCode.INVALID_CHAT_ROOM, roomId);
         }
         ChatRoom room = record.get();
         Set<ChatRoomParticipant> existingUsers = room.getParticipants();

@@ -7,6 +7,7 @@
  */
 package com.jda.dct.chatserver.util
 
+import com.jda.dct.chatservice.exception.ChatException
 import com.jda.dct.chatservice.utils.ChatRoomUtil
 import org.assertj.core.util.Lists
 import org.assertj.core.util.Maps
@@ -47,7 +48,7 @@ public class ChatRoomUtilSpec extends Specification {
          ChatRoomUtil.byteArrayToObject(bytes);
 
         then: "Expect exception"
-        thrown(IllegalArgumentException)
+        thrown(ChatException)
     }
 
     def "test byte array from object should raise IO exception"() {
@@ -59,8 +60,19 @@ public class ChatRoomUtilSpec extends Specification {
         ChatRoomUtil.objectToByteArray(objects);
 
         then: "Expect exception"
-        thrown(IllegalArgumentException)
+        thrown(ChatException)
     }
 
 
+    def "test object to json raise Chat exception"() {
+        given: "Initialize Object"
+
+        List<Object> objects = Mock(List)
+        objects.get(_) >> {throw new ChatException(ChatException.ErrorCode.CREATE_SNAPSHOT_ERROR)()}
+        when: "Converting to byte array"
+        ChatRoomUtil.objectToJson(objects);
+
+        then: "Expect exception"
+        thrown(ChatException)
+    }
 }

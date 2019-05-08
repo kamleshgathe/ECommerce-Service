@@ -16,6 +16,7 @@ import com.jda.dct.chatservice.dto.upstream.ChatContext
 import com.jda.dct.chatservice.dto.upstream.ChatRoomCreateDto
 import com.jda.dct.chatservice.dto.upstream.ResolveRoomDto
 import com.jda.dct.chatservice.dto.upstream.TokenDto
+import com.jda.dct.chatservice.exception.ChatException
 import com.jda.dct.chatservice.exception.InvalidChatRequest
 import com.jda.dct.chatservice.repository.ChatRoomParticipantRepository
 import com.jda.dct.chatservice.repository.ProxyTokenMappingRepository
@@ -156,7 +157,7 @@ class SituationRoomServiceSpec extends Specification {
         channelId | chatRoom         | exceptionClazz
         null      | Optional.empty() | InvalidChatRequest
         ""        | Optional.empty() | InvalidChatRequest
-        "123"     | Optional.empty() | InvalidChatRequest
+        "123"     | Optional.empty() | ChatException
     }
 
     def "test post message should failed if room is already resolved"() {
@@ -604,7 +605,7 @@ class SituationRoomServiceSpec extends Specification {
         initNewSituationRoomService()
         service.inviteUsers("abcd", request)
         then: "Should get exception"
-        thrown(InvalidChatRequest)
+        thrown(ChatException)
     }
 
     def "test resolve room expect exception if room already resolved"() {
@@ -809,7 +810,7 @@ class SituationRoomServiceSpec extends Specification {
         channel | ex
         null    | InvalidChatRequest
         ""      | InvalidChatRequest
-        "1"     | InvalidChatRequest
+        "1"     | ChatException
     }
 
     def "test get chat context should succeed"() {
@@ -865,7 +866,7 @@ class SituationRoomServiceSpec extends Specification {
         initNewSituationRoomService()
         service.resolve("1", request)
         then: "Expect InvalidChatRequest"
-        thrown(InvalidChatRequest.class)
+        thrown(ChatException.class)
     }
 
     def "resolve room should fail if room already resolved"() {
@@ -1192,8 +1193,6 @@ class SituationRoomServiceSpec extends Specification {
         where: "Defined invalid inputs"
         id   | roomStatus              | room                                                                                        | targetUser
         null | ChatRoomStatus.RESOLVED | Optional.empty()                                                                            | "user3"
-
-        "1"  | ChatRoomStatus.RESOLVED | Optional.empty()                                                                            | "user3"
 
         "1"  | ChatRoomStatus.RESOLVED | Optional.of(mockedChatRoom(id, getDummySnapshot(), Sets.newHashSet(), "user1", roomStatus)) | "user3"
 
