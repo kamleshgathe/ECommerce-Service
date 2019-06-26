@@ -55,6 +55,8 @@ artifactory {
                 repoKey = 'libs-release-local'
             else if (version.contains('ga'))
                 repoKey = 'libs-release-local'
+            else if (version.contains('stable') || version.contains('STABLE'))
+                repoKey = 'libs-release-local
             else
                 repoKey = 'libs-snapshot-local'
             username = "${artifactoryUsername}"
