@@ -39,6 +39,12 @@ public class ChatRoomController {
 
     private SituationRoomService service;
     private AuthContext authContext;
+
+    /**
+     * Chat room controller constructor.
+     * @param service Situation room service class.
+     * @param authContext Auth context.
+     */
     public ChatRoomController(@Autowired SituationRoomService service,
                               @Autowired AuthContext authContext) {
         AssertUtil.notNull(service, "Situation service can't be null");
@@ -46,6 +52,10 @@ public class ChatRoomController {
         this.authContext = authContext;
     }
 
+    /**
+     * Return the token of user.
+     * @return json representation of team and token.
+     */
     @GetMapping(value = "/token",
         consumes = MediaType.APPLICATION_JSON_VALUE,
         produces = MediaType.APPLICATION_JSON_VALUE)
@@ -54,6 +64,12 @@ public class ChatRoomController {
         return ResponseEntity.ok(service.getSessionToken());
     }
 
+    /**
+     * Returns list of channel for logged in user.
+     * @param by user.
+     * @param type type of room.
+     * @return
+     */
     @GetMapping(value = "/channels",
         consumes = MediaType.ALL_VALUE,
         produces = MediaType.APPLICATION_JSON_VALUE)
@@ -72,6 +88,11 @@ public class ChatRoomController {
         return ResponseEntity.ok(service.postMessage(request));
     }
 
+    /**
+     * Add new chat room into system.
+     * @param request chat room request.
+     * @return created chat room information.
+     */
     @PostMapping(value = "/channels",
         consumes = MediaType.APPLICATION_JSON_VALUE,
         produces = MediaType.APPLICATION_JSON_VALUE)
