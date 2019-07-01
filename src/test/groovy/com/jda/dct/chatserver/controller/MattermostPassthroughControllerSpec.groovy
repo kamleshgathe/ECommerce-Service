@@ -10,6 +10,8 @@ package com.jda.dct.chatserver.controller
 
 import com.jda.dct.chatservice.controller.MattermostPassthroughController
 import com.jda.dct.chatservice.service.MattermostPassthroughService
+import com.jda.dct.ignitecaches.springimpl.Tenants
+import com.jda.luminate.security.contexts.AuthContext
 import org.assertj.core.util.Lists
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpMethod
@@ -22,29 +24,31 @@ import javax.servlet.http.HttpServletRequest
 class MattermostPassthroughControllerSpec extends Specification {
     def "test constructor exception if service is null"() {
         when: "Creating controller with null service"
-        new MattermostPassthroughController(null)
+        new MattermostPassthroughController(null,null)
         then: "Expect exception"
         thrown(IllegalArgumentException)
     }
 
     def "test constructor should be initialize if service is not null"() {
         when: "Creating constroller with not null service"
-        def controller = new MattermostPassthroughController(Mock(MattermostPassthroughService))
+        def controller = new MattermostPassthroughController(Mock(MattermostPassthroughService),null)
         then: "Controller should be initialize"
         controller != null
     }
 
     def "test passthrouh call"() {
         given: "Initialize"
-
+        def authContext = Mock(AuthContext)
+        authContext.getCurrentTid() >> "tid1"
         def service = Mock(MattermostPassthroughService)
         service.passthrough(_ , _ as HttpMethod, _ ) >> responseEntity
         when: "Creating constroller with not null service"
-        def controller = new MattermostPassthroughController(service)
+        def controller = new MattermostPassthroughController(service,authContext)
         ResponseEntity actual = controller.passthrough(body, method, httpServletRequest);
         then: "Controller should be initialize"
         actual.statusCode == responseEntity.statusCode
         actual.body == responseEntity.body
+        Tenants.getCurrent() == "tid1"
         where:
         body | method         | httpServletRequest       | responseEntity
         null | HttpMethod.GET | buildHttpServetRequest() | buildResponseEntity("abcd", HttpStatus.OK)
