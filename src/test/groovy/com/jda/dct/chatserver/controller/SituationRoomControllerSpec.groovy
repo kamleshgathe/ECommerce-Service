@@ -14,6 +14,8 @@ import com.jda.dct.chatservice.dto.upstream.*
 import com.jda.dct.chatservice.exception.InvalidChatRequest
 import com.jda.dct.chatservice.service.SituationRoomService
 import com.jda.dct.domain.ChatRoomStatus
+import com.jda.dct.ignitecaches.springimpl.Tenants
+import com.jda.luminate.security.contexts.AuthContext
 import groovy.json.JsonSlurper
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -23,17 +25,18 @@ class SituationRoomControllerSpec extends Specification {
 
     def "test throw exception if service is null"() {
         when: "Create the purchase order"
-        new ChatRoomController(null)
+        new ChatRoomController(null,null)
         then:
         thrown InvalidChatRequest
     }
 
     def "test no exception"() {
         given:
-        def service = Mock(SituationRoomService);
+        def service = mockedChatService()
+        def authContext = mockedAuthContext()
         when: "Create the purchase order"
 
-        new ChatRoomController(service)
+        new ChatRoomController(service,authContext)
         then:
         noExceptionThrown()
     }
@@ -43,17 +46,20 @@ class SituationRoomControllerSpec extends Specification {
         def token = new TokenDto();
         token.teamId = "abcd"
         token.token = "token1"
-        def service = Mock(SituationRoomService);
+        def service = mockedChatService()
+        def authContext = mockedAuthContext()
         service.getSessionToken() >> token;
+        authContext.getCurrentTid() >> "tid1"
 
         when: "Calling get token of a user"
-        def ChatRoomController controller = new ChatRoomController(service);
+        def ChatRoomController controller = new ChatRoomController(service,authContext);
         ResponseEntity<TokenDto> tokenResponse = controller.getAccessToken();
 
         then:
         tokenResponse.statusCode.value() == 200
         tokenResponse.body.token == "token1"
         tokenResponse.body.teamId == "abcd"
+        Tenants.getCurrent() == "tid1"
     }
 
     def "test create channel"() {
@@ -64,15 +70,18 @@ class SituationRoomControllerSpec extends Specification {
         exepectedResponse.put("name", "channels_1")
         exepectedResponse.put("team_id", "2222");
         ChatRoomCreateDto situationRoomDto = new ChatRoomCreateDto();
-        def service = Mock(SituationRoomService);
+        def service = mockedChatService()
+        def authContext = mockedAuthContext()
         service.createChannel(_ as ChatRoomCreateDto) >> exepectedResponse;
+        authContext.getCurrentTid() >> "tid1"
 
         when: "Calling get token of a user"
-        def controller = new ChatRoomController(service);
+        def controller = new ChatRoomController(service,authContext);
         ResponseEntity<Map<String, Object>> responseEntity = controller.addNewChannel(Mock(ChatRoomCreateDto))
         then:
         responseEntity.getStatusCode().value() == 200
         responseEntity.getBody() == exepectedResponse
+        Tenants.getCurrent() == "tid1"
     }
 
     def "test add user to existing"() {
@@ -82,14 +91,17 @@ class SituationRoomControllerSpec extends Specification {
         request.users == users;
         def exepectedResponse = Maps.newHashMap();
         exepectedResponse.put("Status", "success");
-        def service = Mock(SituationRoomService);
+        def service = mockedChatService()
+        def authContext = mockedAuthContext()
+        authContext.getCurrentTid() >> "tid1"
         service.inviteUsers("abcd", request) >> exepectedResponse;
 
         when: "Add user to existing channel"
-        def controller = new ChatRoomController(service);
+        def controller = new ChatRoomController(service,authContext);
         ResponseEntity<Map<String, Object>> responseEntity = controller.inviteUsers("abcd", request)
         then:
         responseEntity.getStatusCode().value() == 200
+        Tenants.getCurrent() == "tid1"
     }
 
     def "test get chat context"() {
@@ -98,16 +110,18 @@ class SituationRoomControllerSpec extends Specification {
         entity.add("json1");
         def context = Mock(ChatContext);
         context.getEntity() >> entity;
-        def service = Mock(SituationRoomService);
+        def service = mockedChatService()
+        def authContext = mockedAuthContext()
         service.getChannelContext("abcd") >> context;
+        authContext.getCurrentTid() >> "tid1"
 
         when: "Add user to existing channel"
-        def controller = new ChatRoomController(service);
+        def controller = new ChatRoomController(service,authContext);
         ResponseEntity<ChatContext> responseEntity = controller.getChatRoomContext("abcd")
         then:
         responseEntity.getStatusCode().value() == 200
         ((List) ((ChatContext) responseEntity.getBody()).getEntity())[0] == "json1"
-
+        Tenants.getCurrent() == "tid1"
     }
 
     def "test post message"() {
@@ -122,16 +136,18 @@ class SituationRoomControllerSpec extends Specification {
                 '"root_id": "","parent_id": "","original_id": "","message": "Sending just like",' +
                 '"type": "","props": {}, "hashtags": "","pending_post_id": ""}')
 
-        def service = Mock(SituationRoomService);
+        def service = mockedChatService()
+        def authContext = mockedAuthContext()
         service.postMessage(_ as Map) >> expectedObj;
-
+        authContext.getCurrentTid() >> "tid1"
         when:
-        def controller = new ChatRoomController(service);
+        def controller = new ChatRoomController(service,authContext);
         ResponseEntity<Map<String, Object>> responseEntity = controller.postMessageToChannel(postObject)
 
         then:
         responseEntity.statusCode.value() == 200
         responseEntity.getBody() == expectedObj
+        Tenants.getCurrent() == "tid1"
     }
 
     def "resolve room should succeed"() {
@@ -146,11 +162,13 @@ class SituationRoomControllerSpec extends Specification {
         expected.getId() >> "room1"
 
         ResolveRoomDto dto = new ResolveRoomDto();
-        def service = Mock(SituationRoomService);
+        def service = mockedChatService()
+        def authContext = mockedAuthContext()
         service.resolve(_ as String, _ as ResolveRoomDto) >> expected;
+        authContext.getCurrentTid() >> "tid1"
 
         when: "Resolve room"
-        def controller = new ChatRoomController(service);
+        def controller = new ChatRoomController(service,authContext);
         ResponseEntity<ChatContext> response = controller.resolve("room1", dto);
         ChatContext actual = response.getBody();
         then: "Match expectation"
@@ -160,6 +178,7 @@ class SituationRoomControllerSpec extends Specification {
         actual.getResolutionTypes() == expected.getResolutionTypes()
         actual.resolutionRemark == expected.resolutionRemark
         actual.getId() == actual.getId();
+        Tenants.getCurrent() == "tid1"
     }
 
     def "Deatche user from room should succeed"() {
@@ -167,40 +186,47 @@ class SituationRoomControllerSpec extends Specification {
 
         Map status = Maps.newHashMap();
         status.put("Status", "Success")
-        def service = Mock(SituationRoomService);
+        def service = mockedChatService()
+        def authContext = mockedAuthContext()
+        authContext.getCurrentTid() >> "tid1"
         service.removeParticipant(_ as String, _ as String) >> status;
 
         when: "Resolve room"
-        def controller = new ChatRoomController(service);
+        def controller = new ChatRoomController(service,authContext);
         ResponseEntity<Map> response = controller.removeUser("room1", "user2");
         then: "Match expectation"
         response.statusCode == HttpStatus.OK
         response.body.get("Status") == "Success"
+        Tenants.getCurrent() == "tid1"
     }
 
     def "test get channels"() {
         given: "Initialize response context"
-        def service = Mock(SituationRoomService);
+        def service = mockedChatService()
+        def authContext = mockedAuthContext()
         def mockChannels = Mock(List)
         service.getChannels(_,_) >> mockChannels
         mockChannels.size() >> 5
-
+        authContext.getCurrentTid() >> "tid1"
         when: "Get rooms"
-        def controller = new ChatRoomController(service);
+        def controller = new ChatRoomController(service,authContext);
         ResponseEntity<List> response = controller.getChannels(null, null)
         then: "Match expectation"
         response.statusCode == HttpStatus.OK
         response.body.size() == 5
+        Tenants.getCurrent() == "tid1"
     }
 
     def "test join room"() {
         given: "Initialize"
         def map = Maps.newHashMap()
         map.put("Status","Success")
-        def service = Mock(SituationRoomService);
+        def service = mockedChatService()
+        def authContext = mockedAuthContext()
+        authContext.getCurrentTid() >> "tid1"
         service.acceptInvitation("room1") >> map
         when: "join rooms"
-        def controller = new ChatRoomController(service);
+        def controller = new ChatRoomController(service,authContext);
         ResponseEntity<Map> response = controller.join("room1")
         then: "Match expectation"
         response.statusCode == HttpStatus.OK
@@ -211,13 +237,24 @@ class SituationRoomControllerSpec extends Specification {
         given: "Initialize"
         def unreadResponse = Mock(List)
         unreadResponse.size() >> 5
-        def service = Mock(SituationRoomService);
+        def service = mockedChatService()
+        def authContext = mockedAuthContext()
+        authContext.getCurrentTid() >> "tid1"
         service.getUnreadCount() >> unreadResponse
         when: "unread counts"
-        def controller = new ChatRoomController(service);
+        def controller = new ChatRoomController(service,authContext);
         ResponseEntity<List> response = controller.getUserUnreadCount()
         then: "Match expectation"
         response.statusCode == HttpStatus.OK
         response.body.size() == 5
+        Tenants.getCurrent() == "tid1"
+    }
+
+    def mockedChatService() {
+        return Mock(SituationRoomService)
+    }
+
+    def mockedAuthContext() {
+        return Mock(AuthContext)
     }
 }

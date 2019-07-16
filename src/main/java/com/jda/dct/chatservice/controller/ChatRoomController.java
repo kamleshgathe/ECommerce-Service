@@ -15,6 +15,8 @@ import com.jda.dct.chatservice.dto.upstream.ResolveRoomDto;
 import com.jda.dct.chatservice.dto.upstream.TokenDto;
 import com.jda.dct.chatservice.service.SituationRoomService;
 import com.jda.dct.chatservice.utils.AssertUtil;
+import com.jda.dct.ignitecaches.springimpl.Tenants;
+import com.jda.luminate.security.contexts.AuthContext;
 import java.util.List;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,25 +36,47 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/chat")
 public class ChatRoomController {
 
-    private SituationRoomService service;
 
-    public ChatRoomController(@Autowired SituationRoomService service) {
+    private SituationRoomService service;
+    private AuthContext authContext;
+
+    /**
+     * Chat room controller constructor.
+     * @param service Situation room service class.
+     * @param authContext Auth context.
+     */
+    public ChatRoomController(@Autowired SituationRoomService service,
+                              @Autowired AuthContext authContext) {
         AssertUtil.notNull(service, "Situation service can't be null");
         this.service = service;
+        this.authContext = authContext;
     }
 
+    /**
+     * Return the token of user.
+     * @return json representation of team and token.
+     */
     @GetMapping(value = "/token",
         consumes = MediaType.APPLICATION_JSON_VALUE,
         produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<TokenDto> getAccessToken() {
+        Tenants.setCurrent(authContext.getCurrentTid());
         return ResponseEntity.ok(service.getSessionToken());
     }
 
+    /**
+     * Returns list of channel for logged in user.
+     * @param by user.
+     * @param type type of room.
+     * @return
+     */
     @GetMapping(value = "/channels",
         consumes = MediaType.ALL_VALUE,
         produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<ChatContext>> getChannels(@RequestParam(value = "by", required = false) String by,
                                                          @RequestParam(value = "type", required = false) String type) {
+
+        Tenants.setCurrent(authContext.getCurrentTid());
         return ResponseEntity.ok(service.getChannels(by, type));
     }
 
@@ -60,14 +84,21 @@ public class ChatRoomController {
         consumes = MediaType.APPLICATION_JSON_VALUE,
         produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Map<String, Object>> postMessageToChannel(@RequestBody Map<String, Object> request) {
+        Tenants.setCurrent(authContext.getCurrentTid());
         return ResponseEntity.ok(service.postMessage(request));
     }
 
+    /**
+     * Add new chat room into system.
+     * @param request chat room request.
+     * @return created chat room information.
+     */
     @PostMapping(value = "/channels",
         consumes = MediaType.APPLICATION_JSON_VALUE,
         produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Map<String, Object>> addNewChannel(@RequestBody ChatRoomCreateDto request) {
 
+        Tenants.setCurrent(authContext.getCurrentTid());
         return ResponseEntity.ok(service.createChannel(request));
     }
 
@@ -76,6 +107,7 @@ public class ChatRoomController {
         produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Map<String, Object>> inviteUsers(@PathVariable("channel_id") String channelId,
                                                            @RequestBody AddUserToRoomDto request) {
+        Tenants.setCurrent(authContext.getCurrentTid());
         return ResponseEntity.ok(service.inviteUsers(channelId, request));
     }
 
@@ -84,6 +116,7 @@ public class ChatRoomController {
         produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Map<String, Object>> removeUser(@PathVariable("channel_id") String channelId,
                                                           @PathVariable("user_id") String userId) {
+        Tenants.setCurrent(authContext.getCurrentTid());
         return ResponseEntity.ok(service.removeParticipant(channelId, userId));
     }
 
@@ -91,6 +124,7 @@ public class ChatRoomController {
         consumes = MediaType.ALL_VALUE,
         produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ChatContext> getChatRoomContext(@PathVariable("channel_id") String channelId) {
+        Tenants.setCurrent(authContext.getCurrentTid());
         return ResponseEntity.ok(service.getChannelContext(channelId));
     }
 
@@ -98,6 +132,7 @@ public class ChatRoomController {
         consumes = MediaType.ALL_VALUE,
         produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Map<String, Object>> join(@PathVariable("channel_id") String channelId) {
+        Tenants.setCurrent(authContext.getCurrentTid());
         return ResponseEntity.ok(service.acceptInvitation(channelId));
     }
 
@@ -105,6 +140,7 @@ public class ChatRoomController {
         consumes = MediaType.ALL_VALUE,
         produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<Map<String, Object>>> getUserUnreadCount() {
+        Tenants.setCurrent(authContext.getCurrentTid());
         return ResponseEntity.ok(service.getUnreadCount());
     }
 
@@ -113,6 +149,7 @@ public class ChatRoomController {
         produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ChatContext> resolve(@PathVariable("channel_id") String roomId,
                                                @RequestBody ResolveRoomDto resolveRequest) {
+        Tenants.setCurrent(authContext.getCurrentTid());
         return ResponseEntity.ok(service.resolve(roomId, resolveRequest));
     }
 }
