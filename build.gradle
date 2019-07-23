@@ -51,14 +51,10 @@ artifactory {
     contextUrl = "${artifactoryContextUrl}"
     publish {
         repository {
-            if (version.contains('rc'))
-                repoKey = 'libs-release-local'
-            else if (version.contains('ga'))
-                repoKey = 'libs-release-local'
-            else if (version.contains('stable') || version.contains('STABLE'))
-                repoKey = 'libs-release-local'
-            else
+            if (version.contains('snapshot') || version.contains('SNAPSHOT'))
                 repoKey = 'libs-snapshot-local'
+            else
+                repoKey = 'libs-release-local'
             username = "${artifactoryUsername}"
             password = "${artifactoryPassword}"
         }
