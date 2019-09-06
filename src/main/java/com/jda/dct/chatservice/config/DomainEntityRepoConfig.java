@@ -90,6 +90,7 @@ public class DomainEntityRepoConfig {
             .shipmentRepo(shipmentDao)
             .deliveryRepo(deliveryDao)
             .inventoryRepo(nodeDao)
+            .capacityRepo(nodeDao)
             .build();
     }
 

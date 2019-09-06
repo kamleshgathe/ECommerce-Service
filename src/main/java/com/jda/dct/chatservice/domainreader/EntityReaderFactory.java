@@ -31,6 +31,7 @@ public class EntityReaderFactory {
     private static final String TYPE_SALES_ORDER = "sales_order";
     private static final String TYPE_DELIVERY = "delivery";
     private static final String TYPE_INVENTORY = "inventory";
+    private static final String TYPE_CAPACITY = "capacity";
 
     private AuthContext authContext;
 
@@ -71,6 +72,7 @@ public class EntityReaderFactory {
         private DctDaoBase<PurchaseOrder> purchaseOrderRepo;
         private DctDaoBase<Delivery> deliveryRepo;
         private DctDaoBase<Node> inventoryRepo;
+        private DctDaoBase<Node> capacityRepo;
 
         private AuthContext authContext;
 
@@ -99,6 +101,11 @@ public class EntityReaderFactory {
             return this;
         }
 
+        public EntityReaderFactoryBuilder capacityRepo(final DctDaoBase<Node> capacityRepo) {
+            this.capacityRepo = capacityRepo;
+            return this;
+        }
+
         public EntityReaderFactoryBuilder authContext(final AuthContext authContext) {
             this.authContext = authContext;
             return this;
@@ -114,6 +121,7 @@ public class EntityReaderFactory {
             Assert.notNull(purchaseOrderRepo, "PurchaseOrder repository can't be null");
             Assert.notNull(deliveryRepo, "Delivery repository can't be null");
             Assert.notNull(inventoryRepo, "Inventory repository can't be null");
+            Assert.notNull(capacityRepo, "Capacity repository can't be null");
             Assert.notNull(authContext, "AuthContext can't be null");
 
             EntityReaderFactory readerFactory = new EntityReaderFactory();
@@ -122,6 +130,7 @@ public class EntityReaderFactory {
             readerFactory.repoMap.put(TYPE_SALES_ORDER, salesOrderRepo);
             readerFactory.repoMap.put(TYPE_DELIVERY, deliveryRepo);
             readerFactory.repoMap.put(TYPE_INVENTORY, inventoryRepo);
+            readerFactory.repoMap.put(TYPE_CAPACITY, capacityRepo);
             readerFactory.authContext = authContext;
             return readerFactory;
         }
