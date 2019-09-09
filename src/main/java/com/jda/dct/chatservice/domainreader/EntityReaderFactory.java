@@ -15,8 +15,10 @@ import com.jda.dct.domain.stateful.SalesOrder;
 import com.jda.dct.domain.stateful.Shipment;
 import com.jda.dct.persist.ignite.dao.DctDaoBase;
 import com.jda.luminate.security.contexts.AuthContext;
+
 import java.util.HashMap;
 import java.util.Map;
+
 import org.apache.logging.log4j.util.Strings;
 import org.springframework.util.Assert;
 
@@ -31,6 +33,7 @@ public class EntityReaderFactory {
     private static final String TYPE_SALES_ORDER = "sales_order";
     private static final String TYPE_DELIVERY = "delivery";
     private static final String TYPE_INVENTORY = "inventory";
+    private static final String TYPE_CAPACITY = "capacity";
 
     private AuthContext authContext;
 
@@ -70,7 +73,7 @@ public class EntityReaderFactory {
         private DctDaoBase<SalesOrder> salesOrderRepo;
         private DctDaoBase<PurchaseOrder> purchaseOrderRepo;
         private DctDaoBase<Delivery> deliveryRepo;
-        private DctDaoBase<Node> inventoryRepo;
+        private DctDaoBase<Node> nodeRepo;
 
         private AuthContext authContext;
 
@@ -94,8 +97,8 @@ public class EntityReaderFactory {
             return this;
         }
 
-        public EntityReaderFactoryBuilder inventoryRepo(final DctDaoBase<Node> inventoryRepo) {
-            this.inventoryRepo = inventoryRepo;
+        public EntityReaderFactoryBuilder nodeRepo(final DctDaoBase<Node> nodeRepo) {
+            this.nodeRepo = nodeRepo;
             return this;
         }
 
@@ -106,6 +109,7 @@ public class EntityReaderFactory {
 
         /**
          * Builder for EntityReaderFactory.
+         *
          * @return return EntityReaderFactory.
          */
         public EntityReaderFactory build() {
@@ -113,7 +117,7 @@ public class EntityReaderFactory {
             Assert.notNull(salesOrderRepo, "SalesOrder repository can't be null");
             Assert.notNull(purchaseOrderRepo, "PurchaseOrder repository can't be null");
             Assert.notNull(deliveryRepo, "Delivery repository can't be null");
-            Assert.notNull(inventoryRepo, "Inventory repository can't be null");
+            Assert.notNull(nodeRepo, "Node repository can't be null");
             Assert.notNull(authContext, "AuthContext can't be null");
 
             EntityReaderFactory readerFactory = new EntityReaderFactory();
@@ -121,7 +125,8 @@ public class EntityReaderFactory {
             readerFactory.repoMap.put(TYPE_PURCHASE_ORDER, purchaseOrderRepo);
             readerFactory.repoMap.put(TYPE_SALES_ORDER, salesOrderRepo);
             readerFactory.repoMap.put(TYPE_DELIVERY, deliveryRepo);
-            readerFactory.repoMap.put(TYPE_INVENTORY, inventoryRepo);
+            readerFactory.repoMap.put(TYPE_INVENTORY, nodeRepo);
+            readerFactory.repoMap.put(TYPE_CAPACITY, nodeRepo);
             readerFactory.authContext = authContext;
             return readerFactory;
         }
