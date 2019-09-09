@@ -106,8 +106,7 @@ class EntityReaderFactorySpec extends Specification {
                 .purchaseOrderRepo(purchaseOrder)
                 .salesOrderRepo(salesOrder)
                 .deliveryRepo(delivery)
-                .inventoryRepo(node)
-                .capacityRepo(node)
+                .nodeRepo(node)
                 .authContext(authContext)
                 .build();
     }
