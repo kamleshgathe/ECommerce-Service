@@ -36,6 +36,13 @@ class EntityReaderFactorySpec extends Specification {
         thrown(IllegalArgumentException)
     }
 
+    def "test constructor should throw exception if node repo is null"() {
+        when: "Initialize constructor"
+        buildEntityReaderFactory(Mock(DctDaoBase), Mock(DctDaoBase), Mock(DctDaoBase), Mock(DctDaoBase), null, Mock(AuthContext));
+        then: "Should expect exception"
+        thrown(IllegalArgumentException)
+    }
+
     def "test constructor should throw exception auth context is null"() {
         when: "Initialize constructor"
         buildEntityReaderFactory(Mock(DctDaoBase),
@@ -99,7 +106,7 @@ class EntityReaderFactorySpec extends Specification {
                 .purchaseOrderRepo(purchaseOrder)
                 .salesOrderRepo(salesOrder)
                 .deliveryRepo(delivery)
-                .inventoryRepo(node)
+                .nodeRepo(node)
                 .authContext(authContext)
                 .build();
     }
