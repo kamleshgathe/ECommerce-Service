@@ -155,10 +155,9 @@ class SituationRoomControllerSpec extends Specification {
         ChatContext expected = Mock(ChatContext)
         expected.getCreatedBy() >> "user1"
         expected.getResolvedAt() >> 123456789
-        expected.getResolution() >> "resolved1"
+        expected.getResolution() >> Lists.newArrayList("resolved1")
         expected.getResolutionRemark() >> "thanks"
         expected.getRoomStatus() >> ChatRoomStatus.RESOLVED.name()
-        expected.getResolutionTypes() >> Lists.newArrayList("shipment started")
         expected.getId() >> "room1"
 
         ResolveRoomDto dto = new ResolveRoomDto();
@@ -173,9 +172,8 @@ class SituationRoomControllerSpec extends Specification {
         ChatContext actual = response.getBody();
         then: "Match expectation"
         response.statusCode == HttpStatus.OK
-        actual.resolution == expected.resolution
+        actual.getResolution() == expected.getResolution()
         actual.resolvedBy == expected.resolvedBy
-        actual.getResolutionTypes() == expected.getResolutionTypes()
         actual.resolutionRemark == expected.resolutionRemark
         actual.getId() == actual.getId();
         Tenants.getCurrent() == "tid1"

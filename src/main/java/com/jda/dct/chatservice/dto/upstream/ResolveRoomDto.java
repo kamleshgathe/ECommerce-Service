@@ -14,8 +14,7 @@ import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
 
 public class ResolveRoomDto {
-    private List<String> resolutionTypes;
-    private String resolution;
+    private List<String> resolution;
     private String remark;
 
     @JsonCreator
@@ -23,11 +22,7 @@ public class ResolveRoomDto {
         //this has been kept blank to get initialize by jackson
     }
 
-    public List<String> getResolutionTypes() {
-        return resolutionTypes;
-    }
-
-    public String getResolution() {
+    public List<String> getResolution() {
         return resolution;
     }
 
@@ -35,21 +30,14 @@ public class ResolveRoomDto {
         return remark;
     }
 
-    @JsonProperty(value = "resolution_type", required = true)
+    @JsonProperty(value = "resolution", required = true)
     @NotNull(message = "Resolution type can't be null")
     @NotEmpty(message = "Resolution type can't be empty")
-    public void setResolutionTypes(List<String> resolutionTypes) {
-        this.resolutionTypes = resolutionTypes;
-    }
-
-    @JsonProperty(value = "resolution", required = true)
-    @NotNull(message = "Resolution can't be null or empty")
-    public void setResolution(String resolution) {
+    public void setResolution(List<String> resolution) {
         this.resolution = resolution;
     }
 
-    @JsonProperty(value = "resolution_remark", required = true)
-    @NotNull(message = "Resolution remark can't be null or empty")
+    @JsonProperty(value = "resolution_remark")
     public void setRemark(String remark) {
         this.remark = remark;
     }
@@ -57,8 +45,7 @@ public class ResolveRoomDto {
     @Override
     public String toString() {
         final StringBuilder sb = new StringBuilder("ResolveRoomDto{");
-        sb.append("resolutionTypes='").append(resolutionTypes).append('\'');
-        sb.append(", resolution='").append(resolution).append('\'');
+        sb.append("resolution='").append(resolution).append('\'');
         sb.append(", remark='").append(remark).append('\'');
         sb.append('}');
         return sb.toString();
