@@ -832,9 +832,8 @@ class SituationRoomServiceSpec extends Specification {
         given: "Initialize inputs"
         mock()
         ResolveRoomDto request = new ResolveRoomDto()
-        request.resolutionTypes = resolutionType
-        request.resolution = ((String) resolutionMsg)
-        request.remark = remark;
+        request.resolution = resolutionList as List<String>
+        request.remark = remark
 
         when: "Calling resolve room"
         initNewSituationRoomService()
@@ -842,14 +841,14 @@ class SituationRoomServiceSpec extends Specification {
         then:
         thrown(InvalidChatRequest.class)
         where: "Expect InvalidChatRequest"
-        roomId | resolutionType              | resolutionMsg | remark
-        null   | Lists.newArrayList("type1") | "resolution1" | "thanks"
-        "1"    | null                            | "resolution1" | "thanks"
-        "1"    | Lists.newArrayList("type1")     | null          | "thanks"
-        "1"    | Lists.newArrayList("type1")     | "resolution1" | null
-        "1"    | Lists.newArrayList(" ")         | "resolution1" | null
-        "1"    | Lists.newArrayList("type1", "") | "resolution1" | "thanks"
-        "1"    | Lists.newArrayList()            | "resolution1" | "thanks"
+        roomId | resolutionList                                       | remark
+        "1"    | null                                                 | "thanks"
+        "1"    | Lists.newArrayList( "resolution1",  null)            | ""
+        "1"    | Lists.newArrayList( "resolution1",  "")              | "thanks"
+        "1"    | Lists.newArrayList( "", "")                          | null
+        "1"    | Lists.newArrayList("")                               | null
+        null   | Lists.newArrayList( "resolution1",  "resolution2")   | "thanks"
+        "1"    | Lists.newArrayList()                                 | "thanks"
 
     }
 
@@ -858,8 +857,7 @@ class SituationRoomServiceSpec extends Specification {
         mock()
         authContext.getCurrentUser() >> "user1"
         ResolveRoomDto request = new ResolveRoomDto()
-        request.resolutionTypes = Lists.newArrayList("type1")
-        request.resolution = "resolution1";
+        request.resolution = Lists.newArrayList((String)"resolution1")
         request.remark = "thanks";
         roomRepository.findById("1") >> Optional.empty()
         when: "Calling resolve room"
@@ -874,8 +872,7 @@ class SituationRoomServiceSpec extends Specification {
         mock()
         authContext.getCurrentUser() >> "user1"
         ResolveRoomDto request = new ResolveRoomDto()
-        request.resolutionTypes = Lists.newArrayList("type1")
-        request.resolution = "resolution1";
+        request.resolution = Lists.newArrayList("resolution1");
         request.remark = "thanks";
         ChatRoom mockedRoom = Mock(ChatRoom);
         mockedRoom.getStatus() >> ChatRoomStatus.RESOLVED
@@ -893,8 +890,7 @@ class SituationRoomServiceSpec extends Specification {
         mock()
         authContext.getCurrentUser() >> "user2"
         ResolveRoomDto request = new ResolveRoomDto()
-        request.resolutionTypes = Lists.newArrayList("type1")
-        request.resolution = "resolution1";
+        request.resolution = Lists.newArrayList("resolution1");
         request.remark = "thanks";
 
         byte[] snapshot = getDummySnapshot()
@@ -919,8 +915,7 @@ class SituationRoomServiceSpec extends Specification {
         mock()
         authContext.getCurrentUser() >> "user1"
         ResolveRoomDto request = new ResolveRoomDto()
-        request.resolutionTypes = Lists.newArrayList("type1")
-        request.resolution = "resolution1";
+        request.resolution = Lists.newArrayList("resolution1")
         request.remark = "thanks";
 
         byte[] snapshot = getDummySnapshot()
@@ -946,8 +941,7 @@ class SituationRoomServiceSpec extends Specification {
         mock()
         authContext.getCurrentUser() >> "user1"
         ResolveRoomDto request = new ResolveRoomDto()
-        request.resolutionTypes = Lists.newArrayList("type1")
-        request.resolution = "resolution1";
+        request.resolution = Lists.newArrayList("resolution1")
         request.remark = "thanks";
 
         byte[] snapshot = getDummySnapshot()
@@ -966,8 +960,7 @@ class SituationRoomServiceSpec extends Specification {
         then: "Save room should get called"
         1 * roomRepository.save(_ as ChatRoom) >> {
             ChatRoom newStateRoom ->
-                newStateRoom.getResolution().types == request.resolutionTypes
-                newStateRoom.getResolution().getResolution() == request.resolution
+                newStateRoom.getResolution().resolution == request.resolution
                 newStateRoom.getResolution().remark == request.remark
                 newStateRoom.getResolution().resolvedBy == authContext.getCurrentUser()
                 newStateRoom.status == ChatRoomStatus.RESOLVED
@@ -980,8 +973,7 @@ class SituationRoomServiceSpec extends Specification {
         mock()
         authContext.getCurrentUser() >> "user1"
         ResolveRoomDto resolutionRequestDto = new ResolveRoomDto()
-        resolutionRequestDto.resolutionTypes = Lists.newArrayList("type1")
-        resolutionRequestDto.resolution = "resolution1";
+        resolutionRequestDto.resolution = Lists.newArrayList("resolution1")
         resolutionRequestDto.remark = "thanks";
 
         def entity = new ArrayList();
@@ -997,7 +989,6 @@ class SituationRoomServiceSpec extends Specification {
         ChatContext context = service.getChannelContext("1")
         then: "Save room should get called"
         context.getResolution() == resolutionRequestDto.getResolution()
-        context.getResolutionTypes() == resolutionRequestDto.getResolutionTypes()
         context.getResolutionRemark() == resolutionRequestDto.getRemark()
         context.getResolvedBy() == "user1"
         new Date(context.getResolvedAt()) != null
@@ -1507,7 +1498,6 @@ class SituationRoomServiceSpec extends Specification {
         ChatRoomResolution resolution = new ChatRoomResolution()
         resolution.setResolvedBy(resolveBy)
         resolution.setDate(new Date())
-        resolution.setTypes(request.getResolutionTypes())
         resolution.setResolution(request.getResolution())
         resolution.setRemark(request.getRemark());
         return resolution;

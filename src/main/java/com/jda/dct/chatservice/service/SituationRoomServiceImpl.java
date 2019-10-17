@@ -381,14 +381,11 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     private void validateResolveRoomInputs(String roomId, String currentUser, ResolveRoomDto request) {
         LOGGER.debug("Validating resolve room request");
         roomIdInputValidation(roomId);
-        AssertUtil.isTrue(!StringUtils.isEmpty(request.getResolution()),
-            "Resolution can't be null or empty");
-        AssertUtil.notNull(request.getResolutionTypes(),
-            "Resolution type can't be null");
-        AssertUtil.notEmpty(request.getResolutionTypes(), "Resolution type can't be empty");
-        request.getResolutionTypes()
-            .forEach(type -> AssertUtil.isTrue(!StringUtils.isEmpty(type), "Invalid resolution type"));
-        AssertUtil.isTrue(!StringUtils.isEmpty(request.getRemark()), "Remark can't be null or empty");
+        AssertUtil.notNull(request.getResolution(),
+            "Resolution can't be null");
+        AssertUtil.notEmpty(request.getResolution(), "Resolution can't be empty");
+        request.getResolution()
+            .forEach(resolution -> AssertUtil.isTrue(!StringUtils.isEmpty(resolution), "Invalid resolution type"));
         validateRoomState(roomId, currentUser, "Room is already resolved");
         Optional<ChatRoom> room = getChatRoomById(roomId);
         if (!room.isPresent()) {
@@ -756,7 +753,6 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         if (room.getResolution() != null) {
             ChatRoomResolution resolution = room.getResolution();
             context.setResolution(resolution.getResolution());
-            context.setResolutionTypes(resolution.getTypes());
             context.setResolutionRemark(resolution.getRemark());
             context.setResolvedBy(resolution.getResolvedBy());
             context.setResolvedAt(resolution.getDate().getTime());
@@ -893,11 +889,10 @@ public class SituationRoomServiceImpl implements SituationRoomService {
 
     private ChatRoomResolution buildResolution(ResolveRoomDto request, String resolveBy) {
         ChatRoomResolution resolution = new ChatRoomResolution();
-        resolution.setResolution(request.getResolution());
         resolution.setDate(new Date());
         resolution.setRemark(request.getRemark());
         resolution.setResolvedBy(resolveBy);
-        resolution.setTypes(request.getResolutionTypes());
+        resolution.setResolution(request.getResolution());
         return resolution;
     }
 
