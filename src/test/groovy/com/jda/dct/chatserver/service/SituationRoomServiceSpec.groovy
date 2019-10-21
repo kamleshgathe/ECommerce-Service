@@ -527,6 +527,22 @@ class SituationRoomServiceSpec extends Specification {
         thrown(InvalidChatRequest)
     }
 
+    def "verify response of delete room request if room created by different user "() {
+        given:
+        def expectedResponse = "Room can only be removed by Creator"
+        mock()
+        authContext.getCurrentUser() >> "User2"
+        ChatRoom mockdRoom = Mock(ChatRoom);
+        mockdRoom.getCreatedBy() >> "User1"
+        roomRepository.findById(_ as String) >> Optional.of(mockdRoom)
+        when: "Calling delete channel"
+        initNewSituationRoomService()
+        service.removeChannel("a5kr3xy6af8gipmw5r47cfzoir")
+        then: "Should get exception and verify exception message"
+        def exception = thrown(InvalidChatRequest)
+        exception.getMessage() == expectedResponse
+    }
+
     def "test delete channel should succeed"() {
         given:
         mock()
