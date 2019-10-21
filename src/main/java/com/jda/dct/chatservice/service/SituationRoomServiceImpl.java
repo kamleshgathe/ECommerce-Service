@@ -9,7 +9,6 @@
 package com.jda.dct.chatservice.service;
 
 import static com.jda.dct.chatservice.constants.ChatRoomConstants.FILTER_BY_USER;
-import static com.jda.dct.chatservice.constants.ChatRoomConstants.INVALID_ROOM_FORMATTED_MSG;
 import static com.jda.dct.chatservice.constants.ChatRoomConstants.MATTERMOST_CHANNELS;
 import static com.jda.dct.chatservice.constants.ChatRoomConstants.MATTERMOST_POSTS;
 import static com.jda.dct.chatservice.constants.ChatRoomConstants.MATTERMOST_USERS;
@@ -187,6 +186,73 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         setupParticipantsIfNotBefore(request.getParticipants(), channelTeamId);
         addParticipantsToRoom(authContext.getCurrentUser(), roomId);
         return response.getBody();
+    }
+
+    /**
+     * This API is used to delete channel in remote system.
+     * @param roomId to be deleted
+     * @return Map object, containing remote system returned information.
+     */
+    @Override
+    @Transactional
+    public Map<String, Object> removeChannel(String roomId) {
+        String currentUser = authContext.getCurrentUser();
+        LOGGER.info("Delete Situation Room {} has been called by user {}", roomId, currentUser);
+
+        validateRemoveRoomRequest(roomId, currentUser);
+        removeRoomInApp(roomId);
+        Map<String, Object> response = removeRoomInRemote(roomId, currentUser);
+        LOGGER.info("Room {} removed by {} successfully", roomId, currentUser);
+        response.put("deletedRoomId", roomId);
+        return response;
+    }
+
+    private void removeRoomInApp(String roomId) {
+        LOGGER.debug("Going to Delete chat room having Room Id {} meta information into system", roomId);
+        roomRepository.deleteById(roomId);
+        LOGGER.debug("Chat room having room Id {} deleted successfully", roomId);
+    }
+
+    private Map<String, Object> removeRoomInRemote(String roomId, String currentUser) {
+        ProxyTokenMapping proxyTokenMapping = getUserTokenMapping(currentUser);
+        HttpHeaders headers = getHttpHeader(proxyTokenMapping.getProxyToken());
+        headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
+        HttpEntity<Map<String, Object>> requestEntity
+                = new HttpEntity<>(null, headers);
+
+        ResponseEntity<Map> response = restTemplate.exchange(
+                    getRemoteActionUrl(removeRoomPath(roomId)),
+                    HttpMethod.DELETE,
+                    requestEntity,
+                    Map.class);
+
+        if (!response.getStatusCode().is2xxSuccessful()) {
+            LOGGER.error("Error {} while deleting channel {} for user {}",
+                    response.getBody(),
+                    roomId,
+                    currentUser);
+            throw new ResourceAccessException(response.getBody() != null
+                    ? response.getBody().toString() :
+                    "Remote system unknown exception.");
+        }
+
+        LOGGER.info("Situation Room having room Id {} deleted from remote successfully", roomId);
+
+        return response.getBody();
+    }
+
+    private String removeRoomPath(String roomId) {
+        return getChannelPath() + "/" + roomId;
+    }
+
+    private void validateRemoveRoomRequest(String roomId, String currentUser) {
+        roomIdInputValidation(roomId);
+        Optional<ChatRoom> room = getChatRoomById(roomId);
+
+        if (!room.isPresent()) {
+            throw new ChatException(ChatException.ErrorCode.ROOM_NOT_EXISTS);
+        }
+        AssertUtil.isTrue(room.get().getCreatedBy().equals(currentUser), "Room can only be removed by Creator");
     }
 
     /**
@@ -419,7 +485,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     }
 
     private void roomIdInputValidation(String roomId) {
-        AssertUtil.isTrue(!StringUtils.isEmpty(roomId), "Room can't be null or empty");
+        AssertUtil.isTrue(!StringUtils.isEmpty(roomId), "Room Id can't be null or empty");
     }
 
     private void validateRoomState(String roomId,

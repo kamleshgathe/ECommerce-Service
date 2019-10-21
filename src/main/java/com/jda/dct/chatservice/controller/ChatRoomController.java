@@ -22,6 +22,7 @@ import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -100,6 +101,19 @@ public class ChatRoomController {
 
         Tenants.setCurrent(authContext.getCurrentTid());
         return ResponseEntity.ok(service.createChannel(request));
+    }
+
+    /**
+     * Delete a particular chat Room by room Id.
+     * @param channelId chat room Id
+     * @return Delete status of chat room
+     */
+    @DeleteMapping(value = "/channels/{channel_id}",
+            produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Map<String, Object>> deleteChannel(@PathVariable("channel_id") String channelId) {
+
+        Tenants.setCurrent(authContext.getCurrentTid());
+        return ResponseEntity.ok(service.removeChannel(channelId));
     }
 
     @PostMapping(value = "/channels/{channel_id}/members",

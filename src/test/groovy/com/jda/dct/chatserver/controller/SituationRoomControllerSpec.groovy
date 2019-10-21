@@ -84,6 +84,25 @@ class SituationRoomControllerSpec extends Specification {
         Tenants.getCurrent() == "tid1"
     }
 
+    def "test delete channel"() {
+        given:
+        def exepectedResponse = Maps.newHashMap();
+        exepectedResponse.put("status", "OK");
+        exepectedResponse.put("deletedRoomId", "a5kr3xy6af8gipmw5r47cfzoir")
+        def service = mockedChatService()
+        def authContext = mockedAuthContext()
+        service.removeChannel("a5kr3xy6af8gipmw5r47cfzoir") >> exepectedResponse;
+        authContext.getCurrentTid() >> "tid1"
+
+        when: "Calling delete channel"
+        def controller = new ChatRoomController(service,authContext);
+        ResponseEntity<Map<String, Object>> responseEntity = controller.deleteChannel("a5kr3xy6af8gipmw5r47cfzoir")
+        then:
+        responseEntity.getStatusCode().value() == 200
+        responseEntity.getBody() == exepectedResponse
+        Tenants.getCurrent() == "tid1"
+    }
+
     def "test add user to existing"() {
         given:
         def users = Lists.newArrayList("user1");
