@@ -496,6 +496,79 @@ class SituationRoomServiceSpec extends Specification {
         true
     }
 
+    def "test delete channel expect exception if roomId missing or room not present"() {
+        given:
+        mock()
+        roomRepository.findById(_ as String) >> Optional.empty()
+        when: "Calling delete channel"
+        initNewSituationRoomService()
+        service.removeChannel(roomId)
+        then: "Should get exception"
+        thrown(ex)
+
+        where:
+        roomId | ex
+        null    | InvalidChatRequest
+        ""      | InvalidChatRequest
+        "abcd"  | ChatException
+    }
+
+    def "verify delete room expect exception if room created by different user "() {
+        given:
+        mock()
+        authContext.getCurrentUser() >> "User2"
+        ChatRoom mockdRoom = Mock(ChatRoom);
+        mockdRoom.getCreatedBy() >> "User1"
+        roomRepository.findById(_ as String) >> Optional.of(mockdRoom)
+        when: "Calling delete channel"
+        initNewSituationRoomService()
+        service.removeChannel("a5kr3xy6af8gipmw5r47cfzoir")
+        then: "Should get exception"
+        thrown(InvalidChatRequest)
+    }
+
+    def "test delete channel should succeed"() {
+        given:
+        mock()
+        def user = "User1"
+        def roomId = "a5kr3xy6af8gipmw5r47cfzoir"
+
+        authContext.getCurrentUser() >> user
+        ChatRoom mockdRoom = Mock(ChatRoom)
+        mockdRoom.getCreatedBy() >> user
+        mockdRoom.getId() >> roomId
+        roomRepository.findById(_ as String) >> Optional.of(mockdRoom)
+
+        1 * roomRepository.deleteById(_ as String)
+        def ptm1 = proxyTokenMapping(user, "remote_user1", "token1")
+        def ptm2 = proxyTokenMapping("User2", "remote_user2", "token1")
+        tokenRepository.findByAppUserId(user) >> ptm1
+        tokenRepository.findByAppUserId("User2") >> ptm2
+        tokenRepository.save({
+            ProxyTokenMapping ptm -> ptm.getAppUserId() == user ? ptm1 : ptm2
+        });
+        restTemplate.exchange(_ as String, _ as HttpMethod, _ as HttpEntity, Map.class, *_) >>
+                {
+                    args ->
+                        Map body = Maps.newHashMap();
+                        if (args[0].contains("/channels")) {
+                            body.put("status", "OK")
+                            body.put("deletedRoomId", roomId)
+                        }
+                        return mockedResponseEntity(HttpStatus.OK, body)
+                }
+
+
+        when: "Calling remove channel"
+        initNewSituationRoomService()
+        Map<String, Object> response = service.removeChannel(roomId)
+        then: "Should succeed"
+        response != null
+        response.size() == 2
+        response.get("status") == "OK"
+        response.get("deletedRoomId") == roomId
+    }
+
     def "getting all the channels should return in sorted order"() {
         given:
         mock()

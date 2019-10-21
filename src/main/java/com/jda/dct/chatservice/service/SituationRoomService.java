@@ -25,6 +25,8 @@ public interface SituationRoomService {
 
     Map<String, Object> createChannel(ChatRoomCreateDto request);
 
+    Map<String, Object> removeChannel(String roomId);
+
     Map<String, Object> inviteUsers(String roomId, AddUserToRoomDto users);
 
     Map<String,Object> removeParticipant(String roomId,String targetUser);
