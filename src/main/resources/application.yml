@@ -61,6 +61,10 @@ dct:
   tenants:
     ids: a4b7a825f67930965747445709011120
   datasource:
+    driverClassName: org.mariadb.jdbc.Driver
+    urlTemplate: 'jdbc:mariadb://localhost:3306/dct{tid}?useUnicode=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC&useSSL=false&autoReconnect=true'
+    jdbcUsername: dct
+    jdbcPassword: unr3@lity
     a4b7a825f67930965747445709011120:
       url: 'jdbc:mariadb://127.0.0.1:3306/dcta4b7a825f67930965747445709011120?useUnicode=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC&useSSL=false&autoReconnect=true'
       username: dct
