@@ -34,6 +34,7 @@ public class EntityReaderFactory {
     private static final String TYPE_DELIVERY = "delivery";
     private static final String TYPE_INVENTORY = "inventory";
     private static final String TYPE_CAPACITY = "capacity";
+    private static final String TYPE_PROCUREMENT = "forecast-commits";
 
     private AuthContext authContext;
 
@@ -127,6 +128,7 @@ public class EntityReaderFactory {
             readerFactory.repoMap.put(TYPE_DELIVERY, deliveryRepo);
             readerFactory.repoMap.put(TYPE_INVENTORY, nodeRepo);
             readerFactory.repoMap.put(TYPE_CAPACITY, nodeRepo);
+            readerFactory.repoMap.put(TYPE_PROCUREMENT, nodeRepo);
             readerFactory.authContext = authContext;
             return readerFactory;
         }
