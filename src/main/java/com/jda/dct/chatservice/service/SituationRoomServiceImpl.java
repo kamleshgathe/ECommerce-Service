@@ -331,13 +331,17 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         List<Map<String, Object>> response = new ArrayList<>();
         LOGGER.info("User {} called for unread message count", currentUser);
         ProxyTokenMapping proxyTokenMapping = getUserTokenMapping(currentUser);
+        if(proxyTokenMapping==null){
+            LOGGER.error("the user {} does not have token", currentUser);
+            return response;
+        }
         String remoteUserId = proxyTokenMapping.getRemoteUserId();
         List<ChatRoomParticipant> userRooms =
             getRoomsByParticipantStatus(ChatRoomParticipantStatus.JOINED.name(), currentUser);
         LOGGER.info("Fetching total {} number of room unread count for user {} as remote user is {}",
             userRooms.size(),
             currentUser,
-            proxyTokenMapping.getRemoteUserId());
+                remoteUserId);
         HttpHeaders headers = getHttpHeader(proxyTokenMapping.getProxyToken());
         headers.setAccept(Arrays.asList(MediaType.APPLICATION_JSON));
         for (ChatRoomParticipant userRoom : userRooms) {
