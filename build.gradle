@@ -12,10 +12,14 @@ buildscript {
                 password = artifactoryPassword
             }
         }
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
         mavenCentral()
     }
     dependencies {
-        classpath "org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}"
+        classpath "org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}",
+                "gradle.plugin.com.github.viswaramamoorthy:gradle-util-plugins:0.1.0-RELEASE"
     }
 }
 
@@ -23,7 +27,6 @@ plugins {
     id "com.jfrog.artifactory" version "4.7.5"
     id "org.sonarqube" version "2.6.2"
     id "com.github.hierynomus.license" version "0.14.0"
-    id "com.github.ManifestClasspath" version "0.1.0-RELEASE"
 }
 
 
@@ -38,6 +41,7 @@ apply plugin: 'com.jfrog.artifactory'
 apply plugin: 'maven-publish'
 apply plugin: 'checkstyle'
 apply plugin: 'project-report'
+apply plugin: "com.github.ManifestClasspath"
 
 checkstyle {
     toolVersion "8.8"
@@ -85,7 +89,7 @@ configurations {
     all {
         resolutionStrategy {
             eachDependency {
-                DependencyResolveDetails drd ->
+                 drd ->
                     if (drd.requested.group == 'org.springframework.kafka') {
                         drd.useVersion '2.2.4.RELEASE'
                     }
@@ -114,7 +118,6 @@ dependencies {
     compile 'org.springframework.data:spring-data-commons'
     compile 'org.springframework.boot:spring-boot-starter-web'
     compile 'org.springframework.boot:spring-boot-starter-actuator'
-    compile 'org.springframework.boot:spring-boot-starter-data-jpa'
     /*compile 'org.springframework.boot:spring-boot-starter-security'*/
 
     compile group: "com.jda.dct", name: "toys", version: "${depVersion}", changing: true
