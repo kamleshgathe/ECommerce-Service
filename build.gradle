@@ -12,14 +12,10 @@ buildscript {
                 password = artifactoryPassword
             }
         }
-        maven {
-            url "https://plugins.gradle.org/m2/"
-        }
         mavenCentral()
     }
     dependencies {
-        classpath "org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}",
-                "gradle.plugin.com.github.viswaramamoorthy:gradle-util-plugins:0.1.0-RELEASE"
+        classpath "org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}"
     }
 }
 
@@ -41,7 +37,6 @@ apply plugin: 'com.jfrog.artifactory'
 apply plugin: 'maven-publish'
 apply plugin: 'checkstyle'
 apply plugin: 'project-report'
-apply plugin: "com.github.ManifestClasspath"
 
 checkstyle {
     toolVersion "8.8"
