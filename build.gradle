@@ -36,6 +36,7 @@ apply plugin: 'com.jfrog.artifactory'
 //apply plugin: 'nebula.maven-publish'
 apply plugin: 'maven-publish'
 apply plugin: 'checkstyle'
+apply plugin: 'project-report'
 
 checkstyle {
     toolVersion "8.8"
@@ -46,7 +47,10 @@ version "${version}"
 depVersion = "${depVersion}"
 
 group 'com.jda.dct'
-
+springBoot {
+    mainClassName = 'com.jda.dct.chatservice.ChatServiceApplication'
+    buildInfo()
+}
 artifactory {
     contextUrl = "${artifactoryContextUrl}"
     publish {
@@ -80,7 +84,7 @@ configurations {
     all {
         resolutionStrategy {
             eachDependency {
-                DependencyResolveDetails drd ->
+                 drd ->
                     if (drd.requested.group == 'org.springframework.kafka') {
                         drd.useVersion '2.2.4.RELEASE'
                     }
@@ -103,13 +107,13 @@ repositories {
 }
 
 
+
 dependencies {
     compile group: 'org.codehaus.groovy', name: 'groovy-all', version: '2.5.6'
 
     compile 'org.springframework.data:spring-data-commons'
     compile 'org.springframework.boot:spring-boot-starter-web'
     compile 'org.springframework.boot:spring-boot-starter-actuator'
-    compile 'org.springframework.boot:spring-boot-starter-data-jpa'
     /*compile 'org.springframework.boot:spring-boot-starter-security'*/
 
     compile group: "com.jda.dct", name: "toys", version: "${depVersion}", changing: true
@@ -211,7 +215,22 @@ task unzip {
     }
 }
 
+task classpathJar(type: Jar) {
+    inputs.files sourceSets.test.runtimeClasspath
+
+    archiveName = "runboot-classpath.jar"
+    doFirst {
+        // If run in configuration phase, some artifacts may not exist yet (after clean)
+        // and File.toURI can’t figure out what is directory to add the critical trailing slash.
+        manifest {
+            def classpath = sourceSets.test.runtimeClasspath.files
+            attributes "Class-Path": classpath.collect {f -> f.toURI().toString()}.join(" ")
+        }
+    }
+}
+
 bootRun {
+    classpath = classpathJar.outputs.files
     systemProperties = System.properties
     systemProperty 'spring.profiles.active', 'development'
     jvmArgs('-Djava.util.logging.config.file=none')
