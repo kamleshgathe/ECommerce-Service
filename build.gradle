@@ -107,6 +107,7 @@ repositories {
 }
 
 
+
 dependencies {
     compile group: 'org.codehaus.groovy', name: 'groovy-all', version: '2.5.6'
 
@@ -214,7 +215,22 @@ task unzip {
     }
 }
 
+task classpathJar(type: Jar) {
+    inputs.files sourceSets.test.runtimeClasspath
+
+    archiveName = "runboot-classpath.jar"
+    doFirst {
+        // If run in configuration phase, some artifacts may not exist yet (after clean)
+        // and File.toURI can’t figure out what is directory to add the critical trailing slash.
+        manifest {
+            def classpath = sourceSets.test.runtimeClasspath.files
+            attributes "Class-Path": classpath.collect {f -> f.toURI().toString()}.join(" ")
+        }
+    }
+}
+
 bootRun {
+    classpath = classpathJar.outputs.files
     systemProperties = System.properties
     systemProperty 'spring.profiles.active', 'development'
     jvmArgs('-Djava.util.logging.config.file=none')
