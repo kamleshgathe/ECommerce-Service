@@ -19,7 +19,7 @@ import java.util.Map;
 public interface SituationRoomService {
     TokenDto getSessionToken();
 
-    List<ChatContext> getChannels(String by,String type);
+    List<ChatContext> getChannels(String by,String type, String requestQueryParam);
 
     ChatContext getChannelContext(String roomId);
 

@@ -623,7 +623,7 @@ class SituationRoomServiceSpec extends Specification {
 
         when: "getting all the channels from the service"
         initNewSituationRoomService()
-        List<ChatContext> channels = service.getChannels(null, null);
+        List<ChatContext> channels = service.getChannels(null, null, null)
         then: "should return channels in sorted order"
         1 * participantRepository.findByUserNameOrderByRoomLmdDesc(_ as String) >> allParticipantsInRepo
         channels.size() == 3
@@ -818,7 +818,7 @@ class SituationRoomServiceSpec extends Specification {
 
         when:
         initNewSituationRoomService()
-        List<ChatContext> channels = service.getChannels(null, null);
+        List<ChatContext> channels = service.getChannels(null, null, null)
         then:
         1 * participantRepository.findByUserNameOrderByRoomLmdDesc(_ as String) >> participantAllEntries
         channels.size() == 3
@@ -846,7 +846,7 @@ class SituationRoomServiceSpec extends Specification {
 
         when:
         initNewSituationRoomService()
-        List<ChatContext> channels = service.getChannels("room", "RESOLVED");
+        List<ChatContext> channels = service.getChannels("room", "RESOLVED", null)
         then:
         1 * participantRepository.findByUserNameAndRoomStatusOrderByRoomLmdDesc("1", ChatRoomStatus.RESOLVED) >> participantAllEntries
         channels.size() == 1
@@ -870,7 +870,7 @@ class SituationRoomServiceSpec extends Specification {
 
         when:
         initNewSituationRoomService()
-        List<ChatContext> channels = service.getChannels("user", "PENDING");
+        List<ChatContext> channels = service.getChannels("user", "PENDING", null)
         then:
         1 * participantRepository.findByUserNameAndStatusOrderByRoomLmdDesc("1", ChatRoomParticipantStatus.PENDING) >> participantAllEntries
         channels.size() == 1

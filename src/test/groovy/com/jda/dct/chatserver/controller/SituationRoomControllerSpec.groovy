@@ -222,12 +222,12 @@ class SituationRoomControllerSpec extends Specification {
         def service = mockedChatService()
         def authContext = mockedAuthContext()
         def mockChannels = Mock(List)
-        service.getChannels(_,_) >> mockChannels
+        service.getChannels(_,_,_) >> mockChannels
         mockChannels.size() >> 5
         authContext.getCurrentTid() >> "tid1"
         when: "Get rooms"
         def controller = new ChatRoomController(service,authContext);
-        ResponseEntity<List> response = controller.getChannels(null, null)
+        ResponseEntity<List> response = controller.getChannels(null, null, null)
         then: "Match expectation"
         response.statusCode == HttpStatus.OK
         response.body.size() == 5

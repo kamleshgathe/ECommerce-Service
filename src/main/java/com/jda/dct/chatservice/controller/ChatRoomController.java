@@ -74,11 +74,13 @@ public class ChatRoomController {
     @GetMapping(value = "/channels",
         consumes = MediaType.ALL_VALUE,
         produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<List<ChatContext>> getChannels(@RequestParam(value = "by", required = false) String by,
-                                                         @RequestParam(value = "type", required = false) String type) {
+    public ResponseEntity<List<ChatContext>> getChannels(
+            @RequestParam(value = "by", required = false) String by,
+            @RequestParam(value = "type", required = false) String type,
+            @RequestParam(value = "objectIds", required = false) String objectIds) {
 
         Tenants.setCurrent(authContext.getCurrentTid());
-        return ResponseEntity.ok(service.getChannels(by, type));
+        return ResponseEntity.ok(service.getChannels(by, type, objectIds));
     }
 
     @PostMapping(value = "/posts",

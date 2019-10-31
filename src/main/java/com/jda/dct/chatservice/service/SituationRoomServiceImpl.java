@@ -40,6 +40,7 @@ import com.jda.dct.domain.ChatRoomResolution;
 import com.jda.dct.domain.ChatRoomStatus;
 import com.jda.dct.domain.ProxyTokenMapping;
 import com.jda.dct.ignitecaches.springimpl.Tenants;
+import com.jda.dct.search.SearchConstants;
 import com.jda.luminate.security.contexts.AuthContext;
 
 import java.util.ArrayList;
@@ -56,10 +57,12 @@ import java.util.stream.Collectors;
 import javax.transaction.Transactional;
 
 import org.assertj.core.util.Lists;
+import org.assertj.core.util.Sets;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -298,10 +301,14 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     }
 
     @Override
-    public List<ChatContext> getChannels(String by, String type) {
+    public List<ChatContext> getChannels(String by, String type, String requestQueryParam) {
         String currentUser = authContext.getCurrentUser();
         List<ChatRoomParticipant> participants;
-        if (StringUtils.isEmpty(type)) {
+        if (!StringUtils.isEmpty(requestQueryParam)) {
+            LOGGER.info("Fetching chat rooms by objectIds for user {}", currentUser);
+            List<String> objectIds = parseSearchQueryParam(requestQueryParam);
+            participants = getUserRoomsByObjectIds(objectIds, currentUser);
+        } else if (StringUtils.isEmpty(type)) {
             LOGGER.info("Fetching all chat rooms for user {}", currentUser);
             participants = getUserAllRooms(currentUser);
         } else if (StringUtils.isEmpty(by) || FILTER_BY_USER.equals(by.trim())) {
@@ -316,6 +323,25 @@ public class SituationRoomServiceImpl implements SituationRoomService {
                 .map(ChatRoomParticipant::getRoom)
                 .map(room -> toChatContext(room, currentUser))
                 .collect(Collectors.toList());
+    }
+
+    private List<String> parseSearchQueryParam(String param) {
+        if (StringUtils.isEmpty(param)) {
+            return Lists.emptyList();
+        }
+        return Arrays.asList(param.trim().split(SearchConstants.COMMA));
+    }
+
+    private List<ChatRoomParticipant> getUserRoomsByObjectIds(List<String> objectIds, String currentUser) {
+        Set<ChatRoomParticipant> participantList = Sets.newHashSet();
+        List<ChatRoomParticipant> participants = getUserAllRooms(currentUser);
+        objectIds.forEach(objectId -> participants.forEach(participant -> {
+            ChatRoom chatRoom = participant.getRoom();
+            if (chatRoom.getDomainObjectIds().contains(objectId)) {
+                participantList.add(participant);
+            }
+        }));
+        return new ArrayList<>(participantList);
     }
 
     @Override
@@ -591,7 +617,13 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         return participants;
     }
 
-    private List<ChatRoomParticipant> getUserAllRooms(String currentUser) {
+    /**
+     * Method to get all Chat Room participants for current user.
+     *
+     * @return Returns a list of Chat Room Participants.
+     */
+    @Cacheable(value = "channels", key = "#currentUser")
+    public List<ChatRoomParticipant> getUserAllRooms(String currentUser) {
         List<ChatRoomParticipant> participants;
         participants = participantRepository.findByUserNameOrderByRoomLmdDesc(currentUser);
         return participants;
