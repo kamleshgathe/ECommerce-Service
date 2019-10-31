@@ -69,6 +69,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
@@ -329,7 +330,9 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         if (StringUtils.isEmpty(param)) {
             return Lists.emptyList();
         }
-        return Arrays.asList(param.trim().split(SearchConstants.COMMA));
+        List<String> objectIds = Arrays.asList(param.trim().split(SearchConstants.COMMA));
+        objectIds.replaceAll(String::trim);
+        return  objectIds;
     }
 
     private List<ChatRoomParticipant> getUserRoomsByObjectIds(List<String> objectIds, String currentUser) {
@@ -337,7 +340,8 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         List<ChatRoomParticipant> participants = getUserAllRooms(currentUser);
         objectIds.forEach(objectId -> participants.forEach(participant -> {
             ChatRoom chatRoom = participant.getRoom();
-            if (chatRoom.getDomainObjectIds().contains(objectId)) {
+            if (!CollectionUtils.isEmpty(chatRoom.getDomainObjectIds())
+                    && chatRoom.getDomainObjectIds().contains(objectId)) {
                 participantList.add(participant);
             }
         }));

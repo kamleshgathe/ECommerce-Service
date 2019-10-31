@@ -857,6 +857,56 @@ class SituationRoomServiceSpec extends Specification {
 
     }
 
+    def "test get channels should succeed when by objectIds"() {
+        given:
+        mock()
+        def user = "appUser"
+        def objectIDParam = "123-Node-6765,  98877-Shipment-45465465"
+
+        List<String> room1DomainObjectIds = Lists.newArrayList()
+        room1DomainObjectIds.add("123-Node-6765")
+        room1DomainObjectIds.add("98877-Shipment-45465465")
+
+        List<String> room2DomainObjectIds = Lists.newArrayList()
+        room2DomainObjectIds.add("9437877-Shipment-45466756757655465")
+        room2DomainObjectIds.add("94375765877-Node-455465")
+
+        List<String> resolveRoomDomainObjectIds = Lists.newArrayList()
+        resolveRoomDomainObjectIds.add("98877-Shipment-45465465")
+        resolveRoomDomainObjectIds.add("9437877-Shipment-45466756757655465")
+
+        def participants1 = Sets.newHashSet()
+        def participants2 = Sets.newHashSet()
+        def participants3 = Sets.newHashSet()
+
+        def participantAllEntries = Lists.newArrayList()
+        byte[] snapshot = getDummySnapshot();
+
+        def openRoom1 = mockedChatRoom("room1", snapshot, participants1, user, ChatRoomStatus.OPEN)
+        def openRoom2 = mockedChatRoom("room2", snapshot, participants2, user, ChatRoomStatus.OPEN)
+        def resolvedRoom = mockedChatRoom("room3", snapshot, participants3, user, ChatRoomStatus.RESOLVED)
+
+        openRoom1.getDomainObjectIds() >> room1DomainObjectIds
+        openRoom2.getDomainObjectIds() >> room2DomainObjectIds
+        resolvedRoom.getDomainObjectIds() >> resolveRoomDomainObjectIds
+
+        participantAllEntries.add(addChatParticipant(openRoom1, "1", ChatRoomParticipantStatus.JOINED))
+        participantAllEntries.add(addChatParticipant(openRoom2, "1", ChatRoomParticipantStatus.PENDING))
+        participantAllEntries.add(addChatParticipant(resolvedRoom, "1", ChatRoomParticipantStatus.JOINED))
+
+
+        authContext.getCurrentUser() >> user
+
+        when: "getting all the channels from the service"
+        initNewSituationRoomService()
+        List<ChatContext> channels = service.getChannels(null, null, objectIDParam)
+        then: "should return channels in sorted order"
+        1 * participantRepository.findByUserNameOrderByRoomLmdDesc(_ as String) >> participantAllEntries
+        channels.size() == 2
+        channels.get(0).getId() == "room1"
+        channels.get(1).getId() == "room3"
+    }
+
     def "test use all channels should succeed when by user status"() {
         given:
         mock()
