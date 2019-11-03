@@ -198,6 +198,25 @@ class SituationRoomControllerSpec extends Specification {
         Tenants.getCurrent() == "tid1"
     }
 
+    def "read resolve room should succeed"() {
+        given: "Initialize response context"
+        def exepectedResponse = Maps.newHashMap();
+        exepectedResponse.put("readResolved", "ok");
+
+        def service = mockedChatService()
+        def authContext = mockedAuthContext()
+        service.readResolvedChannel() >> exepectedResponse
+        authContext.getCurrentTid() >> "tid1"
+
+        when: "Read Resolve room"
+        def controller = new ChatRoomController(service,authContext);
+        ResponseEntity<Map<String, Object>> responseEntity = controller.readResolvedChannel()
+        then: "Match expectation"
+        responseEntity.getStatusCode().value() == 200
+        responseEntity.getBody() == exepectedResponse
+        Tenants.getCurrent() == "tid1"
+    }
+
     def "Deatche user from room should succeed"() {
         given: "Initialize response context"
 
