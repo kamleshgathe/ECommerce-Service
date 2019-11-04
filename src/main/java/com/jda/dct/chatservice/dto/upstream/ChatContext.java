@@ -13,6 +13,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.jda.dct.domain.ChatRoomParticipantStatus;
+
 import java.util.List;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -33,6 +34,7 @@ public class ChatContext {
     private String resolvedBy;
 
     private ChatRoomParticipantStatus yourStatus;
+    private boolean isResolvedRoomRead;
 
     private long totalMessageCount;
 
@@ -120,6 +122,11 @@ public class ChatContext {
     @JsonProperty(value = "status")
     public ChatRoomParticipantStatus getYourStatus() {
         return yourStatus;
+    }
+
+    @JsonProperty(value = "isResolveRead")
+    public boolean getResolveReadStatus() {
+        return isResolvedRoomRead;
     }
 
     @JsonProperty(value = "total_msg_count")
@@ -221,6 +228,10 @@ public class ChatContext {
 
     public void setYourStatus(ChatRoomParticipantStatus yourStatus) {
         this.yourStatus = yourStatus;
+    }
+
+    public void setResolveReadStatus(boolean isResolvedRoomRead) {
+        this.isResolvedRoomRead = isResolvedRoomRead;
     }
 
     public void setRoomStatus(String roomStatus) {

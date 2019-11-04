@@ -401,6 +401,31 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         return response;
     }
 
+    @Override
+    public Map<String, Object> readResolvedChannel() {
+        String currentUser = authContext.getCurrentUser();
+        LOGGER.info("Participant {} is going to save all resolved Rooms read status", currentUser);
+
+        List<ChatRoomParticipant> participants = getUserAllRooms(currentUser);
+        participants.forEach(participant -> {
+            if (participant.getRoom().getStatus() == ChatRoomStatus.RESOLVED
+                    && !participant.isResolutionRead()) {
+                participant.setResolutionRead(true);
+            }
+        });
+        saveParticipants(participants);
+        LOGGER.info("participant {} has saved all resolved room read status", currentUser);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("readResolved", "ok");
+        return response;
+    }
+
+    private void saveParticipants(List<ChatRoomParticipant> participants) {
+        LOGGER.debug("Going to persist all participants added or modified");
+        participantRepository.saveAll(participants);
+        LOGGER.debug("Added or modified Participants persisted successfully");
+    }
 
     @Override
     public ChatContext resolve(String roomId, ResolveRoomDto request) {
@@ -418,8 +443,30 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         room.setResolution(buildResolution(request, currentUser));
         room.setLmd(room.getResolution().getDate());
         ChatRoom resolvedRoom = saveChatRoom(room);
+        saveResolveRoomReadStatus(resolvedRoom, currentUser);
+
         LOGGER.info("Room {} status has changed to resolved by user {}", roomId, currentUser);
         return toChatContext(resolvedRoom, currentUser);
+    }
+
+    private void saveResolveRoomReadStatus(ChatRoom chatRoom, String currentUser) {
+        LOGGER.debug("Going to persist resolve read status for all participants of chat room {} into system",
+                chatRoom.getRoomName());
+        List<ChatRoomParticipant> currentUserRooms = getUserAllRooms(currentUser);
+        currentUserRooms.forEach(currentUserRoom -> {
+            if (currentUserRoom.getRoom().getId().equals(chatRoom.getId())) {
+                currentUserRoom.setResolutionRead(true);
+                saveChatRoomParticipant(currentUserRoom);
+            }
+        });
+        LOGGER.debug("Resolve read status for all participants of Chat room {} persisted successfully",
+                chatRoom.getRoomName());
+    }
+
+    private void saveChatRoomParticipant(ChatRoomParticipant participant) {
+        LOGGER.debug("Going to persist participant added or modified");
+        participantRepository.save(participant);
+        LOGGER.debug("Added or modified Participant persisted successfully");
     }
 
     @Override
@@ -871,6 +918,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         room.getParticipants().forEach(participant -> {
             if (participant.getUserName().equals(caller)) {
                 context.setYourStatus(participant.getStatus());
+                context.setResolveReadStatus(participant.isResolutionRead());
             }
             channelUsers.add(participant.getUserName());
         });

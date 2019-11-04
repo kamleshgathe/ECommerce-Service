@@ -903,8 +903,6 @@ class SituationRoomServiceSpec extends Specification {
         then: "should return channels in sorted order"
         1 * participantRepository.findByUserNameOrderByRoomLmdDesc(_ as String) >> participantAllEntries
         channels.size() == 2
-        channels.get(0).getId() == "room1"
-        channels.get(1).getId() == "room3"
     }
 
     def "test use all channels should succeed when by user status"() {
@@ -1074,25 +1072,60 @@ class SituationRoomServiceSpec extends Specification {
         thrown(InvalidChatRequest)
     }
 
+    def "Update Read resolve room should succeed"() {
+        given: "Initialize inputs"
+        mock()
+        def roomId = "room1"
+        def currentUser = "user1"
+        authContext.getCurrentUser() >> currentUser
+
+        byte[] snapshot = getDummySnapshot()
+        Set<ChatRoomParticipant> participants = Sets.newHashSet()
+        def mockRoom = mockedChatRoom(roomId, snapshot, participants, currentUser, ChatRoomStatus.RESOLVED)
+        addChatParticipant(mockRoom, currentUser, ChatRoomParticipantStatus.JOINED)
+        addChatParticipant(mockRoom, "user2", ChatRoomParticipantStatus.JOINED)
+
+        participantRepository.findByUserNameOrderByRoomLmdDesc(currentUser) >> mockRoom.getParticipants().toList()
+
+        when: "Calling Read resolve rooms"
+        initNewSituationRoomService()
+        service.readResolvedChannel()
+        then: "Save participants should get called"
+        1 * participantRepository.saveAll(_ as List<ChatRoomParticipant>) >> {
+            List<ChatRoomParticipant> chatParticipants ->
+                chatParticipants.forEach({ participant ->
+                    participant.isResolutionRead
+                })
+                return chatParticipants
+        }
+    }
 
     def "resolve room should succeed"() {
         given: "Initialize inputs"
         mock()
-        authContext.getCurrentUser() >> "user1"
+        def currentUser = "user1"
+        authContext.getCurrentUser() >> currentUser
         ResolveRoomDto request = new ResolveRoomDto()
         request.resolution = Lists.newArrayList("resolution1")
         request.remark = "thanks";
 
         byte[] snapshot = getDummySnapshot()
         Set<ChatRoomParticipant> participants = Sets.newHashSet();
-        def mockRoom = mockedChatRoom("room1", snapshot, participants, "user1", ChatRoomStatus.OPEN)
+        def mockRoom = mockedChatRoom("room1", snapshot, participants, currentUser, ChatRoomStatus.OPEN)
 
-        addChatParticipant(mockRoom, "user1", ChatRoomParticipantStatus.JOINED)
-        addChatParticipant(mockRoom, "user2", ChatRoomParticipantStatus.JOINED)
+        ChatRoomParticipant currentParticipant = addChatParticipant(mockRoom, currentUser, ChatRoomParticipantStatus.JOINED)
+        ChatRoomParticipant participant = addChatParticipant(mockRoom, "user2", ChatRoomParticipantStatus.JOINED)
 
-        mockRoom.getResolution() >> buildResolution(request, "user1")
+        mockRoom.getResolution() >> buildResolution(request, currentUser)
 
         roomRepository.findById("1") >> Optional.of(mockRoom)
+
+        List<ChatRoomParticipant> mockParticipants = new ArrayList<ChatRoomParticipant>()
+        currentParticipant.setResolutionRead(true)
+        mockParticipants.add(currentParticipant)
+        participant.setResolutionRead(false)
+        mockParticipants.add(participant)
+        participantRepository.findByUserNameOrderByRoomLmdDesc(currentUser) >> mockParticipants
         when: "Calling resolve room"
         initNewSituationRoomService()
         service.resolve("1", request)
@@ -1104,6 +1137,16 @@ class SituationRoomServiceSpec extends Specification {
                 newStateRoom.getResolution().resolvedBy == authContext.getCurrentUser()
                 newStateRoom.status == ChatRoomStatus.RESOLVED
                 return newStateRoom
+        }
+        participantRepository.save(_ as ChatRoomParticipant) >> {
+            chatRoomParticipant ->
+                if(chatRoomParticipant.userName == authContext.getCurrentUser()) {
+                    chatRoomParticipant.isResolutionRead == true
+                }
+                else {
+                    chatRoomParticipant.isResolutionRead == false
+                }
+                return chatRoomParticipant
         }
     }
 

@@ -38,4 +38,6 @@ public interface SituationRoomService {
     List<Map<String,Object>> getUnreadCount();
 
     ChatContext resolve(String roomId,ResolveRoomDto request);
+
+    Map<String, Object> readResolvedChannel();
 }

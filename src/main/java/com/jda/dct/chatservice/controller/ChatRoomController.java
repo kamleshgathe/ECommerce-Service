@@ -168,4 +168,12 @@ public class ChatRoomController {
         Tenants.setCurrent(authContext.getCurrentTid());
         return ResponseEntity.ok(service.resolve(roomId, resolveRequest));
     }
+
+    @PutMapping(value = "/channels/readResolved",
+            consumes = MediaType.ALL_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Map<String, Object>> readResolvedChannel() {
+        Tenants.setCurrent(authContext.getCurrentTid());
+        return ResponseEntity.ok(service.readResolvedChannel());
+    }
 }
