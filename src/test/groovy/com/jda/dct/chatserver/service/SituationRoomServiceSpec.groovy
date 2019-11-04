@@ -890,10 +890,15 @@ class SituationRoomServiceSpec extends Specification {
         openRoom2.getDomainObjectIds() >> room2DomainObjectIds
         resolvedRoom.getDomainObjectIds() >> resolveRoomDomainObjectIds
 
+        def expectedRooms = Lists.newArrayList()
+        expectedRooms.add(openRoom1)
+        expectedRooms.add(resolvedRoom)
+
         participantAllEntries.add(addChatParticipant(openRoom1, "1", ChatRoomParticipantStatus.JOINED))
         participantAllEntries.add(addChatParticipant(openRoom2, "1", ChatRoomParticipantStatus.PENDING))
         participantAllEntries.add(addChatParticipant(resolvedRoom, "1", ChatRoomParticipantStatus.JOINED))
 
+        roomRepository.getChannelByObjectId(_ as String) >> expectedRooms
 
         authContext.getCurrentUser() >> user
 
@@ -901,7 +906,6 @@ class SituationRoomServiceSpec extends Specification {
         initNewSituationRoomService()
         List<ChatContext> channels = service.getChannels(null, null, objectIDParam)
         then: "should return channels in sorted order"
-        1 * participantRepository.findByUserNameOrderByRoomLmdDesc(_ as String) >> participantAllEntries
         channels.size() == 2
     }
 

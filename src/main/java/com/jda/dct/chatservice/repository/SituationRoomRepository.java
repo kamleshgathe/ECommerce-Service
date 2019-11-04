@@ -8,10 +8,18 @@
 package com.jda.dct.chatservice.repository;
 
 import com.jda.dct.domain.ChatRoom;
+
+import java.util.List;
+
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
 public interface SituationRoomRepository extends CrudRepository<ChatRoom,String> {
     ChatRoom findByRoomName(String roomName);
+
+    @Query(value = "Select * from chat_room cr where json_contains(cr.domain_object_ids, ?1)",
+            nativeQuery = true)
+    List<ChatRoom> getChannelByObjectId(String objectId);
 }
