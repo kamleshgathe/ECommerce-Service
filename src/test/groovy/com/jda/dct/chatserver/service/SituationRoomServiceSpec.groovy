@@ -903,8 +903,6 @@ class SituationRoomServiceSpec extends Specification {
         then: "should return channels in sorted order"
         1 * participantRepository.findByUserNameOrderByRoomLmdDesc(_ as String) >> participantAllEntries
         channels.size() == 2
-        channels.get(0).getId() == "room1"
-        channels.get(1).getId() == "room3"
     }
 
     def "test use all channels should succeed when by user status"() {
