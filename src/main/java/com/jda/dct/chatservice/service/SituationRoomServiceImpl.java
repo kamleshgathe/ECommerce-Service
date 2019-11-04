@@ -37,7 +37,6 @@ import com.jda.dct.domain.ChatRoom;
 import com.jda.dct.domain.ChatRoomParticipant;
 import com.jda.dct.domain.ChatRoomParticipantStatus;
 import com.jda.dct.domain.ChatRoomResolution;
-import com.jda.dct.domain.ChatRoomResolveReadStatus;
 import com.jda.dct.domain.ChatRoomStatus;
 import com.jda.dct.domain.ProxyTokenMapping;
 import com.jda.dct.ignitecaches.springimpl.Tenants;
@@ -919,11 +918,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         room.getParticipants().forEach(participant -> {
             if (participant.getUserName().equals(caller)) {
                 context.setYourStatus(participant.getStatus());
-                context.setResolveReadStatus(ChatRoomResolveReadStatus.UNRESOLVED);
-                if (room.getResolution() != null) {
-                    context.setResolveReadStatus(participant.isResolutionRead()
-                            ? ChatRoomResolveReadStatus.READ : ChatRoomResolveReadStatus.UNREAD);
-                }
+                context.setResolveReadStatus(participant.isResolutionRead());
             }
             channelUsers.add(participant.getUserName());
         });
