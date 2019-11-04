@@ -34,7 +34,7 @@ public class ChatContext {
     private String resolvedBy;
 
     private ChatRoomParticipantStatus yourStatus;
-    private boolean resolveReadStatus;
+    private boolean isResolvedRoomRead;
 
     private long totalMessageCount;
 
@@ -126,7 +126,7 @@ public class ChatContext {
 
     @JsonProperty(value = "isResolveRead")
     public boolean getResolveReadStatus() {
-        return resolveReadStatus;
+        return isResolvedRoomRead;
     }
 
     @JsonProperty(value = "total_msg_count")
@@ -230,8 +230,8 @@ public class ChatContext {
         this.yourStatus = yourStatus;
     }
 
-    public void setResolveReadStatus(boolean resolveReadStatus) {
-        this.resolveReadStatus = resolveReadStatus;
+    public void setResolveReadStatus(boolean isResolvedRoomRead) {
+        this.isResolvedRoomRead = isResolvedRoomRead;
     }
 
     public void setRoomStatus(String roomStatus) {
