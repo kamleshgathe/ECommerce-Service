@@ -308,7 +308,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         if (!StringUtils.isEmpty(requestQueryParam)) {
             LOGGER.info("Fetching chat rooms by objectIds for user {}", currentUser);
             List<String> objectIds = parseSearchQueryParam(requestQueryParam);
-            participants = getUserRoomsByObjectIds(objectIds, currentUser);
+            return getRoomsByObjectIds(objectIds, currentUser);
         } else if (StringUtils.isEmpty(type)) {
             LOGGER.info("Fetching all chat rooms for user {}", currentUser);
             participants = getUserAllRooms(currentUser);
@@ -335,17 +335,17 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         return  objectIds;
     }
 
-    private List<ChatRoomParticipant> getUserRoomsByObjectIds(List<String> objectIds, String currentUser) {
-        Set<ChatRoomParticipant> participantList = Sets.newHashSet();
-        List<ChatRoomParticipant> participants = getUserAllRooms(currentUser);
-        objectIds.forEach(objectId -> participants.forEach(participant -> {
-            ChatRoom chatRoom = participant.getRoom();
-            if (!CollectionUtils.isEmpty(chatRoom.getDomainObjectIds())
-                    && chatRoom.getDomainObjectIds().contains(objectId)) {
-                participantList.add(participant);
-            }
-        }));
-        return new ArrayList<>(participantList);
+    private List<ChatContext> getRoomsByObjectIds(List<String> objectIds, String currentUser) {
+        Set<ChatRoom> distinctChatRooms = Sets.newHashSet();
+        objectIds.forEach(objectId -> {
+            List<ChatRoom> chatRooms = roomRepository.getChannelByObjectId("\"" + objectId + "\"");
+            distinctChatRooms.addAll(chatRooms);
+        });
+
+        return distinctChatRooms
+                .stream()
+                .map(room -> toChatContext(room, currentUser))
+                .collect(Collectors.toList());
     }
 
     @Override
