@@ -176,4 +176,20 @@ public class ChatRoomController {
         Tenants.setCurrent(authContext.getCurrentTid());
         return ResponseEntity.ok(service.readResolvedChannel());
     }
+
+
+    /**
+     * This API is used to search with in the SR
+     *
+     * @param requestParams
+     * @return ResponseEntity<List<ChatContext>>
+     */
+    @GetMapping(value = "/channels/search",
+            produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<List<ChatContext>> searchChannels(
+            @RequestParam Map<String, String> requestParams) {
+        Tenants.setCurrent(authContext.getCurrentTid());
+        return ResponseEntity.ok(service.searchChannels(requestParams));
+    }
+
 }

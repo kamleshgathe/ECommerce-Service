@@ -293,4 +293,21 @@ class SituationRoomControllerSpec extends Specification {
     def mockedAuthContext() {
         return Mock(AuthContext)
     }
+
+    def "test search channels"() {
+        given: "Initialize response context"
+        def service = mockedChatService()
+        def authContext = mockedAuthContext()
+        def mockChannels = Mock(List)
+        service.searchChannels(_) >> mockChannels
+        mockChannels.size() >> 5
+        authContext.getCurrentTid() >> "tid1"
+        when: "Get rooms"
+        def controller = new ChatRoomController(service,authContext)
+        ResponseEntity<List> response = controller.searchChannels(null)
+        then: "Match expectation"
+        response.statusCode == HttpStatus.OK
+        response.body.size() == 5
+        Tenants.getCurrent() == "tid1"
+    }
 }

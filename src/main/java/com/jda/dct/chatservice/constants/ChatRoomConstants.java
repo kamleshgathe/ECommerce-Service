@@ -19,6 +19,10 @@ public final class ChatRoomConstants {
 
     public static final String INVALID_ROOM_FORMATTED_MSG = "Invalid chat room id %s";
 
+    public static final String PERCENT_SIGN = "%";
+    public static final String DOMAIN_OBJECT_ID = "objectId";
+    public static final String QUOTATION_MARK = "\"";
+
     private ChatRoomConstants() {
         //private constructor to make to avoid mistaken initialization
     }
