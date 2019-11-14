@@ -69,7 +69,7 @@ public class ChatRoomController {
      * Returns list of channel for logged in user.
      * @param by user.
      * @param type type of room.
-     * @return
+     * @return return the channels in form of json
      */
     @GetMapping(value = "/channels",
         consumes = MediaType.ALL_VALUE,
@@ -176,4 +176,20 @@ public class ChatRoomController {
         Tenants.setCurrent(authContext.getCurrentTid());
         return ResponseEntity.ok(service.readResolvedChannel());
     }
+
+
+    /**
+     * Method is used to search with in the SR.
+     *
+     * @param requestParams     -- input value contain search text and object id
+     * @return ResponseEntity    -- response will be search result in form of json
+     */
+    @GetMapping(value = "/channels/search",
+            produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<List<ChatContext>> searchChannels(
+            @RequestParam Map<String, String> requestParams) {
+        Tenants.setCurrent(authContext.getCurrentTid());
+        return ResponseEntity.ok(service.searchChannels(requestParams));
+    }
+
 }

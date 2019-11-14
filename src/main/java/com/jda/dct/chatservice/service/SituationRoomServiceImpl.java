@@ -8,11 +8,14 @@
 
 package com.jda.dct.chatservice.service;
 
+import static com.jda.dct.chatservice.constants.ChatRoomConstants.DOMAIN_OBJECT_ID;
 import static com.jda.dct.chatservice.constants.ChatRoomConstants.FILTER_BY_USER;
 import static com.jda.dct.chatservice.constants.ChatRoomConstants.MATTERMOST_CHANNELS;
 import static com.jda.dct.chatservice.constants.ChatRoomConstants.MATTERMOST_POSTS;
 import static com.jda.dct.chatservice.constants.ChatRoomConstants.MATTERMOST_USERS;
 import static com.jda.dct.chatservice.constants.ChatRoomConstants.MAX_REMOTE_USERNAME_LENGTH;
+import static com.jda.dct.chatservice.constants.ChatRoomConstants.PERCENT_SIGN;
+import static com.jda.dct.chatservice.constants.ChatRoomConstants.QUOTATION_MARK;
 import static com.jda.dct.chatservice.utils.ChatRoomUtil.buildUrlString;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -1134,4 +1137,63 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     protected void setMattermostUrl(String mattermostUrl) {
         this.mattermostUrl = mattermostUrl;
     }
+
+    /**
+     * Method is return the chat room details based on given search string.
+     * Allow Search within SR
+     * The search will search only on a fixed set of fields like -
+     *          SR Names,
+     *          SR descriptions,
+     *          transaction object ID,
+     *          Issue type,
+     *          Page type,
+     *          resolution,
+     * we will search across open and resolved rooms 
+     *
+     * @param requestParams     -- input value contain search text and object id
+     * @return List    -- response will be search result in form of chat context object list
+     */
+    @Override
+    public List<ChatContext> searchChannels(Map<String, String> requestParams) {
+        String currentUser = authContext.getCurrentUser();
+        LOGGER.debug("User {} is searching in SR with search string {} ", currentUser, requestParams);
+
+        List<ChatContext> searchResultChannels;
+        List<ChatRoom> tempRooms;
+        String searchQueryValue = null;
+        String domainObjectId = null;
+
+        if (!CollectionUtils.isEmpty(requestParams)) {
+            searchQueryValue = requestParams.get(SearchConstants.SEARCH_TEXT);
+            domainObjectId = requestParams.get(DOMAIN_OBJECT_ID);
+        }
+
+        if (!StringUtils.isEmpty(searchQueryValue)) {
+            String searchTerm = PERCENT_SIGN + searchQueryValue.toUpperCase() + PERCENT_SIGN;
+            if (StringUtils.isEmpty(domainObjectId)) {
+                tempRooms = roomRepository.getChatRoomsBySearch(searchTerm, currentUser);
+            } else {
+                domainObjectId = QUOTATION_MARK + domainObjectId + QUOTATION_MARK;
+                tempRooms = roomRepository.getChatRoomsBySearchInObjectId(searchTerm, currentUser, domainObjectId);
+            }
+        } else {
+            if (StringUtils.isEmpty(domainObjectId)) {
+                List<ChatRoomParticipant> currentUserRooms = getUserAllRooms(currentUser);
+                tempRooms = currentUserRooms.stream().map(ChatRoomParticipant::getRoom).collect(Collectors.toList());
+            } else {
+                domainObjectId = QUOTATION_MARK + domainObjectId + QUOTATION_MARK;
+                tempRooms = roomRepository.getChannelByObjectIdAndUser(domainObjectId, currentUser);
+            }
+        }
+
+        if (tempRooms != null) {
+            searchResultChannels = tempRooms.stream().map(room -> toChatContext(room, currentUser))
+                    .collect(Collectors.toList());
+        } else {
+            searchResultChannels = new ArrayList<>();
+        }
+
+        return searchResultChannels;
+    }
+
 }

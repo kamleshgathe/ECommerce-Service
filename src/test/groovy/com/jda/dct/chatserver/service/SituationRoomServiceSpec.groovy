@@ -10,6 +10,7 @@ package com.jda.dct.chatserver.service
 import com.google.common.collect.Lists
 import com.google.common.collect.Maps
 import com.google.common.collect.Sets
+import com.jda.dct.chatservice.constants.ChatRoomConstants
 import com.jda.dct.chatservice.domainreader.EntityReaderFactory
 import com.jda.dct.chatservice.dto.upstream.AddUserToRoomDto
 import com.jda.dct.chatservice.dto.upstream.ChatContext
@@ -30,6 +31,7 @@ import com.jda.dct.domain.ChatRoomParticipantStatus
 import com.jda.dct.domain.ChatRoomResolution
 import com.jda.dct.domain.ChatRoomStatus
 import com.jda.dct.domain.ProxyTokenMapping
+import com.jda.dct.search.SearchConstants
 import com.jda.luminate.security.contexts.AuthContext
 import org.springframework.http.HttpEntity
 import org.springframework.http.HttpMethod
@@ -1687,5 +1689,132 @@ class SituationRoomServiceSpec extends Specification {
         resolution.setResolution(request.getResolution())
         resolution.setRemark(request.getRemark());
         return resolution;
+    }
+
+    def "search the channels should return values with given search string"() {
+        given:
+        mock()
+        def user = "1"
+
+        List<String> room1DomainObjectIds = Lists.newArrayList()
+        room1DomainObjectIds.add("123-Node-6765")
+        room1DomainObjectIds.add("98877-Shipment-45465465")
+        def participants1 = Sets.newHashSet()
+        def participants3 = Sets.newHashSet()
+        byte[] snapshot = getDummySnapshot();
+        List<String> resolveRoomDomainObjectIds = Lists.newArrayList()
+        resolveRoomDomainObjectIds.add("98877-Shipment-45465465")
+        resolveRoomDomainObjectIds.add("9437877-Shipment-45466756757655465")
+        def openRoom1 = mockedChatRoom("room1", snapshot, participants1, user, ChatRoomStatus.OPEN)
+        def resolvedRoom = mockedChatRoom("room3", snapshot, participants3, user, ChatRoomStatus.RESOLVED)
+        openRoom1.getDomainObjectIds() >> room1DomainObjectIds
+        resolvedRoom.getDomainObjectIds() >> resolveRoomDomainObjectIds
+        def expectedRooms = Lists.newArrayList()
+        expectedRooms.add(openRoom1)
+        expectedRooms.add(resolvedRoom)
+
+        roomRepository.getChatRoomsBySearch(_ as String, _ as String) >> expectedRooms
+
+        authContext.getCurrentUser() >> user
+
+        Map<String, String> requestParams = new HashMap<>()
+        requestParams.put(SearchConstants.SEARCH_TEXT, "IS0036_RO_S2")
+        requestParams.put(ChatRoomConstants.DOMAIN_OBJECT_ID, "")
+
+        when: "getting the channels from the service"
+        initNewSituationRoomService()
+        List<ChatContext> channels = service.searchChannels(requestParams)
+        then: "should return channels"
+        channels.size() == 2
+        channels.get(0).getId() == "room1"
+        channels.get(1).getId() == "room3"
+
+
+    }
+
+    def "search the channels should return values with given search string and domain object id"() {
+        given:
+        mock()
+        def user = "1"
+
+        List<String> room1DomainObjectIds = Lists.newArrayList()
+        room1DomainObjectIds.add("123-Node-6765")
+        room1DomainObjectIds.add("98877-Shipment-45465465")
+        def participants1 = Sets.newHashSet()
+        byte[] snapshot = getDummySnapshot();
+        List<String> resolveRoomDomainObjectIds = Lists.newArrayList()
+        resolveRoomDomainObjectIds.add("98877-Shipment-45465465")
+        resolveRoomDomainObjectIds.add("9437877-Shipment-45466756757655465")
+        def openRoom1 = mockedChatRoom("room1", snapshot, participants1, user, ChatRoomStatus.OPEN)
+        openRoom1.getDomainObjectIds() >> room1DomainObjectIds
+        def expectedRooms = Lists.newArrayList()
+        expectedRooms.add(openRoom1)
+
+        roomRepository.getChatRoomsBySearchInObjectId(_ as String, _ as String, _ as String) >> expectedRooms
+
+        authContext.getCurrentUser() >> user
+
+        Map<String, String> requestParams = new HashMap<>()
+        requestParams.put(SearchConstants.SEARCH_TEXT, "IS0036_RO_S2")
+        requestParams.put(ChatRoomConstants.DOMAIN_OBJECT_ID, "9437877-Shipment-45466756757655465")
+
+        when: "getting channels from the service"
+        initNewSituationRoomService()
+        List<ChatContext> channels = service.searchChannels(requestParams)
+        then: "should return channels"
+        channels.size() == 1
+        channels.get(0).getId() == "room1"
+    }
+
+    def "search the channels should return values with out search string and with domain object id"() {
+        given:
+        mock()
+        def user = "1"
+        def roomId = "room1"
+        def currentUser = "user1"
+
+        authContext.getCurrentUser() >> currentUser
+
+        byte[] snapshot = getDummySnapshot()
+        Set<ChatRoomParticipant> participants = Sets.newHashSet()
+        def mockRoom = mockedChatRoom(roomId, snapshot, participants, currentUser, ChatRoomStatus.RESOLVED)
+        addChatParticipant(mockRoom, currentUser, ChatRoomParticipantStatus.JOINED)
+        addChatParticipant(mockRoom, "user2", ChatRoomParticipantStatus.JOINED)
+
+        participantRepository.findByUserNameOrderByRoomLmdDesc(currentUser) >> mockRoom.getParticipants().toList()
+
+        Map<String, String> requestParams = new HashMap<>()
+        requestParams.put(SearchConstants.SEARCH_TEXT, "")
+        requestParams.put(ChatRoomConstants.DOMAIN_OBJECT_ID, "")
+
+        when: "getting the channels from the service"
+        initNewSituationRoomService()
+        List<ChatContext> channels = service.searchChannels(requestParams)
+        then: "should return channels"
+        channels.size() == 2
+        channels.get(0).getId() == "room1"
+    }
+
+    def "search the channels should return values with out search string"() {
+        given:
+        mock()
+
+        def user = "1"
+        def roomId = "room1"
+        def currentUser = "user1"
+
+        authContext.getCurrentUser() >> currentUser
+        participantRepository.findByUserNameOrderByRoomLmdDesc(currentUser) >> null
+
+        Map<String, String> requestParams = new HashMap<>()
+        requestParams.put(SearchConstants.SEARCH_TEXT, "")
+        requestParams.put(ChatRoomConstants.DOMAIN_OBJECT_ID, "9437877-Shipment-45466756757655465")
+
+        when: "getting the channels from the service"
+        initNewSituationRoomService()
+        List<ChatContext> channels = service.searchChannels(requestParams)
+        then: "should return empty channels"
+        channels.size() == 0
+
     }
 }

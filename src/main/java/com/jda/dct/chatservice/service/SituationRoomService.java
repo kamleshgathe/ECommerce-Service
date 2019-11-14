@@ -40,4 +40,12 @@ public interface SituationRoomService {
     ChatContext resolve(String roomId,ResolveRoomDto request);
 
     Map<String, Object> readResolvedChannel();
+
+    /**
+     * Method is return the chat room details based on given search text.
+     *
+     * @param requestParams         -- input value contain search text and object id
+     * @return List    -- response will be search result in form of chat context object list
+     */
+    List<ChatContext> searchChannels(Map<String, String> requestParams);
 }

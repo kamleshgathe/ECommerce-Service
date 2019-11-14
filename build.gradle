@@ -139,6 +139,7 @@ dependencies {
     zip group: 'com.jda.dct', name: 'cicd', version: '0.0.1-SNAPSHOT', classifier: 'appdynamics-container-config', ext: 'zip'
     runtime group: 'org.springframework.boot', name: 'spring-boot-starter-actuator'
     runtime group: 'org.mariadb.jdbc', name: 'mariadb-java-client', version: '2.4.0'
+    runtime group: 'net.bytebuddy', name: 'byte-buddy', version: '1.10.2'
 
     testCompile 'org.mockito:mockito-core'
     testCompile 'org.springframework.boot:spring-boot-starter-test'
