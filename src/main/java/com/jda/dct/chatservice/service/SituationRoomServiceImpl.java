@@ -1151,7 +1151,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
      * we will search across open and resolved rooms 
      *
      * @param requestParams     -- input value contain search text and object id
-     * @return List<ChatContext>    -- response will be search result in form of chat context object list
+     * @return List    -- response will be search result in form of chat context object list
      */
     @Override
     public List<ChatContext> searchChannels(Map<String, String> requestParams) {
