@@ -8,13 +8,13 @@
 
 package com.jda.dct.chatservice.service;
 
+import static com.jda.dct.chatservice.constants.ChatRoomConstants.DOMAIN_OBJECT_ID;
 import static com.jda.dct.chatservice.constants.ChatRoomConstants.FILTER_BY_USER;
 import static com.jda.dct.chatservice.constants.ChatRoomConstants.MATTERMOST_CHANNELS;
 import static com.jda.dct.chatservice.constants.ChatRoomConstants.MATTERMOST_POSTS;
 import static com.jda.dct.chatservice.constants.ChatRoomConstants.MATTERMOST_USERS;
 import static com.jda.dct.chatservice.constants.ChatRoomConstants.MAX_REMOTE_USERNAME_LENGTH;
 import static com.jda.dct.chatservice.constants.ChatRoomConstants.PERCENT_SIGN;
-import static com.jda.dct.chatservice.constants.ChatRoomConstants.DOMAIN_OBJECT_ID;
 import static com.jda.dct.chatservice.constants.ChatRoomConstants.QUOTATION_MARK;
 import static com.jda.dct.chatservice.utils.ChatRoomUtil.buildUrlString;
 
@@ -1139,7 +1139,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     }
 
     /**
-     * This method is return the chat room details based on given search string
+     * Method is return the chat room details based on given search string.
      * Allow Search within SR
      * The search will search only on a fixed set of fields like -
      *          SR Names,

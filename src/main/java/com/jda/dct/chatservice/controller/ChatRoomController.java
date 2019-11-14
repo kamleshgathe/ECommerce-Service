@@ -179,7 +179,7 @@ public class ChatRoomController {
 
 
     /**
-     * This API is used to search with in the SR
+     * Method is used to search with in the SR.
      *
      * @param requestParams     -- input value contain search text and object id
      * @return ResponseEntity    -- response will be search result in form of json
