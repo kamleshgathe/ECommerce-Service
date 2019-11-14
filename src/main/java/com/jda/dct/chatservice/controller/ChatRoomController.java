@@ -15,11 +15,19 @@ import com.jda.dct.chatservice.dto.upstream.ResolveRoomDto;
 import com.jda.dct.chatservice.dto.upstream.TokenDto;
 import com.jda.dct.chatservice.service.SituationRoomService;
 import com.jda.dct.chatservice.utils.AssertUtil;
+import com.jda.dct.domain.Attachment;
 import com.jda.dct.ignitecaches.springimpl.Tenants;
+import com.jda.luminate.common.base.ResponseDataWrapper;
+import com.jda.luminate.ingest.util.InputStreamWrapper;
 import com.jda.luminate.security.contexts.AuthContext;
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import javax.validation.constraints.NotEmpty;
+import org.apache.poi.ss.formula.functions.T;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -31,6 +39,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 
 @RestController
@@ -192,4 +201,56 @@ public class ChatRoomController {
         return ResponseEntity.ok(service.searchChannels(requestParams));
     }
 
+    /**
+     * This method helps to Upload attachment for a particular ChatRoom.
+     */
+
+    @PostMapping(value = "/channels/{channel_id}/uploadAttachment",
+            produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ResponseDataWrapper<Attachment>> upload(@PathVariable("channel_id") String roomId,
+                                           @RequestParam(value = "file", required = false) MultipartFile file,
+                                           @RequestParam(value = "comment", required = false) String comment) {
+        ResponseDataWrapper<Attachment> responseDataWrapper = new ResponseDataWrapper();
+        Tenants.setCurrent(authContext.getCurrentTid());
+        responseDataWrapper.setData(service.upload(roomId, file, comment));
+        return ResponseEntity.ok().body(responseDataWrapper);
+    }
+
+    /**
+     * This method helps to download attachment for a particular ChatRoom.
+     */
+    @GetMapping(value = "/channels/{channel_id}/attachments/{documentId}")
+    public ResponseEntity<InputStreamResource> downloadAttachment(@PathVariable("channel_id") String roomId,
+                                                                  @PathVariable final String documentId)
+            throws IOException {
+        Tenants.setCurrent(authContext.getCurrentTid());
+        InputStreamWrapper streamWrapper = service.getDocument(roomId, documentId);
+
+        HttpHeaders httpHeaders = new HttpHeaders();
+        httpHeaders.add("Content-Disposition", "attachment; filename=" + streamWrapper.getFileName());
+        httpHeaders.add("Content-Type", MediaType.APPLICATION_OCTET_STREAM_VALUE);
+        return ResponseEntity.ok()
+                .headers(httpHeaders).body(new InputStreamResource(streamWrapper.getInputStream()));
+    }
+
+    /**
+     * Delete the attachment of the ChatRoom.
+     *
+     * @param channelId     ChatRoom id.
+     * @param documentId     documentId.
+     * @return
+     */
+    @DeleteMapping(value = "/channels/{channel_id}/attachments/{documentId}",
+            produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ResponseDataWrapper<T>> deleteAttachment(
+            @NotEmpty @PathVariable("channel_id") String channelId,
+            @NotEmpty @PathVariable String documentId) throws IOException {
+
+        Tenants.setCurrent(authContext.getCurrentTid());
+        // Delete attachment and updated entity object and Delete from store.
+        service.deleteAttachment(channelId, documentId);
+        ResponseDataWrapper<T> responseDataWrapper = new ResponseDataWrapper<>();
+        responseDataWrapper.setCount(1);
+        return ResponseEntity.ok().body(responseDataWrapper);
+    }
 }

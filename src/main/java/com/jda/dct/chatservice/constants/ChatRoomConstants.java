@@ -18,6 +18,9 @@ public final class ChatRoomConstants {
     public static final String PASSTHROUGH_PREFIX = "/chat/passthrough";
 
     public static final String INVALID_ROOM_FORMATTED_MSG = "Invalid chat room id %s";
+    public static  final String PATH_PREFIX = "Situation Room";
+    public static final String PATH_DELIMITER = "/";
+
 
     public static final String PERCENT_SIGN = "%";
     public static final String DOMAIN_OBJECT_ID = "objectId";

@@ -14,11 +14,15 @@ import static com.jda.dct.chatservice.constants.ChatRoomConstants.MATTERMOST_CHA
 import static com.jda.dct.chatservice.constants.ChatRoomConstants.MATTERMOST_POSTS;
 import static com.jda.dct.chatservice.constants.ChatRoomConstants.MATTERMOST_USERS;
 import static com.jda.dct.chatservice.constants.ChatRoomConstants.MAX_REMOTE_USERNAME_LENGTH;
+import static com.jda.dct.chatservice.constants.ChatRoomConstants.PATH_DELIMITER;
+import static com.jda.dct.chatservice.constants.ChatRoomConstants.PATH_PREFIX;
 import static com.jda.dct.chatservice.constants.ChatRoomConstants.PERCENT_SIGN;
 import static com.jda.dct.chatservice.constants.ChatRoomConstants.QUOTATION_MARK;
 import static com.jda.dct.chatservice.utils.ChatRoomUtil.buildUrlString;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.jda.dct.app.constants.AttachmentConstants;
+import com.jda.dct.app.exception.AttachmentException;
 import com.jda.dct.chatservice.domainreader.EntityReaderFactory;
 import com.jda.dct.chatservice.dto.downstream.AddParticipantDto;
 import com.jda.dct.chatservice.dto.downstream.CreateChannelDto;
@@ -36,29 +40,40 @@ import com.jda.dct.chatservice.repository.ProxyTokenMappingRepository;
 import com.jda.dct.chatservice.repository.SituationRoomRepository;
 import com.jda.dct.chatservice.utils.AssertUtil;
 import com.jda.dct.chatservice.utils.ChatRoomUtil;
+import com.jda.dct.domain.Attachment;
 import com.jda.dct.domain.ChatRoom;
 import com.jda.dct.domain.ChatRoomParticipant;
 import com.jda.dct.domain.ChatRoomParticipantStatus;
 import com.jda.dct.domain.ChatRoomResolution;
 import com.jda.dct.domain.ChatRoomStatus;
 import com.jda.dct.domain.ProxyTokenMapping;
+import com.jda.dct.domain.exceptions.DctIoException;
+import com.jda.dct.domain.util.StringUtil;
 import com.jda.dct.ignitecaches.springimpl.Tenants;
 import com.jda.dct.search.SearchConstants;
+import com.jda.luminate.ingest.rest.services.attachments.AttachmentValidator;
+import com.jda.luminate.ingest.util.InputStreamWrapper;
+import com.jda.luminate.io.documentstore.DocumentStoreService;
+import com.jda.luminate.io.documentstore.exception.DocumentException;
 import com.jda.luminate.security.contexts.AuthContext;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import javax.transaction.Transactional;
-
+import org.apache.tika.mime.MimeTypeException;
 import org.assertj.core.util.Lists;
 import org.assertj.core.util.Sets;
 import org.slf4j.Logger;
@@ -76,6 +91,7 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.multipart.MultipartFile;
 
 
 /**
@@ -99,7 +115,9 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     private final AuthContext authContext;
     private final SituationRoomRepository roomRepository;
     private final ProxyTokenMappingRepository tokenRepository;
+    private final AttachmentValidator attachmentValidator;
     private final ChatRoomParticipantRepository participantRepository;
+    private final DocumentStoreService documentStoreService;
     private final EntityReaderFactory entityReaderFactory;
     private final UniqueRoomNameGenerator generator;
 
@@ -117,13 +135,17 @@ public class SituationRoomServiceImpl implements SituationRoomService {
                                     @Autowired ProxyTokenMappingRepository tokenRepository,
                                     @Autowired ChatRoomParticipantRepository participantRepository,
                                     @Autowired UniqueRoomNameGenerator generator,
-                                    @Autowired EntityReaderFactory entityReaderFactory) {
+                                    @Autowired EntityReaderFactory entityReaderFactory,
+                                    @Autowired AttachmentValidator attachmentValidator,
+                                    @Autowired DocumentStoreService documentStoreService) {
         this.authContext = authContext;
         this.roomRepository = roomRepository;
         this.tokenRepository = tokenRepository;
         this.participantRepository = participantRepository;
         this.generator = generator;
         this.entityReaderFactory = entityReaderFactory;
+        this.attachmentValidator = attachmentValidator;
+        this.documentStoreService = documentStoreService;
     }
 
     /**
@@ -470,6 +492,176 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         LOGGER.debug("Going to persist participant added or modified");
         participantRepository.save(participant);
         LOGGER.debug("Added or modified Participant persisted successfully");
+    }
+
+    @Override
+    public List<Attachment> upload(String roomId, MultipartFile file, String comment) {
+        LOGGER.debug("Uploading document for SR  {} ", roomId);
+        String path = PATH_PREFIX + PATH_DELIMITER + roomId;
+        String fileName = file.getOriginalFilename();
+        Set<String> fileNames = new HashSet<>();
+        Attachment attachments;
+        List<Attachment> attachmentsList;
+        List<Attachment> response = new ArrayList<>();
+        comment = comment == null ? "" : comment;
+        validateFile(file);
+        try {
+            Optional<ChatRoom> record = getChatRoomById(roomId);
+            if (!record.isPresent()) {
+                throw new ChatException(ChatException.ErrorCode.INVALID_CHAT_ROOM, roomId);
+            }
+            ChatRoom room = record.get();
+            attachmentsList = room.getAttachments();
+            InputStream inputStream = file.getInputStream();
+            if (attachmentsList != null) {
+                Iterator<Attachment> iter = attachmentsList.iterator();
+                while (iter.hasNext()) {
+                    LinkedHashMap<String, Object> temp = ((LinkedHashMap<String, Object>) (Object) iter.next());
+                    fileNames.add(temp.get("attachmentName").toString());
+                }
+            }
+            fileName = StringUtil.incrementFileName(fileName, fileNames);
+            documentStoreService.getDocumentStore().store(path, fileName, inputStream);
+            attachments = curateResponse(path, fileName, comment);
+            response.add(attachments);
+            attachmentsList = attachmentsList == null ? new ArrayList<>() : attachmentsList;
+            attachmentsList.add(attachments);
+            room.setAttachments(attachmentsList);
+            saveChatRoom(room);
+            LOGGER.info("File Uploaded successfully for room {}", roomId);
+        } catch (ChatException t) {
+            LOGGER.error("Exception", t);
+            throw new ChatException(ChatException.ErrorCode.INVALID_CHAT_ROOM, roomId);
+        } catch (DocumentException ex) {
+            LOGGER.error("failed to upload file {} for user {}", fileName, authContext.getCurrentUser(), ex);
+            throw new AttachmentException(AttachmentException.ErrorCode.INVALID_SIGNATURE, null, fileName);
+        } catch (IOException | MimeTypeException e) {
+            LOGGER.error("failed to upload file {} for user {}", fileName, authContext.getCurrentUser(), e);
+            throw new AttachmentException(AttachmentException.ErrorCode.INTERNAL_SERVER_ERROR, null, e.getMessage());
+        }
+        return response;
+    }
+
+    @Override
+    public InputStreamWrapper getDocument(String roomId, String documentId) throws IOException {
+        LOGGER.debug("Downloading document for SR  {} ", roomId);
+        List<Attachment> attachmentsList;
+        String filePath;
+        String fileName;
+        LinkedHashMap<String, String> attachmentMetaData = new LinkedHashMap<>();
+        Optional<ChatRoom> record = getChatRoomById(roomId);
+        if (!record.isPresent()) {
+            throw new ChatException(ChatException.ErrorCode.INVALID_CHAT_ROOM, roomId);
+        }
+        ChatRoom room = record.get();
+        attachmentsList = room.getAttachments();
+        if (attachmentsList == null) {
+            throw new AttachmentException(AttachmentException.ErrorCode.ATTACHMENTS_NOT_FOUND, null, documentId);
+        }
+        HashMap<String,Object> res = retrieve(attachmentsList, documentId);
+        if (!res.get("filePath").toString().isEmpty() && ! res.get("fileName").toString().isEmpty()) {
+            filePath = res.get("filePath").toString();
+            fileName = res.get("fileName").toString();
+            String path = filePath + PATH_DELIMITER + fileName;
+            Optional<InputStream> documentStream = documentStoreService.getDocumentStore().retrieve(path);
+            if (documentStream.isPresent()) {
+                return new InputStreamWrapper(documentStream.get(), fileName);
+            } else {
+                throw new AttachmentException(AttachmentException.ErrorCode.NULL_VALUE, null);
+            }
+        } else {
+            throw new AttachmentException(AttachmentException.ErrorCode.INVALID_ATTACHMENT, null);
+        }
+    }
+
+    @Override
+    public void deleteAttachment(String roomId, String documentId) throws IOException {
+        LOGGER.debug("Deleting document for SR  {} ", roomId);
+        List<Attachment> attachmentsList;
+        String filePath;
+        String fileName;
+        LinkedHashMap<String, String> attachmentMetaData = new LinkedHashMap<>();
+        Optional<ChatRoom> record = getChatRoomById(roomId);
+        HashMap<String,Object> res;
+        int count = 0;
+        int finalCount;
+        if (!record.isPresent()) {
+            throw new ChatException(ChatException.ErrorCode.INVALID_CHAT_ROOM, roomId);
+        }
+        ChatRoom room = record.get();
+        attachmentsList = room.getAttachments();
+        if (attachmentsList == null) {
+            throw new AttachmentException(AttachmentException.ErrorCode.ATTACHMENTS_NOT_FOUND, null, documentId);
+        }
+        try {
+            res = retrieve(attachmentsList, documentId);
+            filePath = res.get("filePath").toString();
+            fileName = res.get("fileName").toString();
+            finalCount = (int) res.get("finalCount");
+
+            res.get("finalCount");
+            if (!(fileName == null)) {
+                String path = filePath
+                        + AttachmentConstants.PATH_DELIMITER + fileName;
+                documentStoreService.getDocumentStore().delete(path);
+                attachmentsList.remove(finalCount);
+                room.setAttachments(attachmentsList);
+                saveChatRoom(room);
+            }
+        } catch (NullPointerException | DctIoException t) {
+            throw new AttachmentException(AttachmentException.ErrorCode.INVALID_ATTACHMENT, null);
+        }
+    }
+
+
+
+    private void validateFile(MultipartFile file) {
+        attachmentValidator.checkForNull(file);
+        attachmentValidator.checkValidExtension(file.getOriginalFilename());
+        attachmentValidator.checkFileSize(file);
+    }
+
+
+    private Attachment curateResponse(String path, String fileName, String comment) {
+        String documentId = StringUtil.getUuid();
+        Attachment attachments = new Attachment();
+        Map<String, String> attachmentMetaData = new HashMap<>();
+        attachmentMetaData.put(AttachmentConstants.METADATA_FILE_PATH, path);
+        attachmentMetaData.put(AttachmentConstants.COMMENT, comment);
+        attachments.setId(documentId);
+        attachments.setAttachmentName(fileName);
+        attachments.setCreatedBy(this.authContext.getCurrentUser());
+        attachments.setCreationDate(new Date());
+        attachments.setAttachmentMetaData(attachmentMetaData);
+        return attachments;
+    }
+
+    private HashMap<String, Object> retrieve(List<Attachment> attachments, String documentId) {
+        HashMap<String, Object> response = new HashMap<>();
+        int count = 0;
+        int finalCount;
+        String filePath;
+        String fileName;
+        Set<String> fileNames = new HashSet<>();
+        Iterator<Attachment> iter = attachments.iterator();
+        LinkedHashMap<String, String> attachmentMetaData;
+        while (iter.hasNext()) {
+            LinkedHashMap<String, Object> temp = ((LinkedHashMap<String, Object>) (Object) iter.next());
+            fileNames.add(temp.get("attachmentName").toString());
+            if (temp.get("id").toString().contentEquals(documentId)) {
+                attachmentMetaData = ((LinkedHashMap<String, String>) (Object) temp.get("attachmentMetaData"));
+                filePath = attachmentMetaData.get("filePath");
+                fileName = temp.get("attachmentName").toString();
+                finalCount = count;
+                response.put("filePath", filePath);
+                response.put("fileName", fileName);
+                response.put("finalCount", finalCount);
+            }
+            count++;
+        }
+        response.put("fileNames", fileNames);
+        return response;
+
     }
 
     @Override
@@ -909,6 +1101,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         context.setCreatedBy(room.getCreatedBy());
         context.setEntityType(room.getEntityType());
         context.setRoomStatus(room.getStatus().name());
+        context.setAttachments(room.getAttachments());
         if (room.getResolution() != null) {
             ChatRoomResolution resolution = room.getResolution();
             context.setResolution(resolution.getResolution());

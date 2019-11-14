@@ -42,8 +42,15 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
     "com.jda.dct.exec.lib.actions",
     "com.jda.dct.domain.util",
     "com.jda.dct.exec.lib.relationships",
+    "com.jda.dct.exec.permission",
+    "com.jda.dct.exec.statemachine",
+    "com.jda.dct.exec.compute",
+    "com.jda.dct.exec.lib.actions",
+    "com.jda.dct.exec.util",
     "com.jda.luminate.messaging.kafka",
     "com.jda.luminate.common.aspects",
+    "com.jda.luminate.io.documentstore",
+    "com.jda.luminate.ingest.rest.services",
     "com.jda.luminate.common.cache"    
 })
 

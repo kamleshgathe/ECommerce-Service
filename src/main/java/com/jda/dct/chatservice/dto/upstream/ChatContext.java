@@ -12,6 +12,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.jda.dct.domain.Attachment;
 import com.jda.dct.domain.ChatRoomParticipantStatus;
 
 import java.util.List;
@@ -48,6 +49,8 @@ public class ChatContext {
 
     private List<String> participants;
     private Object entity;
+
+    private List<Attachment> attachments;
 
     @JsonCreator
     public ChatContext() {
@@ -184,6 +187,15 @@ public class ChatContext {
         return entity;
     }
 
+    @JsonProperty(value = "attachments")
+    public List<Attachment> getAttachments() {
+        return attachments;
+    }
+
+    public void setAttachments(List<Attachment> attachments) {
+        this.attachments = attachments;
+    }
+
     public void setName(String name) {
         this.name = name;
     }
@@ -314,6 +326,7 @@ public class ChatContext {
         sb.append(", extraUpdateAt=").append(extraUpdateAt);
         sb.append(", participants=").append(participants);
         sb.append(", entity=").append(entity);
+        sb.append(", attachments=").append(attachments);
         sb.append('}');
         return sb.toString();
     }

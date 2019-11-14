@@ -13,12 +13,17 @@ import com.jda.dct.chatservice.controller.ChatRoomController
 import com.jda.dct.chatservice.dto.upstream.*
 import com.jda.dct.chatservice.exception.InvalidChatRequest
 import com.jda.dct.chatservice.service.SituationRoomService
+import com.jda.dct.domain.Attachment
 import com.jda.dct.domain.ChatRoomStatus
 import com.jda.dct.ignitecaches.springimpl.Tenants
+import com.jda.luminate.common.base.ResponseDataWrapper
+import com.jda.luminate.ingest.util.InputStreamWrapper
 import com.jda.luminate.security.contexts.AuthContext
 import groovy.json.JsonSlurper
+import org.springframework.core.io.InputStreamResource
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
+import org.springframework.mock.web.MockMultipartFile
 import spock.lang.Specification
 
 class SituationRoomControllerSpec extends Specification {
@@ -284,6 +289,55 @@ class SituationRoomControllerSpec extends Specification {
         response.statusCode == HttpStatus.OK
         response.body.size() == 5
         Tenants.getCurrent() == "tid1"
+    }
+
+    def "upload File"() {
+        given: "Initialize"
+        def service = mockedChatService()
+        def authContext = mockedAuthContext()
+        authContext.getCurrentTid() >> "tid1"
+        def file = new MockMultipartFile("data", "filename.txt",
+                "text/plain", "some data".getBytes())
+        when: "upload"
+        def controller = new ChatRoomController(service,authContext);
+        ResponseEntity<ResponseDataWrapper<Attachment>> response  = controller.upload("id", file, "comment")
+        then: "Get 'invalid field value message'"
+        response.getStatusCode().value() == 200
+    }
+
+    def "download file"(){
+        given: "Initializing variables"
+        def service = mockedChatService()
+        def authContext = mockedAuthContext()
+        authContext.getCurrentTid() >> "tid1"
+        def inputStream = new ByteArrayInputStream("testData".getBytes())
+        def entityId = "shipment-123"
+        def documentId = "docId124"
+        def fileName = "excel.csv"
+        def inputStreamWrapper = new InputStreamWrapper(inputStream, fileName)
+        service.getDocument(entityId, documentId) >> inputStreamWrapper
+        when: "invoking controller download attachment API"
+        def controller = new ChatRoomController(service,authContext);
+        ResponseEntity<InputStreamResource>  res =  controller.downloadAttachment(entityId, documentId)
+        then: "should succeed"
+        res.getStatusCode().value() == 200
+        res.getBody().getInputStream() != null
+
+    }
+
+    def "Delete Attachment"(){
+        given: "Initializing variables"
+        def service = mockedChatService()
+        def authContext = mockedAuthContext()
+        authContext.getCurrentTid() >> "tid1"
+        def id = "shipment-123"
+        def attachmentId = "docId124"
+        when: "invoking Delete attachment API"
+        def controller = new ChatRoomController(service,authContext)
+        ResponseEntity<ResponseDataWrapper> resp = controller.deleteAttachment(id, attachmentId)
+        then: "should succeed"
+        resp.getStatusCode().value() == 200
+
     }
 
     def mockedChatService() {
