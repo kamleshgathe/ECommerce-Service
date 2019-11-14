@@ -181,8 +181,8 @@ public class ChatRoomController {
     /**
      * This API is used to search with in the SR
      *
-     * @param requestParams
-     * @return ResponseEntity<List<ChatContext>>
+     * @param requestParams     -- input value contain search text and object id
+     * @return ResponseEntity<List<ChatContext>>    -- response will be search result in form of json
      */
     @GetMapping(value = "/channels/search",
             produces = MediaType.APPLICATION_JSON_VALUE)

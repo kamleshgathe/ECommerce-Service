@@ -1150,20 +1150,20 @@ public class SituationRoomServiceImpl implements SituationRoomService {
      *          resolution,
      * we will search across open and resolved rooms 
      *
-     * @param requestParams
-     * @return List<ChatContext>
+     * @param requestParams     -- input value contain search text and object id
+     * @return List<ChatContext>    -- response will be search result in form of chat context object list
      */
     @Override
     public List<ChatContext> searchChannels(Map<String, String> requestParams) {
         String currentUser = authContext.getCurrentUser();
         LOGGER.debug("User {} is searching in SR with search string {} ", currentUser, requestParams);
 
-        List<ChatContext> searchResultChannels = null;
-        List<ChatRoom> tempRooms = null;
+        List<ChatContext> searchResultChannels;
+        List<ChatRoom> tempRooms;
         String searchQueryValue = null;
         String domainObjectId = null;
 
-        if ( !CollectionUtils.isEmpty(requestParams) ) {
+        if (!CollectionUtils.isEmpty(requestParams)) {
             searchQueryValue = requestParams.get(SearchConstants.SEARCH_TEXT);
             domainObjectId = requestParams.get(DOMAIN_OBJECT_ID);
         }
@@ -1174,7 +1174,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
                 tempRooms = roomRepository.getChatRoomsBySearch(searchTerm, currentUser);
             } else {
                 domainObjectId = QUOTATION_MARK + domainObjectId + QUOTATION_MARK;
-                tempRooms = roomRepository.getChatRoomsBySearchInObjectId(searchTerm, currentUser, domainObjectId );
+                tempRooms = roomRepository.getChatRoomsBySearchInObjectId(searchTerm, currentUser, domainObjectId);
             }
         } else {
             if (StringUtils.isEmpty(domainObjectId)) {
@@ -1182,11 +1182,11 @@ public class SituationRoomServiceImpl implements SituationRoomService {
                 tempRooms = currentUserRooms.stream().map(ChatRoomParticipant::getRoom).collect(Collectors.toList());
             } else {
                 domainObjectId = QUOTATION_MARK + domainObjectId + QUOTATION_MARK;
-                tempRooms = roomRepository.getChannelByObjectIdAndUser(domainObjectId, currentUser );
+                tempRooms = roomRepository.getChannelByObjectIdAndUser(domainObjectId, currentUser);
             }
         }
 
-        if( tempRooms != null) {
+        if (tempRooms != null) {
             searchResultChannels = tempRooms.stream().map(room -> toChatContext(room, currentUser))
                     .collect(Collectors.toList());
         } else {

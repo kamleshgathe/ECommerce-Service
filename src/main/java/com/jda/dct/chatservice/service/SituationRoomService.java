@@ -44,8 +44,8 @@ public interface SituationRoomService {
     /**
      * This method is return the chat room details based on given search text
      *
-     * @param requestParams
-     * @return List<ChatContext>
+     * @param requestParams         -- input value contain search text and object id
+     * @return List<ChatContext>    -- response will be search result in form of chat context object list
      */
     List<ChatContext> searchChannels(Map<String, String> requestParams);
 }
