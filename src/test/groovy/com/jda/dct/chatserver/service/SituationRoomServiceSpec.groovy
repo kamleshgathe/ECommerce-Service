@@ -1564,7 +1564,6 @@ class SituationRoomServiceSpec extends Specification {
         roomRepository.findById(_) >> Optional.of(mockRoom)
         initNewSituationRoomService()
         List<Attachment> response = service.upload("1", file, "Test")
-        //response.get(0).getMsg()
 
         then:
         1 * localDocumentStore.store(_, _, _)

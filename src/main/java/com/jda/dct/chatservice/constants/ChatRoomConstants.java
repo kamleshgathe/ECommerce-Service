@@ -21,7 +21,6 @@ public final class ChatRoomConstants {
     public static  final String PATH_PREFIX = "Situation Room";
     public static final String PATH_DELIMITER = "/";
 
-
     public static final String PERCENT_SIGN = "%";
     public static final String DOMAIN_OBJECT_ID = "objectId";
     public static final String QUOTATION_MARK = "\"";

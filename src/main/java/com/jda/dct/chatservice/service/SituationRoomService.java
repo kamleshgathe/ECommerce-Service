@@ -52,6 +52,7 @@ public interface SituationRoomService {
      * @param requestParams         -- input value contain search text and object id
      * @return List    -- response will be search result in form of chat context object list
      */
+
     List<ChatContext> searchChannels(Map<String, String> requestParams);
 
     List<Attachment> upload(String roomId, MultipartFile file, String comment);

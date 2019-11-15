@@ -52,6 +52,7 @@ public class ChatContext {
 
     private List<Attachment> attachments;
 
+
     @JsonCreator
     public ChatContext() {
         //this has been kept blank to get initialize by jackson

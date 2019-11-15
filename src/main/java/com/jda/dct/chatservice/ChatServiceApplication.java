@@ -59,6 +59,7 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
     LuminateMessageSourceConfig.class})
 @EnableJpaRepositories(basePackages = {"com.jda.dct.ignitecaches.springimpl",
     "com.jda.dct.chatservice.repository"})
+
 public class ChatServiceApplication {
 
     public static void main(String[] args) {

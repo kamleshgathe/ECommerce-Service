@@ -202,7 +202,7 @@ public class ChatRoomController {
     }
 
     /**
-     * This method helps to Upload attachment for a particular ChatRoom.
+     * This method helps to Upload attachment for a particular ChatRoom .
      */
 
     @PostMapping(value = "/channels/{channel_id}/uploadAttachment",

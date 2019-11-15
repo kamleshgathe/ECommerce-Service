@@ -91,12 +91,12 @@ class SituationRoomControllerSpec extends Specification {
 
     def "test delete channel"() {
         given:
-        def exepectedResponse = Maps.newHashMap();
-        exepectedResponse.put("status", "OK");
-        exepectedResponse.put("deletedRoomId", "a5kr3xy6af8gipmw5r47cfzoir")
+        def expectedResponse = Maps.newHashMap();
+        expectedResponse.put("status", "OK");
+        expectedResponse.put("deletedRoomId", "a5kr3xy6af8gipmw5r47cfzoir")
         def service = mockedChatService()
         def authContext = mockedAuthContext()
-        service.removeChannel("a5kr3xy6af8gipmw5r47cfzoir") >> exepectedResponse;
+        service.removeChannel("a5kr3xy6af8gipmw5r47cfzoir") >> expectedResponse;
         authContext.getCurrentTid() >> "tid1"
 
         when: "Calling delete channel"
@@ -104,7 +104,7 @@ class SituationRoomControllerSpec extends Specification {
         ResponseEntity<Map<String, Object>> responseEntity = controller.deleteChannel("a5kr3xy6af8gipmw5r47cfzoir")
         then:
         responseEntity.getStatusCode().value() == 200
-        responseEntity.getBody() == exepectedResponse
+        responseEntity.getBody() == expectedResponse
         Tenants.getCurrent() == "tid1"
     }
 

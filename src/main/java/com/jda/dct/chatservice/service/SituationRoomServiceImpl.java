@@ -637,6 +637,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     }
 
     private HashMap<String, Object> retrieve(List<Attachment> attachments, String documentId) {
+        LOGGER.debug("Retrieve method is called  for SR  {} ", documentId);
         HashMap<String, Object> response = new HashMap<>();
         int count = 0;
         int finalCount;
