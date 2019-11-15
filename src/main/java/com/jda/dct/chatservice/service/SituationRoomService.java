@@ -13,8 +13,13 @@ import com.jda.dct.chatservice.dto.upstream.ChatContext;
 import com.jda.dct.chatservice.dto.upstream.ChatRoomCreateDto;
 import com.jda.dct.chatservice.dto.upstream.ResolveRoomDto;
 import com.jda.dct.chatservice.dto.upstream.TokenDto;
+import com.jda.dct.domain.Attachment;
+import com.jda.luminate.ingest.util.InputStreamWrapper;
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import org.springframework.web.multipart.MultipartFile;
+
 
 public interface SituationRoomService {
     TokenDto getSessionToken();
@@ -47,5 +52,12 @@ public interface SituationRoomService {
      * @param requestParams         -- input value contain search text and object id
      * @return List    -- response will be search result in form of chat context object list
      */
+
     List<ChatContext> searchChannels(Map<String, String> requestParams);
+
+    List<Attachment> upload(String roomId, MultipartFile file, String comment);
+
+    InputStreamWrapper getDocument(String roomId, String documentId) throws IOException;
+
+    void deleteAttachment(String roomId, String documentId) throws IOException;
 }
