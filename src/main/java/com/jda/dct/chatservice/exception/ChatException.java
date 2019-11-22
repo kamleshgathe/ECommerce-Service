@@ -28,7 +28,7 @@ public class ChatException extends DctException {
         CHANNEL_NOT_EXISTS("channelnotexists", "Channel {0} does not exists"),
         INVALID_ROOM("invalidroom", "Invalid room"),
         ROOM_NOT_EXISTS("roomnotexists","Room does not exists,wrong room name for post message"),
-        INVALID_CHAT_ROOM("invalidchatroom","Invalid chat room id {0}"),
+        INVALID_CHAT_ROOM("invalidchatroom","The room has either been deleted or doesn't exist."),
         PARTICIPANT_NOT_BELONG("participantnotbelong","Participant does not belong to room"),
         USER_NOT_INVITED("usernotinvited","User {0} not invited to room {1}"),
         UNABLE_TO_JOIN_ROOM("unabletojoin","Unable to joined situation room."),
