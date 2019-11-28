@@ -34,6 +34,10 @@ public class ChatContext {
     private String resolutionRemark;
     private String resolvedBy;
 
+
+    private String userName;
+    private  String resolvedUser;
+
     private ChatRoomParticipantStatus yourStatus;
     private boolean isResolvedRoomRead;
 
@@ -193,6 +197,23 @@ public class ChatContext {
         return attachments;
     }
 
+    @JsonProperty("user_name")
+    public String getUserName() {
+        return userName;
+    }
+
+    public String getResolvedUser() {
+        return resolvedUser;
+    }
+
+    public void setResolvedUser(String resolvedUser) {
+        this.resolvedUser = resolvedUser;
+    }
+
+    public void setUserName(String userName) {
+        this.userName = userName;
+    }
+
     public void setAttachments(List<Attachment> attachments) {
         this.attachments = attachments;
     }
@@ -328,6 +349,8 @@ public class ChatContext {
         sb.append(", participants=").append(participants);
         sb.append(", entity=").append(entity);
         sb.append(", attachments=").append(attachments);
+        sb.append(", userName=").append(userName);
+        sb.append(", resolvedUser=").append(resolvedUser);
         sb.append('}');
         return sb.toString();
     }

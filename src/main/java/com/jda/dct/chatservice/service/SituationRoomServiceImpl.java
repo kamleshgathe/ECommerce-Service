@@ -21,6 +21,10 @@ import static com.jda.dct.chatservice.constants.ChatRoomConstants.QUOTATION_MARK
 import static com.jda.dct.chatservice.utils.ChatRoomUtil.buildUrlString;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.jda.dct.app.constants.AttachmentConstants;
 import com.jda.dct.app.exception.AttachmentException;
 import com.jda.dct.chatservice.domainreader.EntityReaderFactory;
@@ -49,6 +53,7 @@ import com.jda.dct.domain.ChatRoomStatus;
 import com.jda.dct.domain.ProxyTokenMapping;
 import com.jda.dct.domain.exceptions.DctIoException;
 import com.jda.dct.domain.util.StringUtil;
+import com.jda.dct.foundation.process.access.DctServiceRestTemplate;
 import com.jda.dct.ignitecaches.springimpl.Tenants;
 import com.jda.dct.search.SearchConstants;
 import com.jda.luminate.ingest.rest.services.attachments.AttachmentValidator;
@@ -120,6 +125,10 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     private final DocumentStoreService documentStoreService;
     private final EntityReaderFactory entityReaderFactory;
     private final UniqueRoomNameGenerator generator;
+    private DctServiceRestTemplate dctService;
+
+    @Value("${tenant.umsUri}")
+    private String umsUri;
 
     private RestTemplate restTemplate = new RestTemplate();
 
@@ -137,7 +146,8 @@ public class SituationRoomServiceImpl implements SituationRoomService {
                                     @Autowired UniqueRoomNameGenerator generator,
                                     @Autowired EntityReaderFactory entityReaderFactory,
                                     @Autowired AttachmentValidator attachmentValidator,
-                                    @Autowired DocumentStoreService documentStoreService) {
+                                    @Autowired DocumentStoreService documentStoreService,
+                                    @Autowired DctServiceRestTemplate dctService) {
         this.authContext = authContext;
         this.roomRepository = roomRepository;
         this.tokenRepository = tokenRepository;
@@ -146,6 +156,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         this.entityReaderFactory = entityReaderFactory;
         this.attachmentValidator = attachmentValidator;
         this.documentStoreService = documentStoreService;
+        this.dctService = dctService;
     }
 
     /**
@@ -504,12 +515,10 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         List<Attachment> attachmentsList;
         List<Attachment> response = new ArrayList<>();
         comment = comment == null ? "" : comment;
+        validateRoomState(roomId, authContext.getCurrentUser(), "Unable to upload file as room is resolved.");
         validateFile(file);
         try {
             Optional<ChatRoom> record = getChatRoomById(roomId);
-            if (!record.isPresent()) {
-                throw new ChatException(ChatException.ErrorCode.INVALID_CHAT_ROOM, roomId);
-            }
             ChatRoom room = record.get();
             attachmentsList = room.getAttachments();
             InputStream inputStream = file.getInputStream();
@@ -530,7 +539,6 @@ public class SituationRoomServiceImpl implements SituationRoomService {
             saveChatRoom(room);
             LOGGER.info("File Uploaded successfully for room {}", roomId);
         } catch (ChatException t) {
-            LOGGER.error("Exception", t);
             throw new ChatException(ChatException.ErrorCode.INVALID_CHAT_ROOM, roomId);
         } catch (DocumentException ex) {
             LOGGER.error("failed to upload file {} for user {}", fileName, authContext.getCurrentUser(), ex);
@@ -585,9 +593,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         HashMap<String,Object> res;
         int count = 0;
         int finalCount;
-        if (!record.isPresent()) {
-            throw new ChatException(ChatException.ErrorCode.INVALID_CHAT_ROOM, roomId);
-        }
+        validateRoomState(roomId, authContext.getCurrentUser(), "Unable to delete file as room is resolved.");
         ChatRoom room = record.get();
         attachmentsList = room.getAttachments();
         if (attachmentsList == null) {
@@ -623,17 +629,45 @@ public class SituationRoomServiceImpl implements SituationRoomService {
 
 
     private Attachment curateResponse(String path, String fileName, String comment) {
-        String documentId = StringUtil.getUuid();
+        String user;
+        Optional<String> userInfo;
+        String userName;
+        userInfo = this.userData();
+        user = authContext.getCurrentUser();
+        userName = userName(user, userInfo);
         Attachment attachments = new Attachment();
+        String documentId = StringUtil.getUuid();
         Map<String, String> attachmentMetaData = new HashMap<>();
         attachmentMetaData.put(AttachmentConstants.METADATA_FILE_PATH, path);
         attachmentMetaData.put(AttachmentConstants.COMMENT, comment);
         attachments.setId(documentId);
         attachments.setAttachmentName(fileName);
-        attachments.setCreatedBy(this.authContext.getCurrentUser());
+        attachments.setCreatedBy(authContext.getCurrentUser());
+        attachments.setUserName(userName);
         attachments.setCreationDate(new Date());
         attachments.setAttachmentMetaData(attachmentMetaData);
         return attachments;
+    }
+
+    /**
+     * This API is used to get the User Name from user object.
+     * *
+     */
+    public String userName(String user, Optional<String> userInfo) {
+        String userName = authContext.getCurrentUser();
+        JsonParser parser = new JsonParser();
+        if (userInfo != null) {
+            JsonArray val = (JsonArray) parser.parse(userInfo.get());
+            for (JsonElement userJson : val) {
+                JsonObject users = userJson.getAsJsonObject();
+                if (users.get("userName").getAsString().trim().contentEquals(user.trim())) {
+                    userName = (users.get("firstName").getAsString().trim() + " "
+                            + users.get("lastName").getAsString().trim());
+
+                }
+            }
+        }
+        return userName;
     }
 
     private HashMap<String, Object> retrieve(List<Attachment> attachments, String documentId) {
@@ -1109,6 +1143,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
             context.setResolutionRemark(resolution.getRemark());
             context.setResolvedBy(resolution.getResolvedBy());
             context.setResolvedAt(resolution.getDate().getTime());
+            context.setResolvedUser(resolution.getResolvedUser());
         }
 
         List<String> channelUsers = new ArrayList<>();
@@ -1129,7 +1164,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         context.setUpdatedAt(room.getLmd().getTime());
         context.setLastPostAt(room.getLastPostAt().getTime());
 
-
+        context.setUserName(room.getUserName());
         context.setDeletedAt(0);
         context.setExpiredAt(0);
         context.setExtraUpdateAt(0);
@@ -1138,6 +1173,9 @@ public class SituationRoomServiceImpl implements SituationRoomService {
 
     private ChatRoom buildChatRoom(String id, ChatRoomCreateDto request) {
         ChatRoom room = new ChatRoom();
+        Optional<String> userInfo;
+        userInfo = userData();
+        String userName = userName(authContext.getCurrentUser(), userInfo);
         room.setId(id);
         room.setRoomName(request.getName());
         room.setEntityType(request.getEntityType());
@@ -1156,6 +1194,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         room.setTid(authContext.getCurrentTid());
         room.setDomainObjectIds(request.getObjectIds());
         room.setChats(ChatRoomUtil.objectToByteArray(Lists.newArrayList()));
+        room.setUserName(userName);
         List<Object> chatEntities = new ArrayList<>();
         for (String entityId : request.getObjectIds()) {
             Object entity = entityReaderFactory.getEntity(request.getEntityType(), entityId);
@@ -1242,10 +1281,15 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     }
 
     private ChatRoomResolution buildResolution(ResolveRoomDto request, String resolveBy) {
+        Optional<String> userInfo;
+        String userName;
         ChatRoomResolution resolution = new ChatRoomResolution();
+        userInfo = this.userData();
+        userName = userName(resolveBy,userInfo);
         resolution.setDate(new Date());
         resolution.setRemark(request.getRemark());
         resolution.setResolvedBy(resolveBy);
+        resolution.setResolvedUser(userName);
         resolution.setResolution(request.getResolution());
         return resolution;
     }
@@ -1332,6 +1376,11 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         this.mattermostUrl = mattermostUrl;
     }
 
+    @VisibleForTesting
+    protected void setuserUrl(String umsUri) {
+        this.umsUri = umsUri;
+    }
+
     /**
      * Method is return the chat room details based on given search string.
      * Allow Search within SR
@@ -1388,6 +1437,17 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         }
 
         return searchResultChannels;
+    }
+
+    /**
+     * This API is used to get the User's data object.
+     * *
+     */
+    @Cacheable(value = "usersInfo")
+    public Optional<String> userData() {
+        Optional<String> userInfo;
+        userInfo = dctService.restTemplateForTenantService(umsUri);
+        return userInfo;
     }
 
 }

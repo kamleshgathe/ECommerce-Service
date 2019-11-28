@@ -11,6 +11,7 @@ import com.google.common.collect.Lists
 import com.google.common.collect.Maps
 import com.jda.dct.chatservice.controller.ChatRoomController
 import com.jda.dct.chatservice.dto.upstream.*
+import com.jda.dct.chatservice.exception.FileUploadExceptionAdvice
 import com.jda.dct.chatservice.exception.InvalidChatRequest
 import com.jda.dct.chatservice.service.SituationRoomService
 import com.jda.dct.domain.Attachment
@@ -24,9 +25,20 @@ import org.springframework.core.io.InputStreamResource
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.mock.web.MockMultipartFile
+import org.springframework.web.context.request.WebRequest
+import org.springframework.web.multipart.MaxUploadSizeExceededException
+import spock.lang.Shared
 import spock.lang.Specification
 
 class SituationRoomControllerSpec extends Specification {
+
+    @Shared
+    FileUploadExceptionAdvice advice
+
+    def setupSpec() {
+        advice = new FileUploadExceptionAdvice();
+    }
+
 
     def "test throw exception if service is null"() {
         when: "Create the purchase order"
@@ -337,6 +349,23 @@ class SituationRoomControllerSpec extends Specification {
         ResponseEntity<ResponseDataWrapper> resp = controller.deleteAttachment(id, attachmentId)
         then: "should succeed"
         resp.getStatusCode().value() == 200
+
+    }
+
+    def "testing FileUploadExceptionAdvice"() {
+        given: "Multipart file upload  exception"
+        long size = 10
+       //MaxUploadSizeExceededException ex = new MaxUploadSizeExceededException(IllegalStateException , size)
+        MaxUploadSizeExceededException ex = new MaxUploadSizeExceededException(size
+                ,new Throwable("test"))
+        WebRequest webRequestMock = Mock(WebRequest)
+        FileUploadExceptionAdvice advice = new FileUploadExceptionAdvice()
+        when: "calling handleAttachmentException"
+        ResponseEntity<Object> responseEntity = advice.handleSizeExceededException(webRequestMock, ex)
+
+        then: "verify response"
+        assert responseEntity != null
+        assert responseEntity.statusCode == HttpStatus.INTERNAL_SERVER_ERROR
 
     }
 
