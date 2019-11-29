@@ -475,15 +475,6 @@ class SituationRoomServiceSpec extends Specification {
         given:
         mock()
         def channel = new ChatRoomCreateDto();
-        Optional<String> userInfo
-        JsonArray data = new JsonArray()
-        JsonObject users = new JsonObject()
-        users.addProperty("userName","1")
-        users.addProperty("firstName","test")
-        users.addProperty("lastName","data")
-        data.add(users)
-        userInfo = Optional.of(data.toString())
-        umsUri = "http://localhost:9090/api/v1/ums/users"
         def user = "1"
         def ptm1 = proxyTokenMapping("1", "remote_user1", "token1");
         def ptm2 = proxyTokenMapping("2", "remote_user2", "token1");
@@ -519,7 +510,7 @@ class SituationRoomServiceSpec extends Specification {
         channel.setName("name with space")
         channel.setSituationType("shipment_delayed")
         channel.setPurpose("situation room for shipment delayed")
-        dctService.restTemplateForTenantService(umsUri) >> userInfo
+        dctService.restTemplateForTenantService(umsUri) >> mockuserInfo()
         when: "Calling create channel"
         initNewSituationRoomService()
         service.createChannel(channel)
@@ -1047,8 +1038,9 @@ class SituationRoomServiceSpec extends Specification {
         request.resolution = Lists.newArrayList("resolution1");
         request.remark = "thanks";
         ChatRoom mockedRoom = Mock(ChatRoom);
+        initNewSituationRoomService()
         mockedRoom.getStatus() >> ChatRoomStatus.RESOLVED
-        mockedRoom.getResolution() >> buildResolution(request, "user1")
+        mockedRoom.getResolution() >> buildResolution(request, "1")
         roomRepository.findById("1") >> Optional.of(mockedRoom)
         when: "Calling resolve room"
         initNewSituationRoomService()
@@ -1070,12 +1062,10 @@ class SituationRoomServiceSpec extends Specification {
         def mockRoom = mockedChatRoom("room1", snapshot, participants, "user1", ChatRoomStatus.OPEN)
 
         addChatParticipant(mockRoom, "user1", ChatRoomParticipantStatus.JOINED)
-
+        initNewSituationRoomService()
         mockRoom.getResolution() >> buildResolution(request, "user1")
-
         roomRepository.findById("1") >> Optional.of(mockRoom)
         when: "Calling resolve room"
-        initNewSituationRoomService()
         service.resolve("1", request)
         then: "Save room should get called"
         thrown(InvalidChatRequest)
@@ -1096,7 +1086,7 @@ class SituationRoomServiceSpec extends Specification {
 
         addChatParticipant(mockRoom, "user1", ChatRoomParticipantStatus.PENDING)
         addChatParticipant(mockRoom, "user2", ChatRoomParticipantStatus.JOINED)
-
+        initNewSituationRoomService()
         mockRoom.getResolution() >> buildResolution(request, "user1")
 
         roomRepository.findById("1") >> Optional.of(mockRoom)
@@ -1138,7 +1128,7 @@ class SituationRoomServiceSpec extends Specification {
     def "resolve room should succeed"() {
         given: "Initialize inputs"
         mock()
-        def currentUser = "user1"
+        def currentUser = "1"
         authContext.getCurrentUser() >> currentUser
         ResolveRoomDto request = new ResolveRoomDto()
         request.resolution = Lists.newArrayList("resolution1")
@@ -1150,7 +1140,7 @@ class SituationRoomServiceSpec extends Specification {
 
         ChatRoomParticipant currentParticipant = addChatParticipant(mockRoom, currentUser, ChatRoomParticipantStatus.JOINED)
         ChatRoomParticipant participant = addChatParticipant(mockRoom, "user2", ChatRoomParticipantStatus.JOINED)
-
+        initNewSituationRoomService()
         mockRoom.getResolution() >> buildResolution(request, currentUser)
 
         roomRepository.findById("1") >> Optional.of(mockRoom)
@@ -1162,7 +1152,6 @@ class SituationRoomServiceSpec extends Specification {
         mockParticipants.add(participant)
         participantRepository.findByUserNameOrderByRoomLmdDesc(currentUser) >> mockParticipants
         when: "Calling resolve room"
-        initNewSituationRoomService()
         service.resolve("1", request)
         then: "Save room should get called"
         1 * roomRepository.save(_ as ChatRoom) >> {
@@ -1170,6 +1159,7 @@ class SituationRoomServiceSpec extends Specification {
                 newStateRoom.getResolution().resolution == request.resolution
                 newStateRoom.getResolution().remark == request.remark
                 newStateRoom.getResolution().resolvedBy == authContext.getCurrentUser()
+                newStateRoom.getResolution().resolvedUser == "test data"
                 newStateRoom.status == ChatRoomStatus.RESOLVED
                 return newStateRoom
         }
@@ -1199,6 +1189,7 @@ class SituationRoomServiceSpec extends Specification {
         byte[] bytes = ChatRoomUtil.objectToByteArray(jsonString);
 
         def mockRoom = mockedChatRoom("1", bytes, Lists.newArrayList(), "user1", ChatRoomStatus.RESOLVED)
+        initNewSituationRoomService()
         mockRoom.getResolution() >> buildResolution(resolutionRequestDto, "user1")
         roomRepository.findById(_) >> Optional.of(mockRoom)
         when: "Calling resolve room"
@@ -1563,14 +1554,13 @@ class SituationRoomServiceSpec extends Specification {
         given: "Multipart file to upload"
         mock()
         documentStoreService.getDocumentStore() >> localDocumentStore
-        authContext.getCurrentUser() >> "user1"
+        authContext.getCurrentUser() >> "1"
         ResolveRoomDto resolutionRequestDto = new ResolveRoomDto()
         resolutionRequestDto.resolution = Lists.newArrayList("resolution1")
         resolutionRequestDto.remark = "thanks"
         def participants = Sets.newHashSet()
-        def mockRoom = mockedChatRoom("room1", getDummySnapshot(), participants, "user1", ChatRoomStatus.OPEN)
-        addChatParticipant(mockRoom, "user1", ChatRoomParticipantStatus.JOINED)
-
+        def mockRoom = mockedChatRoom("room1", getDummySnapshot(), participants, "1", ChatRoomStatus.OPEN)
+        addChatParticipant(mockRoom, "1", ChatRoomParticipantStatus.JOINED)
         def entity = new ArrayList();
         entity.add("json1");
         String jsonString = ChatRoomUtil.objectToJson(entity);
@@ -1579,12 +1569,14 @@ class SituationRoomServiceSpec extends Specification {
                 "text/plain", "some data".getBytes())
         when: "Calling upload function"
         roomRepository.findById(_) >> Optional.of(mockRoom)
+        dctService.restTemplateForTenantService(umsUri) >> mockuserInfo()
         initNewSituationRoomService()
         List<Attachment> response = service.upload("1", file, "Test")
 
         then:
         1 * localDocumentStore.store(_, _, _)
         response.get(0).getAttachmentName() == file.getOriginalFilename()
+        response.get(0).getUserName() == "test data"
 
 
     }
@@ -2110,6 +2102,7 @@ class SituationRoomServiceSpec extends Specification {
         documentStoreService = Mock(DocumentStoreService)
         localDocumentStore = Mock(LocalDocumentStore)
         dctService = Mock(DctServiceRestTemplate)
+        umsUri = "http://localhost:9090/api/v1/ums/users"
     }
 
     def successHttpResponse() {
@@ -2175,6 +2168,17 @@ class SituationRoomServiceSpec extends Specification {
 
     }
 
+    def mockuserInfo(){
+        Optional<String> userInfo
+        JsonArray data = new JsonArray()
+        JsonObject users = new JsonObject()
+        users.addProperty("userName","1")
+        users.addProperty("firstName","test")
+        users.addProperty("lastName","data")
+        data.add(users)
+        userInfo = Optional.of(data.toString())
+    }
+
     def mockAtachment1(){
         List<Object> attachmentsList = new ArrayList<>()
         Map<String, Object> eachAttachmentMap = new LinkedHashMap<String, Object>()
@@ -2226,11 +2230,15 @@ class SituationRoomServiceSpec extends Specification {
     }
 
     def buildResolution(ResolveRoomDto request, String resolveBy) {
+        String resolvedUser
+        dctService.restTemplateForTenantService(umsUri) >> mockuserInfo()
+        resolvedUser = service.userName(resolveBy, mockuserInfo())
         ChatRoomResolution resolution = new ChatRoomResolution()
         resolution.setResolvedBy(resolveBy)
         resolution.setDate(new Date())
         resolution.setResolution(request.getResolution())
-        resolution.setRemark(request.getRemark());
+        resolution.setRemark(request.getRemark())
+        resolution.setResolvedUser(resolvedUser)
         return resolution;
     }
 

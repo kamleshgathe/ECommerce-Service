@@ -538,8 +538,6 @@ public class SituationRoomServiceImpl implements SituationRoomService {
             room.setAttachments(attachmentsList);
             saveChatRoom(room);
             LOGGER.info("File Uploaded successfully for room {}", roomId);
-        } catch (ChatException t) {
-            throw new ChatException(ChatException.ErrorCode.INVALID_CHAT_ROOM, roomId);
         } catch (DocumentException ex) {
             LOGGER.error("failed to upload file {} for user {}", fileName, authContext.getCurrentUser(), ex);
             throw new AttachmentException(AttachmentException.ErrorCode.INVALID_SIGNATURE, null, fileName);
