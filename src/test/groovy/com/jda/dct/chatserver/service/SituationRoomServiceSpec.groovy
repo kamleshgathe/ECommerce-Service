@@ -620,9 +620,9 @@ class SituationRoomServiceSpec extends Specification {
         def openRoom2 = mockedChatRoomWithInputLmd("room2", snapshot, participants2, user, ChatRoomStatus.NEW, lmd2)
         def resolvedRoom = mockedChatRoomWithInputLmd("room3", snapshot, participants3, user, ChatRoomStatus.RESOLVED, lmd3)
 
-        ChatRoomParticipant r1p1 = addChatParticipant(openRoom1, "appUser", ChatRoomParticipantStatus.JOINED)
+        ChatRoomParticipant r1p1 = addChatParticipant(openRoom1, "AppUser", ChatRoomParticipantStatus.JOINED)
         ChatRoomParticipant r2p1 = addChatParticipant(openRoom2, "appUser", ChatRoomParticipantStatus.PENDING)
-        ChatRoomParticipant r3p1 = addChatParticipant(resolvedRoom, "appUser", ChatRoomParticipantStatus.JOINED)
+        ChatRoomParticipant r3p1 = addChatParticipant(resolvedRoom, "appuser", ChatRoomParticipantStatus.JOINED)
 
         allParticipantsInRepo.add(r1p1)
         allParticipantsInRepo.add(r2p1)
@@ -646,6 +646,9 @@ class SituationRoomServiceSpec extends Specification {
         channels.get(0).getId() == "room3"
         channels.get(1).getId() == "room1"
         channels.get(2).getId() == "room2"
+        channels.get(0).getYourStatus() != null && channels.get(0).getYourStatus() == ChatRoomParticipantStatus.JOINED
+        channels.get(1).getYourStatus() != null && channels.get(1).getYourStatus() == ChatRoomParticipantStatus.JOINED
+        channels.get(2).getYourStatus() != null && channels.get(2).getYourStatus() == ChatRoomParticipantStatus.PENDING
     }
 
     def "test add users to existing channel expect exception if channel is missing"() {

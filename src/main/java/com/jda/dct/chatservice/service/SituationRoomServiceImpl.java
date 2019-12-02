@@ -1113,7 +1113,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
 
         List<String> channelUsers = new ArrayList<>();
         room.getParticipants().forEach(participant -> {
-            if (participant.getUserName().equals(caller)) {
+            if (participant.getUserName().equalsIgnoreCase(caller)) {
                 context.setYourStatus(participant.getStatus());
                 context.setResolveReadStatus(participant.isResolutionRead());
             }
