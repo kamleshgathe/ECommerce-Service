@@ -52,6 +52,9 @@ oauth2:
   jwt:
     key: 123
 
+tenant:
+  umsUri: http://luminate-auth:80/api/v1/ums/users
+
 datalake:
   clientid: 8ae42e16-f4d4-4e50-8e5f-876a6c854be5
   authTokenEndpoint: https://login.microsoftonline.com/2ac36cee-0617-4ac0-bebf-e1ce5dfab86c/oauth2/token
@@ -95,6 +98,9 @@ kafka:
 
 es:
   hosts: http://localhost:9200
+
+tenant:
+  umsUri: http://localhost:33333/api/v1/ums/users
 
 local:
   store:
