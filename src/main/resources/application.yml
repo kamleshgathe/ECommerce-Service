@@ -23,6 +23,8 @@ dct:
     allowDeletes: true
   fileUpload:
     validFormats: doc, docx, txt, pdf, xls, csv, jpeg, png, jpg, xlsx
+  fileSize:
+    maxSize: 10MB
 
 delivery:
   service:

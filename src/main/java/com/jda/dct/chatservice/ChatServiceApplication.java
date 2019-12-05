@@ -41,6 +41,7 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
     "com.jda.dct.foundation.tenantutils",
     "com.jda.dct.exec.lib.actions",
     "com.jda.dct.domain.util",
+    "com.jda.luminate.app.exception",
     "com.jda.dct.exec.lib.relationships",
     "com.jda.dct.exec.permission",
     "com.jda.dct.exec.statemachine",
