@@ -107,6 +107,7 @@ import org.springframework.web.multipart.MultipartFile;
 public class SituationRoomServiceImpl implements SituationRoomService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SituationRoomServiceImpl.class);
+    private static final String CHANNEL_ID = "channel_id";
 
     @Value("${dct.situationRoom.mattermost.host}")
     private String mattermostUrl;
@@ -537,6 +538,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
             attachmentsList.add(attachments);
             room.setAttachments(attachmentsList);
             saveChatRoom(room);
+            savePostInRemote(roomId, attachments, comment);
             LOGGER.info("File Uploaded successfully for room {}", roomId);
         } catch (DocumentException ex) {
             LOGGER.error("failed to upload file {} for user {}", fileName, authContext.getCurrentUser(), ex);
@@ -546,6 +548,23 @@ public class SituationRoomServiceImpl implements SituationRoomService {
             throw new AttachmentException(AttachmentException.ErrorCode.INTERNAL_SERVER_ERROR, null, e.getMessage());
         }
         return response;
+    }
+
+    private void savePostInRemote(String roomId, Attachment attachment, String comment) {
+        String currentUser = authContext.getCurrentUser();
+        LOGGER.info("Going to save Attachment metaData for room {} by user {}", roomId, currentUser);
+        Map<String, Object> attachmentDetail = new HashMap<>();
+        attachmentDetail.put(CHANNEL_ID, roomId);
+        attachmentDetail.put("file_ids", new String[]{attachment.getId()});
+        attachmentDetail.put("message", null);
+        Map<String, Object> propsData = new HashMap<>();
+        propsData.put("username", currentUser);
+        propsData.put("fileId", attachment.getId());
+        propsData.put("filename", attachment.getAttachmentName());
+        propsData.put("comment", comment);
+        attachmentDetail.put("props", propsData);
+        postMessage(attachmentDetail);
+        LOGGER.info("Attachment metaData saved in Remote successfully for room {} by user {}", roomId, currentUser);
     }
 
     @Override
