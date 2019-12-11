@@ -535,10 +535,10 @@ public class SituationRoomServiceImpl implements SituationRoomService {
             attachments = curateResponse(path, fileName, comment);
             response.add(attachments);
             attachmentsList = attachmentsList == null ? new ArrayList<>() : attachmentsList;
-            savePostInRemote(roomId, attachmentsList, attachments);
             attachmentsList.add(attachments);
             room.setAttachments(attachmentsList);
             saveChatRoom(room);
+            savePostInRemote(roomId, attachments, comment);
             LOGGER.info("File Uploaded successfully for room {}", roomId);
         } catch (DocumentException ex) {
             LOGGER.error("failed to upload file {} for user {}", fileName, authContext.getCurrentUser(), ex);
@@ -550,54 +550,20 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         return response;
     }
 
-    private void savePostInRemote(String roomId, List<Attachment> attachments, Attachment currentAttached) {
+    private void savePostInRemote(String roomId, Attachment attachment, String comment) {
         String currentUser = authContext.getCurrentUser();
         LOGGER.info("Going to save Attachment metaData for room {} by user {}", roomId, currentUser);
-
-        List<String> fileIds = Lists.newArrayList();
-
-        Map<String, Object> attachmentDetailMap = new HashMap<>();
-        fileIds.add(currentAttached.getId());
-        attachmentDetailMap.put(currentAttached.getId(), currentAttached);
-
-        Iterator<Attachment> attachmentItr = attachments.iterator();
-        while (attachmentItr.hasNext()) {
-            LinkedHashMap<String, Object> attachmentObj;
-            attachmentObj = ((LinkedHashMap<String, Object>) (Object) attachmentItr.next());
-
-            Map<String, String> attachmentMetaData = new HashMap<>();
-            LinkedHashMap<String, String> attachmentMetaObject;
-            attachmentMetaObject = ((LinkedHashMap<String, String>) (Object) attachmentObj.get("attachmentMetaData"));
-            String attchedFilePath = attachmentMetaObject.get(AttachmentConstants.METADATA_FILE_PATH);
-            attachmentMetaData.put(AttachmentConstants.METADATA_FILE_PATH, attchedFilePath);
-            attachmentMetaData.put(AttachmentConstants.COMMENT, attachmentMetaObject.get(AttachmentConstants.COMMENT));
-
-            Attachment attachment = new Attachment();
-            String fileId = attachmentObj.get("id").toString();
-            fileIds.add(fileId);
-            attachment.setId(fileId);
-            attachment.setAttachmentName(attachmentObj.get("attachmentName").toString());
-            attachment.setUserName(attachmentObj.get("userName").toString());
-            attachment.setCreatedBy(attachmentObj.get("createdBy").toString());
-            String date = attachmentObj.get("creationDate").toString();
-            Date attachmentDate = new Date(Long.parseLong(date) * 1000);
-            attachment.setCreationDate(attachmentDate);
-            attachment.setAttachmentMetaData(attachmentMetaData);
-
-            attachmentDetailMap.put(attachment.getId(), attachment);
-        }
-
+        Map<String, Object> attachmentDetail = new HashMap<>();
+        attachmentDetail.put(CHANNEL_ID, roomId);
+        attachmentDetail.put("file_ids", new String[]{attachment.getId()});
+        attachmentDetail.put("message", null);
         Map<String, Object> propsData = new HashMap<>();
         propsData.put("username", currentUser);
-        propsData.put("attachments", attachmentDetailMap);
-
-        Map<String, Object> attachmentPost = new HashMap<>();
-        attachmentPost.put(CHANNEL_ID, roomId);
-        attachmentPost.put("file_ids", Arrays.toString(fileIds.toArray()));
-        attachmentPost.put("message", null);
-        attachmentPost.put("props", propsData);
-
-        postMessage(attachmentPost);
+        propsData.put("fileId", attachment.getId());
+        propsData.put("filename", attachment.getAttachmentName());
+        propsData.put("comment", comment);
+        attachmentDetail.put("props", propsData);
+        postMessage(attachmentDetail);
         LOGGER.info("Attachment metaData saved in Remote successfully for room {} by user {}", roomId, currentUser);
     }
 

@@ -1608,17 +1608,9 @@ class SituationRoomServiceSpec extends Specification {
         mockRoom.getChats() >> ChatRoomUtil.objectToByteArray(new ArrayList())
         addChatParticipant(mockRoom, currentUser, ChatRoomParticipantStatus.JOINED)
 
-        Map<String, String> attachmentMetaData = new LinkedHashMap<>()
-        attachmentMetaData.put("filePath", "PathDetails");
-        attachmentMetaData.put("comment", "uploaded attachment");
-
         Map<String, Object> attachmentMap = new LinkedHashMap<String, Object>()
         attachmentMap.put("attachmentName", "text.txt")
-        attachmentMap.put("userName", "YODA YODA")
-        attachmentMap.put("createdBy", "mrA@dcttestllc.onmicrosoft.com")
-        attachmentMap.put("creationDate", "1081157732")
         attachmentMap.put("id", StringUtil.getUuid())
-        attachmentMap.put("attachmentMetaData", attachmentMetaData)
 
         List<Object> attachmentsList = new ArrayList<>()
         attachmentsList.add(attachmentMap)
