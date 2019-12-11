@@ -1616,7 +1616,7 @@ class SituationRoomServiceSpec extends Specification {
         attachmentMap.put("attachmentName", "text.txt")
         attachmentMap.put("userName", "YODA YODA")
         attachmentMap.put("createdBy", "mrA@dcttestllc.onmicrosoft.com")
-        attachmentMap.put("creationDate", new Date())
+        attachmentMap.put("creationDate", "1081157732")
         attachmentMap.put("id", StringUtil.getUuid())
         attachmentMap.put("attachmentMetaData", attachmentMetaData)
 

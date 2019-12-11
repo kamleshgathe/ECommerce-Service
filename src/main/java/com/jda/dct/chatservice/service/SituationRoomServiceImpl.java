@@ -579,7 +579,9 @@ public class SituationRoomServiceImpl implements SituationRoomService {
             attachment.setAttachmentName(attachmentObj.get("attachmentName").toString());
             attachment.setUserName(attachmentObj.get("userName").toString());
             attachment.setCreatedBy(attachmentObj.get("createdBy").toString());
-            attachment.setCreationDate((Date) attachmentObj.get("creationDate"));
+            String date = attachmentObj.get("creationDate").toString();
+            Date attachmentDate = new Date(Long.parseLong(date) * 1000);
+            attachment.setCreationDate(attachmentDate);
             attachment.setAttachmentMetaData(attachmentMetaData);
 
             attachmentDetailMap.put(attachment.getId(), attachment);
