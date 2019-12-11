@@ -36,6 +36,7 @@ import com.jda.dct.domain.ChatRoomParticipantStatus
 import com.jda.dct.domain.ChatRoomResolution
 import com.jda.dct.domain.ChatRoomStatus
 import com.jda.dct.domain.ProxyTokenMapping
+import com.jda.dct.domain.util.StringUtil
 import com.jda.dct.foundation.process.access.DctServiceRestTemplate
 import com.jda.dct.search.SearchConstants
 import com.jda.luminate.ingest.rest.services.attachments.AttachmentValidator
@@ -1607,9 +1608,19 @@ class SituationRoomServiceSpec extends Specification {
         mockRoom.getChats() >> ChatRoomUtil.objectToByteArray(new ArrayList())
         addChatParticipant(mockRoom, currentUser, ChatRoomParticipantStatus.JOINED)
 
-        List<Object> attachmentsList = new ArrayList<>()
+        Map<String, String> attachmentMetaData = new LinkedHashMap<>()
+        attachmentMetaData.put("filePath", "PathDetails");
+        attachmentMetaData.put("comment", "uploaded attachment");
+
         Map<String, Object> attachmentMap = new LinkedHashMap<String, Object>()
         attachmentMap.put("attachmentName", "text.txt")
+        attachmentMap.put("userName", "YODA YODA")
+        attachmentMap.put("createdBy", "mrA@dcttestllc.onmicrosoft.com")
+        attachmentMap.put("creationDate", new Date())
+        attachmentMap.put("id", StringUtil.getUuid())
+        attachmentMap.put("attachmentMetaData", attachmentMetaData)
+
+        List<Object> attachmentsList = new ArrayList<>()
         attachmentsList.add(attachmentMap)
         mockRoom.getAttachments() >> attachmentsList
 
