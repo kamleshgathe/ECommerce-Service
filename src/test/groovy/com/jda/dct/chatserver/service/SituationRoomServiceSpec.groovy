@@ -2402,4 +2402,86 @@ class SituationRoomServiceSpec extends Specification {
         channels.size() == 0
 
     }
+
+    def "test userName having firstName and lastName"() {
+
+        given:
+        Optional<String> userInfo
+        JsonArray data = new JsonArray()
+        JsonObject users = new JsonObject()
+        users.addProperty("userName","userName@doman.com")
+        users.addProperty("firstName","userFirstName")
+        users.addProperty("lastName","userLastName")
+        data.add(users)
+        userInfo = Optional.of(data.toString())
+
+        mock()
+
+        when:
+        initNewSituationRoomService();
+        String userName = service.userName("userName@doman.com", userInfo)
+        then:
+        userName == "userFirstName userLastName"
+    }
+
+    def "test userName not having firstName and lastName"() {
+
+        given:
+        Optional<String> userInfo
+        JsonArray data = new JsonArray()
+        JsonObject users = new JsonObject()
+        users.addProperty("userName","userName@doman.com")
+        data.add(users)
+        userInfo = Optional.of(data.toString())
+
+        mock()
+
+        when:
+        initNewSituationRoomService();
+        String userName = service.userName("userName@doman.com", userInfo)
+        then:
+        userName == "userName@doman.com"
+    }
+
+    def "test userName not having firstName and having lastName"() {
+
+        given:
+        Optional<String> userInfo
+        JsonArray data = new JsonArray()
+        JsonObject users = new JsonObject()
+        users.addProperty("userName","userName@doman.com")
+        users.addProperty("lastName","userLastName")
+        data.add(users)
+        userInfo = Optional.of(data.toString())
+
+        mock()
+
+        when:
+        initNewSituationRoomService();
+        String userName = service.userName("userName@doman.com", userInfo)
+        then:
+        userName == "userLastName"
+    }
+
+    def "test userName having firstName and not having lastName"() {
+
+        given:
+        Optional<String> userInfo
+        JsonArray data = new JsonArray()
+        JsonObject users = new JsonObject()
+        users.addProperty("userName","userName@doman.com")
+        users.addProperty("firstName","userFirstName")
+        data.add(users)
+        userInfo = Optional.of(data.toString())
+
+        mock()
+
+        when:
+        initNewSituationRoomService();
+        String userName = service.userName("userName@doman.com", userInfo)
+        then:
+        userName == "userFirstName"
+    }
+
+    
 }

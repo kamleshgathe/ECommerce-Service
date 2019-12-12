@@ -10,6 +10,8 @@ package com.jda.dct.chatservice.service;
 
 import static com.jda.dct.chatservice.constants.ChatRoomConstants.DOMAIN_OBJECT_ID;
 import static com.jda.dct.chatservice.constants.ChatRoomConstants.FILTER_BY_USER;
+import static com.jda.dct.chatservice.constants.ChatRoomConstants.FIRST_NAME;
+import static com.jda.dct.chatservice.constants.ChatRoomConstants.LAST_NAME;
 import static com.jda.dct.chatservice.constants.ChatRoomConstants.MATTERMOST_CHANNELS;
 import static com.jda.dct.chatservice.constants.ChatRoomConstants.MATTERMOST_POSTS;
 import static com.jda.dct.chatservice.constants.ChatRoomConstants.MATTERMOST_USERS;
@@ -18,6 +20,8 @@ import static com.jda.dct.chatservice.constants.ChatRoomConstants.PATH_DELIMITER
 import static com.jda.dct.chatservice.constants.ChatRoomConstants.PATH_PREFIX;
 import static com.jda.dct.chatservice.constants.ChatRoomConstants.PERCENT_SIGN;
 import static com.jda.dct.chatservice.constants.ChatRoomConstants.QUOTATION_MARK;
+import static com.jda.dct.chatservice.constants.ChatRoomConstants.SPACE;
+import static com.jda.dct.chatservice.constants.ChatRoomConstants.USER_NAME;
 import static com.jda.dct.chatservice.utils.ChatRoomUtil.buildUrlString;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -690,18 +694,31 @@ public class SituationRoomServiceImpl implements SituationRoomService {
      * *
      */
     public String userName(String user, Optional<String> userInfo) {
-        String userName = authContext.getCurrentUser();
-        JsonParser parser = new JsonParser();
-        if (userInfo != null) {
+        String userName = user;
+        if (userInfo != null && user != null) {
+            JsonParser parser = new JsonParser();
             JsonArray val = (JsonArray) parser.parse(userInfo.get());
             for (JsonElement userJson : val) {
                 JsonObject users = userJson.getAsJsonObject();
-                if (users.get("userName").getAsString().trim().contentEquals(user.trim())) {
-                    userName = (users.get("firstName").getAsString().trim() + " "
-                            + users.get("lastName").getAsString().trim());
-
+                if (users.has(USER_NAME) && !StringUtils.isEmpty(users.get(USER_NAME))
+                        && users.get(USER_NAME).getAsString().trim().contentEquals(user.trim())) {
+                    userName = parseFromJsonElement(users, userName);
+                    break;
                 }
             }
+        }
+        return userName;
+    }
+
+    private String parseFromJsonElement(JsonObject users, String userName) {
+        if (users.has(FIRST_NAME) && !StringUtils.isEmpty(users.get(FIRST_NAME))
+                && users.has(LAST_NAME) && !StringUtils.isEmpty(users.get(LAST_NAME))) {
+            userName = (users.get(FIRST_NAME).getAsString().trim() + SPACE
+                    + users.get(LAST_NAME).getAsString().trim());
+        } else if (users.has(FIRST_NAME) && !StringUtils.isEmpty(users.get(FIRST_NAME))) {
+            userName = users.get(FIRST_NAME).getAsString().trim();
+        } else if (users.has(LAST_NAME) && !StringUtils.isEmpty(users.get(LAST_NAME))) {
+            userName = users.get(LAST_NAME).getAsString().trim();
         }
         return userName;
     }
