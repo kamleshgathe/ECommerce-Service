@@ -69,7 +69,9 @@ public class ChatRoomUtil {
                 "ChatContext",
                 "java.util.ArrayList",
                 "java.util.HashMap",
-                "java.util.LinkedHashMap"
+                "java.util.LinkedHashMap",
+                "java.lang.String",
+                "[Ljava.lang.String;"
         ));
         try {
             try (ByteArrayInputStream bis = new ByteArrayInputStream(bytes)) {
