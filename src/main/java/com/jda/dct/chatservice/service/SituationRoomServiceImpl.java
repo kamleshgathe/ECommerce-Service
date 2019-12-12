@@ -465,6 +465,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     }
 
     @Override
+    @Transactional
     public ChatContext resolve(String roomId, ResolveRoomDto request) {
         String currentUser = authContext.getCurrentUser();
         LOGGER.info("User {} is resolving room {} with details {}", currentUser, roomId, request);
@@ -481,6 +482,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         room.setLmd(room.getResolution().getDate());
         ChatRoom resolvedRoom = saveChatRoom(room);
         saveResolveRoomReadStatus(resolvedRoom, currentUser);
+        saveResolutionInRemote(resolvedRoom);
 
         LOGGER.info("Room {} status has changed to resolved by user {}", roomId, currentUser);
         return toChatContext(resolvedRoom, currentUser);
@@ -498,6 +500,23 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         });
         LOGGER.debug("Resolve read status for all participants of Chat room {} persisted successfully",
                 chatRoom.getRoomName());
+    }
+
+    private void saveResolutionInRemote(ChatRoom resolvedRoom) {
+        String currentUser = authContext.getCurrentUser();
+        String roomId = resolvedRoom.getId();
+        LOGGER.info("Going to save Attachment metaData for room {} by user {}", roomId, currentUser);
+
+        Map<String, Object> propsData = new HashMap<>();
+        propsData.put("room_status", resolvedRoom.getStatus());
+        propsData.put("resolved_by", resolvedRoom.getResolution().getResolvedUser());
+
+        Map<String, Object> attachmentDetail = new HashMap<>();
+        attachmentDetail.put(CHANNEL_ID, roomId);
+        attachmentDetail.put("message", null);
+        attachmentDetail.put("props", propsData);
+        postMessage(attachmentDetail);
+        LOGGER.info("Attachment metaData saved in Remote successfully for room {} by user {}", roomId, currentUser);
     }
 
     private void saveChatRoomParticipant(ChatRoomParticipant participant) {

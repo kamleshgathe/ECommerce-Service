@@ -1133,21 +1133,21 @@ class SituationRoomServiceSpec extends Specification {
         given: "Initialize inputs"
         mock()
         def currentUser = "1"
+        def roomId = "room1"
         authContext.getCurrentUser() >> currentUser
         ResolveRoomDto request = new ResolveRoomDto()
         request.resolution = Lists.newArrayList("resolution1")
-        request.remark = "thanks";
+        request.remark = "thanks"
 
         byte[] snapshot = getDummySnapshot()
         Set<ChatRoomParticipant> participants = Sets.newHashSet();
-        def mockRoom = mockedChatRoom("room1", snapshot, participants, currentUser, ChatRoomStatus.OPEN)
+        def mockRoom = mockedChatRoom(roomId, snapshot, participants, currentUser, ChatRoomStatus.OPEN)
+        mockRoom.getChats() >> ChatRoomUtil.objectToByteArray(new ArrayList())
 
         ChatRoomParticipant currentParticipant = addChatParticipant(mockRoom, currentUser, ChatRoomParticipantStatus.JOINED)
         ChatRoomParticipant participant = addChatParticipant(mockRoom, "user2", ChatRoomParticipantStatus.JOINED)
         initNewSituationRoomService()
         mockRoom.getResolution() >> buildResolution(request, currentUser)
-
-        roomRepository.findById("1") >> Optional.of(mockRoom)
 
         List<ChatRoomParticipant> mockParticipants = new ArrayList<ChatRoomParticipant>()
         currentParticipant.setResolutionRead(true)
@@ -1155,10 +1155,20 @@ class SituationRoomServiceSpec extends Specification {
         participant.setResolutionRead(false)
         mockParticipants.add(participant)
         participantRepository.findByUserNameOrderByRoomLmdDesc(currentUser) >> mockParticipants
+        roomRepository.findById(roomId) >> Optional.of(mockRoom)
+        def token = proxyTokenMappingWithToken("abcd")
+        tokenRepository.findByAppUserId(currentUser) >> token
+        restTemplate.exchange(_ as String, _ as HttpMethod, _ as HttpEntity, Map.class, *_) >>
+                {
+                    Map body = Maps.newHashMap()
+                    body.put("id", "111")
+                    return mockedResponseEntity(HttpStatus.OK, body)
+                }
+
         when: "Calling resolve room"
-        service.resolve("1", request)
+        service.resolve(roomId, request)
         then: "Save room should get called"
-        1 * roomRepository.save(_ as ChatRoom) >> {
+        roomRepository.save(_ as ChatRoom) >> {
             ChatRoom newStateRoom ->
                 newStateRoom.getResolution().resolution == request.resolution
                 newStateRoom.getResolution().remark == request.remark
