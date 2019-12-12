@@ -36,6 +36,7 @@ import com.jda.dct.domain.ChatRoomParticipantStatus
 import com.jda.dct.domain.ChatRoomResolution
 import com.jda.dct.domain.ChatRoomStatus
 import com.jda.dct.domain.ProxyTokenMapping
+import com.jda.dct.domain.util.StringUtil
 import com.jda.dct.foundation.process.access.DctServiceRestTemplate
 import com.jda.dct.search.SearchConstants
 import com.jda.luminate.ingest.rest.services.attachments.AttachmentValidator
@@ -1556,60 +1557,80 @@ class SituationRoomServiceSpec extends Specification {
     def "Upload file for Situation Room"() {
         given: "Multipart file to upload"
         mock()
-        documentStoreService.getDocumentStore() >> localDocumentStore
-        authContext.getCurrentUser() >> "1"
-        ResolveRoomDto resolutionRequestDto = new ResolveRoomDto()
-        resolutionRequestDto.resolution = Lists.newArrayList("resolution1")
-        resolutionRequestDto.remark = "thanks"
+        def currentUser = "1"
+        def roomId = "room1"
+        def tokenMapping = new ProxyTokenMapping()
+        tokenMapping.setAppUserId("user1")
+        tokenMapping.setRemoteUserId("abcd")
+        tokenMapping.setProxyToken("token1")
+
         def participants = Sets.newHashSet()
-        def mockRoom = mockedChatRoom("room1", getDummySnapshot(), participants, "1", ChatRoomStatus.OPEN)
-        addChatParticipant(mockRoom, "1", ChatRoomParticipantStatus.JOINED)
-        def entity = new ArrayList();
-        entity.add("json1");
-        String jsonString = ChatRoomUtil.objectToJson(entity);
-        byte[] bytes = ChatRoomUtil.objectToByteArray(jsonString);
+        def mockRoom = mockedChatRoom(roomId, getDummySnapshot(), participants, currentUser, ChatRoomStatus.OPEN)
+        mockRoom.getChats() >> ChatRoomUtil.objectToByteArray(new ArrayList())
+        addChatParticipant(mockRoom, currentUser, ChatRoomParticipantStatus.JOINED)
+
         def file = new MockMultipartFile("data", "filename.txt",
                 "text/plain", "some data".getBytes())
+
         when: "Calling upload function"
-        roomRepository.findById(_) >> Optional.of(mockRoom)
+        documentStoreService.getDocumentStore() >> localDocumentStore
+        authContext.getCurrentUser() >> currentUser
+        roomRepository.findById(_ as String) >> Optional.of(mockRoom)
+        tokenRepository.findByAppUserId(currentUser) >> tokenMapping
+        restTemplate.exchange(_ as String, _ as HttpMethod, _ as HttpEntity, Map.class, *_) >>
+                {
+                    Map body = Maps.newHashMap();
+                    body.put("id", "111")
+                    return mockedResponseEntity(HttpStatus.OK, body)
+                }
         dctService.restTemplateForTenantService(umsUri) >> mockuserInfo()
         initNewSituationRoomService()
-        List<Attachment> response = service.upload("1", file, "Test")
+        List<Attachment> response = service.upload(roomId, file, "Test")
 
         then:
         1 * localDocumentStore.store(_, _, _)
         response.get(0).getAttachmentName() == file.getOriginalFilename()
         response.get(0).getUserName() == "test data"
-
-
     }
 
     def "Upload file for Situation Room with attachment list "() {
         given: "Multipart file to upload"
         mock()
-        documentStoreService.getDocumentStore() >> localDocumentStore
-        authContext.getCurrentUser() >> "user1"
-        ResolveRoomDto resolutionRequestDto = new ResolveRoomDto()
-        resolutionRequestDto.resolution = Lists.newArrayList("resolution1")
-        resolutionRequestDto.remark = "thanks"
-        def participants = Sets.newHashSet()
-        def mockRoom = mockedChatRoom("room1", getDummySnapshot(), participants, "user1", ChatRoomStatus.OPEN)
-        addChatParticipant(mockRoom, "user1", ChatRoomParticipantStatus.JOINED)
+        def currentUser = "1"
+        def roomId = "room1"
+        def tokenMapping = new ProxyTokenMapping()
+        tokenMapping.setAppUserId("user1")
+        tokenMapping.setRemoteUserId("abcd")
+        tokenMapping.setProxyToken("token1")
 
-        def entity = new ArrayList()
-        entity.add("json1")
-        String jsonString = ChatRoomUtil.objectToJson(entity)
-        byte[] bytes = ChatRoomUtil.objectToByteArray(jsonString)
-        def file = new MockMultipartFile("data", "filename.txt",
-                "text/plain", "some data".getBytes())
-        when: "Calling upload function"
+        def participants = Sets.newHashSet()
+        def mockRoom = mockedChatRoom(roomId, getDummySnapshot(), participants, currentUser, ChatRoomStatus.OPEN)
+        mockRoom.getChats() >> ChatRoomUtil.objectToByteArray(new ArrayList())
+        addChatParticipant(mockRoom, currentUser, ChatRoomParticipantStatus.JOINED)
+
+        Map<String, Object> attachmentMap = new LinkedHashMap<String, Object>()
+        attachmentMap.put("attachmentName", "text.txt")
+        attachmentMap.put("id", StringUtil.getUuid())
+
         List<Object> attachmentsList = new ArrayList<>()
-        Map<String, Object> eachAttachmentMap = new LinkedHashMap<String, Object>()
-        eachAttachmentMap.put("attachmentName", "text.txt")
-        attachmentsList.add(eachAttachmentMap)
+        attachmentsList.add(attachmentMap)
         mockRoom.getAttachments() >> attachmentsList
 
-        roomRepository.findById(_) >> Optional.of(mockRoom)
+        def file = new MockMultipartFile("data", "filename.txt",
+                "text/plain", "some data".getBytes())
+
+
+        when: "Calling upload function"
+        documentStoreService.getDocumentStore() >> localDocumentStore
+        authContext.getCurrentUser() >> currentUser
+        roomRepository.findById(_ as String) >> Optional.of(mockRoom)
+        tokenRepository.findByAppUserId(currentUser) >> tokenMapping
+        restTemplate.exchange(_ as String, _ as HttpMethod, _ as HttpEntity, Map.class, *_) >>
+                {
+                    Map body = Maps.newHashMap();
+                    body.put("id", "111")
+                    return mockedResponseEntity(HttpStatus.OK, body)
+                }
         initNewSituationRoomService()
         List<Attachment> response = service.upload("1", file, "Test")
 
