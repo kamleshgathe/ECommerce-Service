@@ -514,13 +514,45 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         Map<String, Object> propsData = new HashMap<>();
         propsData.put("room_status", resolvedRoom.getStatus());
         propsData.put("resolved_by", resolvedRoom.getResolution().getResolvedUser());
+        propsData.put("username", currentUser);
 
         Map<String, Object> attachmentDetail = new HashMap<>();
         attachmentDetail.put(CHANNEL_ID, roomId);
         attachmentDetail.put("message", null);
         attachmentDetail.put("props", propsData);
-        postMessage(attachmentDetail);
+        postMessageInRemote(attachmentDetail);
         LOGGER.info("Attachment metaData saved in Remote successfully for room {} by user {}", roomId, currentUser);
+    }
+
+    private Map<String, Object> postMessageInRemote(Map<String, Object> chat) {
+        String currentUser = authContext.getCurrentUser();
+        validatePostResolveMessageRequest(chat);
+        Map<String, Object> chatCopy = new HashMap<>(chat);
+        String roomId = getRoomIdFromPostMessage(chatCopy);
+        LOGGER.info("User {} posting Resolve message to channel {}", currentUser,
+                roomId);
+        ProxyTokenMapping proxyTokenMapping = getUserTokenMapping(currentUser);
+        HttpHeaders headers = getHttpHeader(proxyTokenMapping.getProxyToken());
+        HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(chatCopy, headers);
+        HttpEntity<Map> response = restTemplate.exchange(
+                getRemoteActionUrl(getMessagePath()),
+                HttpMethod.POST,
+                requestEntity,
+                Map.class);
+        LOGGER.info("Message posted successfully into channel {} by user {}",
+                roomId,
+                authContext.getCurrentUser());
+        return response.getBody();
+    }
+
+    private void validatePostResolveMessageRequest(Map<String, Object> request) {
+        LOGGER.debug("Validating post message request");
+        AssertUtil.notNull(request, "Post message can't be null");
+        AssertUtil.notEmpty(request, "Post message can't be empty");
+        AssertUtil.notNull(getRoomIdFromPostMessage(request),
+                "Channel can't be null");
+        AssertUtil.isTrue(getRoomIdFromPostMessage(request).trim().length() > 0,
+                "Channel can't be empty");
     }
 
     private void saveChatRoomParticipant(ChatRoomParticipant participant) {
