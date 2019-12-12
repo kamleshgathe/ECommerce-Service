@@ -510,6 +510,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         Map<String, Object> propsData = new HashMap<>();
         propsData.put("room_status", resolvedRoom.getStatus());
         propsData.put("resolved_by", resolvedRoom.getResolution().getResolvedUser());
+        propsData.put("username", currentUser);
 
         Map<String, Object> attachmentDetail = new HashMap<>();
         attachmentDetail.put(CHANNEL_ID, roomId);
