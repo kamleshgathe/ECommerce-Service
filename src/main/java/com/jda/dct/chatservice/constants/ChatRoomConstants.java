@@ -25,6 +25,11 @@ public final class ChatRoomConstants {
     public static final String DOMAIN_OBJECT_ID = "objectId";
     public static final String QUOTATION_MARK = "\"";
 
+    public static final String FIRST_NAME =  "firstName";
+    public static final String LAST_NAME =  "lastName";
+    public static final String USER_NAME =  "userName";
+    public static final String SPACE =  " ";
+
     private ChatRoomConstants() {
         //private constructor to make to avoid mistaken initialization
     }
