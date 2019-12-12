@@ -846,8 +846,9 @@ public class SituationRoomServiceImpl implements SituationRoomService {
             throw new ChatException(ChatException.ErrorCode.INVALID_CHAT_ROOM, roomId);
         }
         AssertUtil.isTrue(room.get().getStatus() != ChatRoomStatus.RESOLVED,
-                invalidStatusMsg);
-        boolean present = room.get().getParticipants().stream().anyMatch(p -> p.getUserName().equals(currentUser));
+            invalidStatusMsg);
+        boolean present = room.get().getParticipants().stream().anyMatch(p -> p.getUserName()
+            .equalsIgnoreCase(currentUser));
         AssertUtil.isTrue(present, String.format("You are not part of %s room", room.get().getRoomName()));
     }
 
@@ -884,8 +885,8 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         ChatRoom room = roomRecord.get();
         Set<ChatRoomParticipant> participants = room.getParticipants();
         Optional<ChatRoomParticipant> targetParticipant = participants
-                .stream()
-                .filter(p -> p.getUserName().equals(targetUser)).findAny();
+            .stream()
+            .filter(p -> p.getUserName().equalsIgnoreCase(targetUser)).findAny();
 
         if (!targetParticipant.isPresent()) {
             throw new ChatException(ChatException.ErrorCode.PARTICIPANT_NOT_BELONG);
@@ -1001,7 +1002,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         ChatRoom room = roomRecord.get();
 
         Optional<ChatRoomParticipant> participantRecord = room.getParticipants()
-                .stream().filter(p -> p.getUserName().equals(user)).findFirst();
+            .stream().filter(p -> p.getUserName().equalsIgnoreCase(user)).findFirst();
 
         if (!participantRecord.isPresent()) {
             throw new ChatException(ChatException.ErrorCode.USER_NOT_INVITED, user, roomId);
