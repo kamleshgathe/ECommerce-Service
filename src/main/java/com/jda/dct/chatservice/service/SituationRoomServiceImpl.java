@@ -693,20 +693,22 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     private void deleteAttachmentInRemote(String roomId, String documentId) {
         Map<String, Object> channelPostResponse = getChannelPosts(roomId);
         Map<String, Object> channelPosts = (Map<String, Object>) channelPostResponse.get("posts");
-        String postId = channelPosts
-                .entrySet()
-                .stream()
-                .filter(x -> {
-                    Map<String, Object> postVal = (Map<String, Object>) x.getValue();
-                    List<String> fileIds = (List<String>) postVal.get("file_ids");
-                    return !CollectionUtils.isEmpty(fileIds)
-                            && documentId.equalsIgnoreCase(fileIds.get(0));
-                })
-                .map(Map.Entry::getKey)
-                .findAny()
-                .orElse(null);
-        if (!StringUtils.isEmpty(postId)) {
-            deletePostMessage(postId);
+        if (!CollectionUtils.isEmpty(channelPosts)) {
+            String postId = channelPosts
+                    .entrySet()
+                    .stream()
+                    .filter(x -> {
+                        Map<String, Object> postVal = (Map<String, Object>) x.getValue();
+                        List<String> fileIds = (List<String>) postVal.get("file_ids");
+                        return !CollectionUtils.isEmpty(fileIds)
+                                && documentId.equalsIgnoreCase(fileIds.get(0));
+                    })
+                    .map(Map.Entry::getKey)
+                    .findAny()
+                    .orElse(null);
+            if (!StringUtils.isEmpty(postId)) {
+                deletePostMessage(postId);
+            }
         }
     }
 
