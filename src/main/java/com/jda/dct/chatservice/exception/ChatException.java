@@ -32,7 +32,8 @@ public class ChatException extends DctException {
         PARTICIPANT_NOT_BELONG("participantnotbelong","Participant does not belong to room"),
         USER_NOT_INVITED("usernotinvited","User {0} not invited to room {1}"),
         UNABLE_TO_JOIN_ROOM("unabletojoin","Unable to joined situation room."),
-        UNABLE_TO_UPDATE_ROLE("unabletoupdaterole","Unable to update roles.");
+        UNABLE_TO_UPDATE_ROLE("unabletoupdaterole","Unable to update roles."),
+        UNABLE_TO_GET_CHANNEL_POSTS("unabletogetchannelposts", "Unable to get posts for room {0}");
 
         private final String code;
         private final String message;

@@ -1894,9 +1894,11 @@ class SituationRoomServiceSpec extends Specification {
         given:"Delete document"
         mock()
         String id = "aa-ship-1"
-        String documentId = "1"
+        def currentUser = "user1"
+        String documentId = "document123"
+        String postId = "post123"
 
-        authContext.getCurrentUser() >> "user1"
+        authContext.getCurrentUser() >> currentUser
         ResolveRoomDto resolutionRequestDto = new ResolveRoomDto()
         resolutionRequestDto.resolution = Lists.newArrayList("resolution1")
         resolutionRequestDto.remark = "thanks"
@@ -1912,10 +1914,29 @@ class SituationRoomServiceSpec extends Specification {
 
         when: "calling delete document API"
         roomRepository.findById(_) >> new Optional(mockRoom)
+        def token = proxyTokenMappingWithToken("abcd")
+        tokenRepository.findByAppUserId(currentUser) >> token
+        restTemplate.exchange(_ as String, _ as HttpMethod, _ as HttpEntity, Map.class) >>
+                {
+                    Map body = Maps.newHashMap()
+                    body.put("posts", getMockPost(postId, documentId))
+                    return mockedResponseEntity(HttpStatus.OK, body)
+                }
         initNewSituationRoomService()
         mockRoom.getAttachments() >> mockAtachment()
         service.deleteAttachment(id, documentId)
         then: "should Delete the attachment"
+    }
+
+    Map<String, Object> getMockPost(String postId, String documentId) {
+        Map<String, Object> postMap = new HashMap<>()
+        Map<String, Object> postValMap1 = new HashMap<>()
+        postValMap1.put("file_ids", Lists.newArrayList(documentId))
+        Map<String, Object> postValMap2 = new HashMap<>()
+        postValMap2.put("file_ids", Lists.newArrayList("5gg4yu6g5yg64y"))
+        postMap.put(postId, postValMap1)
+        postMap.put("55iy565y6i56", postValMap2)
+        return postMap
     }
 
     def "Failed to delete document due to incorrect filename from object"(){
@@ -2196,7 +2217,7 @@ class SituationRoomServiceSpec extends Specification {
         attachmentMetaData.put("filePath", "filePath")
         eachAttachmentMap.put("attachmentName", "text.txt")
         eachAttachmentMap.put("attachmentMetaData",attachmentMetaData)
-        eachAttachmentMap.put("id","1")
+        eachAttachmentMap.put("id","document123")
         attachmentsList.add(eachAttachmentMap)
         return attachmentsList
 

@@ -660,10 +660,8 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         List<Attachment> attachmentsList;
         String filePath;
         String fileName;
-        LinkedHashMap<String, String> attachmentMetaData = new LinkedHashMap<>();
         Optional<ChatRoom> record = getChatRoomById(roomId);
         HashMap<String,Object> res;
-        int count = 0;
         int finalCount;
         validateRoomState(roomId, authContext.getCurrentUser(), "Unable to delete file as room is resolved.");
         ChatRoom room = record.get();
@@ -678,27 +676,92 @@ public class SituationRoomServiceImpl implements SituationRoomService {
             finalCount = (int) res.get("finalCount");
 
             res.get("finalCount");
-            if (!(fileName == null)) {
+            if (fileName != null) {
                 String path = filePath
                         + AttachmentConstants.PATH_DELIMITER + fileName;
                 documentStoreService.getDocumentStore().delete(path);
                 attachmentsList.remove(finalCount);
                 room.setAttachments(attachmentsList);
                 saveChatRoom(room);
+                deleteAttachmentInRemote(roomId, documentId);
             }
         } catch (NullPointerException | DctIoException t) {
             throw new AttachmentException(AttachmentException.ErrorCode.INVALID_ATTACHMENT, null);
         }
     }
 
+    private void deleteAttachmentInRemote(String roomId, String documentId) {
+        Map<String, Object> channelPostResponse = getChannelPosts(roomId);
+        Map<String, Object> channelPosts = (Map<String, Object>) channelPostResponse.get("posts");
+        String postId = channelPosts
+                .entrySet()
+                .stream()
+                .filter(x -> {
+                    Map<String, Object> postVal = (Map<String, Object>) x.getValue();
+                    List<String> fileIds = (List<String>) postVal.get("file_ids");
+                    return !CollectionUtils.isEmpty(fileIds)
+                            && documentId.equalsIgnoreCase(fileIds.get(0));
+                })
+                .map(Map.Entry::getKey)
+                .findAny()
+                .orElse(null);
+        if (!StringUtils.isEmpty(postId)) {
+            deletePostMessage(postId);
+        }
+    }
 
+    private void deletePostMessage(String postId) {
+        String currentUser = authContext.getCurrentUser();
+        ProxyTokenMapping tokenMapping = getUserTokenMapping(currentUser);
+        HttpHeaders headers = getHttpHeader(tokenMapping.getProxyToken());
+        headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
+        HttpEntity<Map<String, Object>> requestEntity
+                = new HttpEntity<>(null, headers);
+        ResponseEntity<Map> response = restTemplate.exchange(
+                getRemoteActionUrl(removePostsPath(postId)),
+                HttpMethod.DELETE,
+                requestEntity,
+                Map.class);
+
+        if (!response.getStatusCode().is2xxSuccessful()) {
+            LOGGER.error("Error {} while deleting post {}",
+                    response.getBody(),
+                    postId);
+            throw new ResourceAccessException(response.getBody() != null
+                    ? response.getBody().toString() :
+                    "Remote system unknown exception.");
+        }
+    }
+
+    private String removePostsPath(String postId) {
+        return MATTERMOST_POSTS + "/" + postId;
+    }
+
+    private Map<String, Object> getChannelPosts(String roomId) {
+        String currentUser = authContext.getCurrentUser();
+        ProxyTokenMapping proxyTokenMapping = getUserTokenMapping(currentUser);
+        HttpHeaders headers = getHttpHeader(proxyTokenMapping.getProxyToken());
+        ResponseEntity<Map> remoteResponse = restTemplate.exchange(
+                getRemoteActionUrl(getChannelPostsPath(roomId)),
+                HttpMethod.GET,
+                new HttpEntity<Map<String, Object>>(headers),
+                Map.class);
+
+        if (!remoteResponse.getStatusCode().is2xxSuccessful()) {
+            throw new ChatException(ChatException.ErrorCode.UNABLE_TO_GET_CHANNEL_POSTS, roomId);
+        }
+        return remoteResponse.getBody();
+    }
+
+    private String getChannelPostsPath(String roomId) {
+        return MATTERMOST_CHANNELS + "/" + roomId + "/posts";
+    }
 
     private void validateFile(MultipartFile file) {
         attachmentValidator.checkForNull(file);
         attachmentValidator.checkValidExtension(file.getOriginalFilename());
         attachmentValidator.checkFileSize(file);
     }
-
 
     private Attachment curateResponse(String path, String fileName, String comment) {
         String user;
