@@ -69,6 +69,7 @@ public class ChatRoomUtil {
                 "ChatContext",
                 "java.util.ArrayList",
                 "java.util.HashMap",
+                "java.util.Date",
                 "java.util.LinkedHashMap",
                 "java.lang.String",
                 "[Ljava.lang.String;"
