@@ -613,9 +613,11 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         attachmentDetail.put("file_ids", new String[]{attachment.getId()});
         attachmentDetail.put("message", null);
         Map<String, Object> propsData = new HashMap<>();
-        propsData.put("username", currentUser);
-        propsData.put("fileId", attachment.getId());
-        propsData.put("filename", attachment.getAttachmentName());
+        propsData.put("attachmentName", attachment.getAttachmentName());
+        propsData.put("createdBy", currentUser);
+        propsData.put("creationDate", attachment.getCreationDate());
+        propsData.put("id", attachment.getId());
+        propsData.put("userName", attachment.getUserName());
         propsData.put("comment", comment);
         attachmentDetail.put("props", propsData);
         postMessage(attachmentDetail);
