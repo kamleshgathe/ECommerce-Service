@@ -185,17 +185,18 @@ class SituationRoomServiceSpec extends Specification {
     def "test post message should failed if room is already resolved"() {
         given: "Intialize mocks"
         mock()
-        ChatRoom mockedRoom = Mock(ChatRoom);
-        mockedRoom.getStatus() >> ChatRoomStatus.RESOLVED;
-        roomRepository.findById(_ as String) >> Optional.of(mockedRoom);
-        Map<String, Object> chat = new HashMap<>();
+        ChatRoom mockedRoom = Mock(ChatRoom)
+        mockedRoom.getStatus() >> ChatRoomStatus.RESOLVED
+        roomRepository.findById(_ as String) >> Optional.of(mockedRoom)
+        Map<String, Object> chat = new HashMap<>()
         chat.put("channel_id", "1")
         when: "Calling post message"
-        initNewSituationRoomService();
+        initNewSituationRoomService()
         service.postMessage(chat)
 
         then: "Should get exception"
-        thrown(InvalidChatRequest)
+        def ex = thrown(InvalidChatRequest)
+        ex.message == "This room has been Resolved/Deleted.Messages cannot be posted to this room."
     }
 
     def "test post message should failed if room is in resolved state"() {
@@ -1687,12 +1688,12 @@ class SituationRoomServiceSpec extends Specification {
         authContext.getCurrentUser() >> "user1"
         ResolveRoomDto resolutionRequestDto = new ResolveRoomDto()
         resolutionRequestDto.resolution = Lists.newArrayList("resolution1")
-        resolutionRequestDto.remark = "thanks";
+        resolutionRequestDto.remark = "thanks"
 
-        def entity = new ArrayList();
-        entity.add("json1");
-        String jsonString = ChatRoomUtil.objectToJson(entity);
-        byte[] bytes = ChatRoomUtil.objectToByteArray(jsonString);
+        def entity = new ArrayList()
+        entity.add("json1")
+        String jsonString = ChatRoomUtil.objectToJson(entity)
+        byte[] bytes = ChatRoomUtil.objectToByteArray(jsonString)
         def file = new MockMultipartFile("data", "filename.txt",
                 "text/plain", "some data".getBytes())
         when: "Calling upload function"
@@ -1704,6 +1705,7 @@ class SituationRoomServiceSpec extends Specification {
 
         then:
         def ex = thrown (InvalidChatRequest)
+        ex.message == "This room has been Resolved.File can't be Uploaded."
     }
 
     def "Fail to Upload file for Situation Room due to Invalid file signature"() {
@@ -1876,10 +1878,10 @@ class SituationRoomServiceSpec extends Specification {
         def mockRoom = mockedChatRoom("room1", getDummySnapshot(), participants, "user1", ChatRoomStatus.OPEN)
         addChatParticipant(mockRoom, "user1", ChatRoomParticipantStatus.JOINED)
 
-        def entity = new ArrayList();
-        entity.add("json1");
-        String jsonString = ChatRoomUtil.objectToJson(entity);
-        byte[] bytes = ChatRoomUtil.objectToByteArray(jsonString);
+        def entity = new ArrayList()
+        entity.add("json1")
+        String jsonString = ChatRoomUtil.objectToJson(entity)
+        byte[] bytes = ChatRoomUtil.objectToByteArray(jsonString)
         when: "calling get document API"
         roomRepository.findById(_) >> new Optional(mockRoom)
         initNewSituationRoomService()
@@ -2000,7 +2002,8 @@ class SituationRoomServiceSpec extends Specification {
         service.deleteAttachment(id, documentId)
         stream.close()
         then: "InvalidChatRequest Exception thown"
-        thrown(InvalidChatRequest)
+        def ex = thrown (InvalidChatRequest)
+        ex.message == "This room has been Resolved.File can't be deleted."
 
     }
 
@@ -2504,5 +2507,5 @@ class SituationRoomServiceSpec extends Specification {
         userName == "userFirstName"
     }
 
-    
+
 }
