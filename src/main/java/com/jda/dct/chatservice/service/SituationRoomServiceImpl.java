@@ -571,7 +571,8 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         List<Attachment> attachmentsList;
         List<Attachment> response = new ArrayList<>();
         comment = comment == null ? "" : comment;
-        validateRoomState(roomId, authContext.getCurrentUser(), "Unable to upload file as room is resolved.");
+        validateRoomState(roomId, authContext.getCurrentUser(), "This room has been Resolved."
+                + "File can't be Uploaded.");
         validateFile(file);
         try {
             Optional<ChatRoom> record = getChatRoomById(roomId);
@@ -641,7 +642,8 @@ public class SituationRoomServiceImpl implements SituationRoomService {
             throw new AttachmentException(AttachmentException.ErrorCode.ATTACHMENTS_NOT_FOUND, null, documentId);
         }
         HashMap<String,Object> res = retrieve(attachmentsList, documentId);
-        if (!res.get("filePath").toString().isEmpty() && ! res.get("fileName").toString().isEmpty()) {
+        if (res.containsKey("fileName") && res.containsKey("filePath")
+                && !res.get("filePath").toString().isEmpty() && !res.get("fileName").toString().isEmpty()) {
             filePath = res.get("filePath").toString();
             fileName = res.get("fileName").toString();
             String path = filePath + PATH_DELIMITER + fileName;
@@ -665,7 +667,8 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         Optional<ChatRoom> record = getChatRoomById(roomId);
         HashMap<String,Object> res;
         int finalCount;
-        validateRoomState(roomId, authContext.getCurrentUser(), "Unable to delete file as room is resolved.");
+        validateRoomState(roomId, authContext.getCurrentUser(), "This room has been Resolved."
+                + "File can't be deleted.");
         ChatRoom room = record.get();
         attachmentsList = room.getAttachments();
         if (attachmentsList == null) {
@@ -887,7 +890,8 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         AssertUtil.isTrue(getRoomIdFromPostMessage(request).trim().length() > 0,
                 "Channel can't be empty");
         String roomId = getRoomIdFromPostMessage(request);
-        validateRoomState(roomId, currentUser, "Message can't be post to a resolved room");
+        validateRoomState(roomId, currentUser, "This room has been Resolved/Deleted."
+                + "Messages cannot be posted to this room.");
         Optional<ChatRoom> room = getChatRoomById(roomId);
         if (!room.isPresent()) {
             throw new ChatException(ChatException.ErrorCode.ROOM_NOT_EXISTS);
