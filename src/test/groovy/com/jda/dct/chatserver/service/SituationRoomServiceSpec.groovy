@@ -1876,10 +1876,10 @@ class SituationRoomServiceSpec extends Specification {
         def mockRoom = mockedChatRoom("room1", getDummySnapshot(), participants, "user1", ChatRoomStatus.OPEN)
         addChatParticipant(mockRoom, "user1", ChatRoomParticipantStatus.JOINED)
 
-        def entity = new ArrayList();
-        entity.add("json1");
-        String jsonString = ChatRoomUtil.objectToJson(entity);
-        byte[] bytes = ChatRoomUtil.objectToByteArray(jsonString);
+        def entity = new ArrayList()
+        entity.add("json1")
+        String jsonString = ChatRoomUtil.objectToJson(entity)
+        byte[] bytes = ChatRoomUtil.objectToByteArray(jsonString)
         when: "calling get document API"
         roomRepository.findById(_) >> new Optional(mockRoom)
         initNewSituationRoomService()
@@ -2504,5 +2504,5 @@ class SituationRoomServiceSpec extends Specification {
         userName == "userFirstName"
     }
 
-    
+
 }

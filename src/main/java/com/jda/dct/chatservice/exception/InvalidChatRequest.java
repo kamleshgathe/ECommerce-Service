@@ -7,6 +7,7 @@
  */
 package com.jda.dct.chatservice.exception;
 
+import com.jda.dct.domain.exceptions.DctException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ResponseStatus;
 
@@ -14,8 +15,9 @@ import org.springframework.web.bind.annotation.ResponseStatus;
  * Wrapper of Chat server illegal argument exception with bad request status.
  */
 @ResponseStatus(code = HttpStatus.BAD_REQUEST)
-public class InvalidChatRequest extends RuntimeException {
+public class InvalidChatRequest extends DctException {
+
     public InvalidChatRequest(String message) {
-        super(message);
+        super(HttpStatus.BAD_REQUEST.toString(), "chat", message, null, "");
     }
 }
