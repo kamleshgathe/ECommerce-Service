@@ -10,6 +10,8 @@ package com.jda.dct.chatserver.service
 import com.google.common.collect.Lists
 import com.google.common.collect.Maps
 import com.google.common.collect.Sets
+import com.google.gson.JsonArray
+import com.google.gson.JsonObject
 import com.jda.dct.chatservice.constants.ChatRoomConstants
 import com.jda.dct.app.constants.AttachmentConstants
 import com.jda.dct.app.exception.AttachmentException
@@ -34,6 +36,8 @@ import com.jda.dct.domain.ChatRoomParticipantStatus
 import com.jda.dct.domain.ChatRoomResolution
 import com.jda.dct.domain.ChatRoomStatus
 import com.jda.dct.domain.ProxyTokenMapping
+import com.jda.dct.domain.util.StringUtil
+import com.jda.dct.foundation.process.access.DctServiceRestTemplate
 import com.jda.dct.search.SearchConstants
 import com.jda.luminate.ingest.rest.services.attachments.AttachmentValidator
 import com.jda.luminate.ingest.util.InputStreamWrapper
@@ -65,6 +69,8 @@ class SituationRoomServiceSpec extends Specification {
     UniqueRoomNameGenerator generator;
     AttachmentValidator attachmentValidator;
     DocumentStoreService documentStoreService
+    DctServiceRestTemplate dctService
+    String umsUri
     @Shared
     LocalDocumentStore localDocumentStore
 
@@ -179,17 +185,18 @@ class SituationRoomServiceSpec extends Specification {
     def "test post message should failed if room is already resolved"() {
         given: "Intialize mocks"
         mock()
-        ChatRoom mockedRoom = Mock(ChatRoom);
-        mockedRoom.getStatus() >> ChatRoomStatus.RESOLVED;
-        roomRepository.findById(_ as String) >> Optional.of(mockedRoom);
-        Map<String, Object> chat = new HashMap<>();
+        ChatRoom mockedRoom = Mock(ChatRoom)
+        mockedRoom.getStatus() >> ChatRoomStatus.RESOLVED
+        roomRepository.findById(_ as String) >> Optional.of(mockedRoom)
+        Map<String, Object> chat = new HashMap<>()
         chat.put("channel_id", "1")
         when: "Calling post message"
-        initNewSituationRoomService();
+        initNewSituationRoomService()
         service.postMessage(chat)
 
         then: "Should get exception"
-        thrown(InvalidChatRequest)
+        def ex = thrown(InvalidChatRequest)
+        ex.message == "This room has been Resolved/Deleted.Messages cannot be posted to this room."
     }
 
     def "test post message should failed if room is in resolved state"() {
@@ -505,6 +512,7 @@ class SituationRoomServiceSpec extends Specification {
         channel.setName("name with space")
         channel.setSituationType("shipment_delayed")
         channel.setPurpose("situation room for shipment delayed")
+        dctService.restTemplateForTenantService(umsUri) >> mockuserInfo()
         when: "Calling create channel"
         initNewSituationRoomService()
         service.createChannel(channel)
@@ -620,9 +628,9 @@ class SituationRoomServiceSpec extends Specification {
         def openRoom2 = mockedChatRoomWithInputLmd("room2", snapshot, participants2, user, ChatRoomStatus.NEW, lmd2)
         def resolvedRoom = mockedChatRoomWithInputLmd("room3", snapshot, participants3, user, ChatRoomStatus.RESOLVED, lmd3)
 
-        ChatRoomParticipant r1p1 = addChatParticipant(openRoom1, "appUser", ChatRoomParticipantStatus.JOINED)
+        ChatRoomParticipant r1p1 = addChatParticipant(openRoom1, "AppUser", ChatRoomParticipantStatus.JOINED)
         ChatRoomParticipant r2p1 = addChatParticipant(openRoom2, "appUser", ChatRoomParticipantStatus.PENDING)
-        ChatRoomParticipant r3p1 = addChatParticipant(resolvedRoom, "appUser", ChatRoomParticipantStatus.JOINED)
+        ChatRoomParticipant r3p1 = addChatParticipant(resolvedRoom, "appuser", ChatRoomParticipantStatus.JOINED)
 
         allParticipantsInRepo.add(r1p1)
         allParticipantsInRepo.add(r2p1)
@@ -646,6 +654,9 @@ class SituationRoomServiceSpec extends Specification {
         channels.get(0).getId() == "room3"
         channels.get(1).getId() == "room1"
         channels.get(2).getId() == "room2"
+        channels.get(0).getYourStatus() != null && channels.get(0).getYourStatus() == ChatRoomParticipantStatus.JOINED
+        channels.get(1).getYourStatus() != null && channels.get(1).getYourStatus() == ChatRoomParticipantStatus.JOINED
+        channels.get(2).getYourStatus() != null && channels.get(2).getYourStatus() == ChatRoomParticipantStatus.PENDING
     }
 
     def "test add users to existing channel expect exception if channel is missing"() {
@@ -1032,8 +1043,9 @@ class SituationRoomServiceSpec extends Specification {
         request.resolution = Lists.newArrayList("resolution1");
         request.remark = "thanks";
         ChatRoom mockedRoom = Mock(ChatRoom);
+        initNewSituationRoomService()
         mockedRoom.getStatus() >> ChatRoomStatus.RESOLVED
-        mockedRoom.getResolution() >> buildResolution(request, "user1")
+        mockedRoom.getResolution() >> buildResolution(request, "1")
         roomRepository.findById("1") >> Optional.of(mockedRoom)
         when: "Calling resolve room"
         initNewSituationRoomService()
@@ -1055,12 +1067,10 @@ class SituationRoomServiceSpec extends Specification {
         def mockRoom = mockedChatRoom("room1", snapshot, participants, "user1", ChatRoomStatus.OPEN)
 
         addChatParticipant(mockRoom, "user1", ChatRoomParticipantStatus.JOINED)
-
+        initNewSituationRoomService()
         mockRoom.getResolution() >> buildResolution(request, "user1")
-
         roomRepository.findById("1") >> Optional.of(mockRoom)
         when: "Calling resolve room"
-        initNewSituationRoomService()
         service.resolve("1", request)
         then: "Save room should get called"
         thrown(InvalidChatRequest)
@@ -1081,7 +1091,7 @@ class SituationRoomServiceSpec extends Specification {
 
         addChatParticipant(mockRoom, "user1", ChatRoomParticipantStatus.PENDING)
         addChatParticipant(mockRoom, "user2", ChatRoomParticipantStatus.JOINED)
-
+        initNewSituationRoomService()
         mockRoom.getResolution() >> buildResolution(request, "user1")
 
         roomRepository.findById("1") >> Optional.of(mockRoom)
@@ -1123,22 +1133,22 @@ class SituationRoomServiceSpec extends Specification {
     def "resolve room should succeed"() {
         given: "Initialize inputs"
         mock()
-        def currentUser = "user1"
+        def currentUser = "1"
+        def roomId = "room1"
         authContext.getCurrentUser() >> currentUser
         ResolveRoomDto request = new ResolveRoomDto()
         request.resolution = Lists.newArrayList("resolution1")
-        request.remark = "thanks";
+        request.remark = "thanks"
 
         byte[] snapshot = getDummySnapshot()
         Set<ChatRoomParticipant> participants = Sets.newHashSet();
-        def mockRoom = mockedChatRoom("room1", snapshot, participants, currentUser, ChatRoomStatus.OPEN)
+        def mockRoom = mockedChatRoom(roomId, snapshot, participants, currentUser, ChatRoomStatus.OPEN)
+        mockRoom.getChats() >> ChatRoomUtil.objectToByteArray(new ArrayList())
 
         ChatRoomParticipant currentParticipant = addChatParticipant(mockRoom, currentUser, ChatRoomParticipantStatus.JOINED)
         ChatRoomParticipant participant = addChatParticipant(mockRoom, "user2", ChatRoomParticipantStatus.JOINED)
-
+        initNewSituationRoomService()
         mockRoom.getResolution() >> buildResolution(request, currentUser)
-
-        roomRepository.findById("1") >> Optional.of(mockRoom)
 
         List<ChatRoomParticipant> mockParticipants = new ArrayList<ChatRoomParticipant>()
         currentParticipant.setResolutionRead(true)
@@ -1146,15 +1156,25 @@ class SituationRoomServiceSpec extends Specification {
         participant.setResolutionRead(false)
         mockParticipants.add(participant)
         participantRepository.findByUserNameOrderByRoomLmdDesc(currentUser) >> mockParticipants
+        roomRepository.findById(roomId) >> Optional.of(mockRoom)
+        def token = proxyTokenMappingWithToken("abcd")
+        tokenRepository.findByAppUserId(currentUser) >> token
+        restTemplate.exchange(_ as String, _ as HttpMethod, _ as HttpEntity, Map.class, *_) >>
+                {
+                    Map body = Maps.newHashMap()
+                    body.put("id", "111")
+                    return mockedResponseEntity(HttpStatus.OK, body)
+                }
+
         when: "Calling resolve room"
-        initNewSituationRoomService()
-        service.resolve("1", request)
+        service.resolve(roomId, request)
         then: "Save room should get called"
-        1 * roomRepository.save(_ as ChatRoom) >> {
+        roomRepository.save(_ as ChatRoom) >> {
             ChatRoom newStateRoom ->
                 newStateRoom.getResolution().resolution == request.resolution
                 newStateRoom.getResolution().remark == request.remark
                 newStateRoom.getResolution().resolvedBy == authContext.getCurrentUser()
+                newStateRoom.getResolution().resolvedUser == "test data"
                 newStateRoom.status == ChatRoomStatus.RESOLVED
                 return newStateRoom
         }
@@ -1184,6 +1204,7 @@ class SituationRoomServiceSpec extends Specification {
         byte[] bytes = ChatRoomUtil.objectToByteArray(jsonString);
 
         def mockRoom = mockedChatRoom("1", bytes, Lists.newArrayList(), "user1", ChatRoomStatus.RESOLVED)
+        initNewSituationRoomService()
         mockRoom.getResolution() >> buildResolution(resolutionRequestDto, "user1")
         roomRepository.findById(_) >> Optional.of(mockRoom)
         when: "Calling resolve room"
@@ -1547,62 +1568,86 @@ class SituationRoomServiceSpec extends Specification {
     def "Upload file for Situation Room"() {
         given: "Multipart file to upload"
         mock()
-        documentStoreService.getDocumentStore() >> localDocumentStore
-        authContext.getCurrentUser() >> "user1"
-        ResolveRoomDto resolutionRequestDto = new ResolveRoomDto()
-        resolutionRequestDto.resolution = Lists.newArrayList("resolution1")
-        resolutionRequestDto.remark = "thanks";
+        def currentUser = "1"
+        def roomId = "room1"
+        def tokenMapping = new ProxyTokenMapping()
+        tokenMapping.setAppUserId("user1")
+        tokenMapping.setRemoteUserId("abcd")
+        tokenMapping.setProxyToken("token1")
 
-        def entity = new ArrayList();
-        entity.add("json1");
-        String jsonString = ChatRoomUtil.objectToJson(entity);
-        byte[] bytes = ChatRoomUtil.objectToByteArray(jsonString);
+        def participants = Sets.newHashSet()
+        def mockRoom = mockedChatRoom(roomId, getDummySnapshot(), participants, currentUser, ChatRoomStatus.OPEN)
+        mockRoom.getChats() >> ChatRoomUtil.objectToByteArray(new ArrayList())
+        addChatParticipant(mockRoom, currentUser, ChatRoomParticipantStatus.JOINED)
+
         def file = new MockMultipartFile("data", "filename.txt",
                 "text/plain", "some data".getBytes())
+
         when: "Calling upload function"
-        def mockRoom = mockedChatRoom("1", bytes, Lists.newArrayList(), "user1", ChatRoomStatus.RESOLVED)
-        roomRepository.findById(_) >> Optional.of(mockRoom)
+        documentStoreService.getDocumentStore() >> localDocumentStore
+        authContext.getCurrentUser() >> currentUser
+        roomRepository.findById(_ as String) >> Optional.of(mockRoom)
+        tokenRepository.findByAppUserId(currentUser) >> tokenMapping
+        restTemplate.exchange(_ as String, _ as HttpMethod, _ as HttpEntity, Map.class, *_) >>
+                {
+                    Map body = Maps.newHashMap();
+                    body.put("id", "111")
+                    return mockedResponseEntity(HttpStatus.OK, body)
+                }
+        dctService.restTemplateForTenantService(umsUri) >> mockuserInfo()
         initNewSituationRoomService()
-        List<Attachment> response = service.upload("1", file, "Test")
+        List<Attachment> response = service.upload(roomId, file, "Test")
 
         then:
         1 * localDocumentStore.store(_, _, _)
         response.get(0).getAttachmentName() == file.getOriginalFilename()
-
-
+        response.get(0).getUserName() == "test data"
     }
 
     def "Upload file for Situation Room with attachment list "() {
         given: "Multipart file to upload"
         mock()
-        documentStoreService.getDocumentStore() >> localDocumentStore
-        authContext.getCurrentUser() >> "user1"
-        ResolveRoomDto resolutionRequestDto = new ResolveRoomDto()
-        resolutionRequestDto.resolution = Lists.newArrayList("resolution1")
-        resolutionRequestDto.remark = "thanks";
+        def currentUser = "1"
+        def roomId = "room1"
+        def tokenMapping = new ProxyTokenMapping()
+        tokenMapping.setAppUserId("user1")
+        tokenMapping.setRemoteUserId("abcd")
+        tokenMapping.setProxyToken("token1")
 
-        def entity = new ArrayList();
-        entity.add("json1");
-        String jsonString = ChatRoomUtil.objectToJson(entity);
-        byte[] bytes = ChatRoomUtil.objectToByteArray(jsonString);
-        def file = new MockMultipartFile("data", "filename.txt",
-                "text/plain", "some data".getBytes())
-        when: "Calling upload function"
-        def mockRoom = mockedChatRoom("1", bytes, Lists.newArrayList(), "user1", ChatRoomStatus.RESOLVED)
+        def participants = Sets.newHashSet()
+        def mockRoom = mockedChatRoom(roomId, getDummySnapshot(), participants, currentUser, ChatRoomStatus.OPEN)
+        mockRoom.getChats() >> ChatRoomUtil.objectToByteArray(new ArrayList())
+        addChatParticipant(mockRoom, currentUser, ChatRoomParticipantStatus.JOINED)
+
+        Map<String, Object> attachmentMap = new LinkedHashMap<String, Object>()
+        attachmentMap.put("attachmentName", "text.txt")
+        attachmentMap.put("id", StringUtil.getUuid())
+
         List<Object> attachmentsList = new ArrayList<>()
-        Map<String, Object> eachAttachmentMap = new LinkedHashMap<String, Object>()
-        eachAttachmentMap.put("attachmentName", "text.txt")
-        attachmentsList.add(eachAttachmentMap)
+        attachmentsList.add(attachmentMap)
         mockRoom.getAttachments() >> attachmentsList
 
-        roomRepository.findById(_) >> Optional.of(mockRoom)
+        def file = new MockMultipartFile("data", "filename.txt",
+                "text/plain", "some data".getBytes())
+
+
+        when: "Calling upload function"
+        documentStoreService.getDocumentStore() >> localDocumentStore
+        authContext.getCurrentUser() >> currentUser
+        roomRepository.findById(_ as String) >> Optional.of(mockRoom)
+        tokenRepository.findByAppUserId(currentUser) >> tokenMapping
+        restTemplate.exchange(_ as String, _ as HttpMethod, _ as HttpEntity, Map.class, *_) >>
+                {
+                    Map body = Maps.newHashMap();
+                    body.put("id", "111")
+                    return mockedResponseEntity(HttpStatus.OK, body)
+                }
         initNewSituationRoomService()
         List<Attachment> response = service.upload("1", file, "Test")
 
         then:
         1 * localDocumentStore.store(_, _, _)
         response.get(0).getAttachmentName() == file.getOriginalFilename()
-
 
     }
     def "Fail to Upload file for Situation Room due to Document Store exception"() {
@@ -1612,7 +1657,10 @@ class SituationRoomServiceSpec extends Specification {
         authContext.getCurrentUser() >> "user1"
         ResolveRoomDto resolutionRequestDto = new ResolveRoomDto()
         resolutionRequestDto.resolution = Lists.newArrayList("resolution1")
-        resolutionRequestDto.remark = "thanks";
+        resolutionRequestDto.remark = "thanks"
+        def participants = Sets.newHashSet()
+        def mockRoom = mockedChatRoom("room1", getDummySnapshot(), participants, "user1", ChatRoomStatus.OPEN)
+        addChatParticipant(mockRoom, "user1", ChatRoomParticipantStatus.JOINED)
 
         def entity = new ArrayList();
         entity.add("json1");
@@ -1621,7 +1669,6 @@ class SituationRoomServiceSpec extends Specification {
         def file = new MockMultipartFile("data", "filename.txt",
                 "text/plain", "some data".getBytes())
         when: "Calling upload function"
-        def mockRoom = mockedChatRoom("1", bytes, Lists.newArrayList(), "user1", ChatRoomStatus.RESOLVED)
         roomRepository.findById(_) >> Optional.of(mockRoom)
         initNewSituationRoomService()
         localDocumentStore.store(_,_,_) >> {throw new DocumentException(DocumentException.DocumentErrorCode.INVALID_FILE_SIGNATURE, null)}
@@ -1634,6 +1681,33 @@ class SituationRoomServiceSpec extends Specification {
                 "." +AttachmentException.ErrorCode.INVALID_SIGNATURE.getCode()
     }
 
+    def "Fail to Upload file as situation room is resolved"() {
+        given: "Multipart file to upload"
+        mock()
+        documentStoreService.getDocumentStore() >> localDocumentStore
+        authContext.getCurrentUser() >> "user1"
+        ResolveRoomDto resolutionRequestDto = new ResolveRoomDto()
+        resolutionRequestDto.resolution = Lists.newArrayList("resolution1")
+        resolutionRequestDto.remark = "thanks"
+
+        def entity = new ArrayList()
+        entity.add("json1")
+        String jsonString = ChatRoomUtil.objectToJson(entity)
+        byte[] bytes = ChatRoomUtil.objectToByteArray(jsonString)
+        def file = new MockMultipartFile("data", "filename.txt",
+                "text/plain", "some data".getBytes())
+        when: "Calling upload function"
+        def mockRoom = mockedChatRoom("1", bytes, Lists.newArrayList(), "user1", ChatRoomStatus.RESOLVED)
+        roomRepository.findById(_) >> Optional.of(mockRoom)
+        initNewSituationRoomService()
+        localDocumentStore.store(_,_,_) >> {throw new DocumentException(DocumentException.DocumentErrorCode.INVALID_FILE_SIGNATURE, null)}
+        service.upload("1", file, "Test")
+
+        then:
+        def ex = thrown (InvalidChatRequest)
+        ex.message == "This room has been Resolved.File can't be Uploaded."
+    }
+
     def "Fail to Upload file for Situation Room due to Invalid file signature"() {
         given: "Multipart file to upload"
         mock()
@@ -1641,7 +1715,10 @@ class SituationRoomServiceSpec extends Specification {
         authContext.getCurrentUser() >> "user1"
         ResolveRoomDto resolutionRequestDto = new ResolveRoomDto()
         resolutionRequestDto.resolution = Lists.newArrayList("resolution1")
-        resolutionRequestDto.remark = "thanks";
+        resolutionRequestDto.remark = "thanks"
+        def participants = Sets.newHashSet()
+        def mockRoom = mockedChatRoom("room1", getDummySnapshot(), participants, "user1", ChatRoomStatus.OPEN)
+        addChatParticipant(mockRoom, "user1", ChatRoomParticipantStatus.JOINED)
 
         def entity = new ArrayList();
         entity.add("json1");
@@ -1650,7 +1727,6 @@ class SituationRoomServiceSpec extends Specification {
         def file = new MockMultipartFile("data", "filename.txt",
                 "text/plain", "some data".getBytes())
         when: "Calling upload function"
-        def mockRoom = mockedChatRoom("1", bytes, Lists.newArrayList(), "user1", ChatRoomStatus.RESOLVED)
         localDocumentStore.store(_,_,_) >> {throw new DocumentException(DocumentException.DocumentErrorCode.INVALID_FILE_SIGNATURE, null)}
         roomRepository.findById(_) >> Optional.of()
         initNewSituationRoomService()
@@ -1667,16 +1743,18 @@ class SituationRoomServiceSpec extends Specification {
         authContext.getCurrentUser() >> "user1"
         ResolveRoomDto resolutionRequestDto = new ResolveRoomDto()
         resolutionRequestDto.resolution = Lists.newArrayList("resolution1")
-        resolutionRequestDto.remark = "thanks";
+        resolutionRequestDto.remark = "thanks"
+        def participants = Sets.newHashSet()
+        def mockRoom = mockedChatRoom("room1", getDummySnapshot(), participants, "user1", ChatRoomStatus.OPEN)
+        addChatParticipant(mockRoom, "user1", ChatRoomParticipantStatus.JOINED)
 
-        def entity = new ArrayList();
-        entity.add("json1");
-        String jsonString = ChatRoomUtil.objectToJson(entity);
-        byte[] bytes = ChatRoomUtil.objectToByteArray(jsonString);
+        def entity = new ArrayList()
+        entity.add("json1")
+        String jsonString = ChatRoomUtil.objectToJson(entity)
+        byte[] bytes = ChatRoomUtil.objectToByteArray(jsonString)
         def file = new MockMultipartFile("data", "filename.txt",
                 "text/plain", "some data".getBytes())
         when: "Calling upload function"
-        def mockRoom = mockedChatRoom("1", bytes, Lists.newArrayList(), "user1", ChatRoomStatus.RESOLVED )
         localDocumentStore.store(_,_,_) >> {throw new IOException()}
         roomRepository.findById(_) >> new Optional(mockRoom)
         initNewSituationRoomService()
@@ -1693,16 +1771,18 @@ class SituationRoomServiceSpec extends Specification {
         authContext.getCurrentUser() >> "user1"
         ResolveRoomDto resolutionRequestDto = new ResolveRoomDto()
         resolutionRequestDto.resolution = Lists.newArrayList("resolution1")
-        resolutionRequestDto.remark = "thanks";
+        resolutionRequestDto.remark = "thanks"
+        def participants = Sets.newHashSet()
+        def mockRoom = mockedChatRoom("1", getDummySnapshot(), participants, "user1", ChatRoomStatus.OPEN)
+        addChatParticipant(mockRoom, "user1", ChatRoomParticipantStatus.JOINED)
 
-        def entity = new ArrayList();
-        entity.add("json1");
-        String jsonString = ChatRoomUtil.objectToJson(entity);
-        byte[] bytes = ChatRoomUtil.objectToByteArray(jsonString);
+        def entity = new ArrayList()
+        entity.add("json1")
+        String jsonString = ChatRoomUtil.objectToJson(entity)
+        byte[] bytes = ChatRoomUtil.objectToByteArray(jsonString)
         def file = new MockMultipartFile("data", "filename.txt",
                 "text/plain", "some data".getBytes())
         when: "Calling upload function"
-        def mockRoom = mockedChatRoom("1", bytes, Lists.newArrayList(), "user1", ChatRoomStatus.RESOLVED )
         roomRepository.findById(_) >> new Optional()
         initNewSituationRoomService()
         service.upload("1", file, "Test")
@@ -1783,8 +1863,6 @@ class SituationRoomServiceSpec extends Specification {
 
     }
 
-
-
     def "Fail to get document should due to no attachment list in object"(){
         given:"download attachment parameters"
         mock()
@@ -1795,14 +1873,16 @@ class SituationRoomServiceSpec extends Specification {
         authContext.getCurrentUser() >> "user1"
         ResolveRoomDto resolutionRequestDto = new ResolveRoomDto()
         resolutionRequestDto.resolution = Lists.newArrayList("resolution1")
-        resolutionRequestDto.remark = "thanks";
+        resolutionRequestDto.remark = "thanks"
+        def participants = Sets.newHashSet()
+        def mockRoom = mockedChatRoom("room1", getDummySnapshot(), participants, "user1", ChatRoomStatus.OPEN)
+        addChatParticipant(mockRoom, "user1", ChatRoomParticipantStatus.JOINED)
 
-        def entity = new ArrayList();
-        entity.add("json1");
-        String jsonString = ChatRoomUtil.objectToJson(entity);
-        byte[] bytes = ChatRoomUtil.objectToByteArray(jsonString);
+        def entity = new ArrayList()
+        entity.add("json1")
+        String jsonString = ChatRoomUtil.objectToJson(entity)
+        byte[] bytes = ChatRoomUtil.objectToByteArray(jsonString)
         when: "calling get document API"
-        def mockRoom = mockedChatRoom("1", bytes, Lists.newArrayList(), "user1", ChatRoomStatus.RESOLVED )
         roomRepository.findById(_) >> new Optional(mockRoom)
         initNewSituationRoomService()
         InputStreamWrapper streamWrapper = service.getDocument(id, documentId)
@@ -1816,12 +1896,17 @@ class SituationRoomServiceSpec extends Specification {
         given:"Delete document"
         mock()
         String id = "aa-ship-1"
-        String documentId = "1"
+        def currentUser = "user1"
+        String documentId = "document123"
+        String postId = "post123"
 
-        authContext.getCurrentUser() >> "user1"
+        authContext.getCurrentUser() >> currentUser
         ResolveRoomDto resolutionRequestDto = new ResolveRoomDto()
         resolutionRequestDto.resolution = Lists.newArrayList("resolution1")
-        resolutionRequestDto.remark = "thanks";
+        resolutionRequestDto.remark = "thanks"
+        def participants = Sets.newHashSet()
+        def mockRoom = mockedChatRoom("room1", getDummySnapshot(), participants, "user1", ChatRoomStatus.OPEN)
+        addChatParticipant(mockRoom, "user1", ChatRoomParticipantStatus.JOINED)
 
         def entity = new ArrayList();
         entity.add("json1");
@@ -1830,16 +1915,67 @@ class SituationRoomServiceSpec extends Specification {
         documentStoreService.getDocumentStore() >> localDocumentStore
 
         when: "calling delete document API"
-        def mockRoom = mockedChatRoom("1", bytes, Lists.newArrayList(), "user1", ChatRoomStatus.RESOLVED )
         roomRepository.findById(_) >> new Optional(mockRoom)
+        def token = proxyTokenMappingWithToken("abcd")
+        tokenRepository.findByAppUserId(currentUser) >> token
+        restTemplate.exchange(_ as String, _ as HttpMethod, _ as HttpEntity, Map.class) >>
+                {
+                    Map body = Maps.newHashMap()
+                    body.put("posts", getMockPost(postId, documentId))
+                    return mockedResponseEntity(HttpStatus.OK, body)
+                }
         initNewSituationRoomService()
         mockRoom.getAttachments() >> mockAtachment()
         service.deleteAttachment(id, documentId)
         then: "should Delete the attachment"
     }
 
+    Map<String, Object> getMockPost(String postId, String documentId) {
+        Map<String, Object> postMap = new HashMap<>()
+        Map<String, Object> postValMap1 = new HashMap<>()
+        postValMap1.put("file_ids", Lists.newArrayList(documentId))
+        Map<String, Object> postValMap2 = new HashMap<>()
+        postValMap2.put("file_ids", Lists.newArrayList("5gg4yu6g5yg64y"))
+        postMap.put(postId, postValMap1)
+        postMap.put("55iy565y6i56", postValMap2)
+        return postMap
+    }
+
     def "Failed to delete document due to incorrect filename from object"(){
-        given:"download attachment parameters"
+        given:"Delete Document parameters"
+        mock()
+        String id = "aa-ship-1"
+        String documentId = "1"
+        def stream = new ByteArrayInputStream("test".getBytes())
+
+        authContext.getCurrentUser() >> "user1"
+        ResolveRoomDto resolutionRequestDto = new ResolveRoomDto()
+        resolutionRequestDto.resolution = Lists.newArrayList("resolution1")
+        resolutionRequestDto.remark = "thanks"
+        def participants = Sets.newHashSet()
+        def mockRoom = mockedChatRoom("room1", getDummySnapshot(), participants, "user1", ChatRoomStatus.OPEN)
+        addChatParticipant(mockRoom, "user1", ChatRoomParticipantStatus.JOINED)
+
+        def entity = new ArrayList()
+        entity.add("json1")
+        String jsonString = ChatRoomUtil.objectToJson(entity)
+        byte[] bytes = ChatRoomUtil.objectToByteArray(jsonString)
+
+
+        when: "calling Document API"
+        roomRepository.findById(_) >> new Optional(mockRoom)
+        initNewSituationRoomService()
+        mockRoom.getAttachments() >> mockAtachment1()
+        documentStoreService.getDocumentStore() >> localDocumentStore
+        //localDocumentStore.delete(_) >> {throw new IOException()}
+        service.deleteAttachment(id, documentId)
+        stream.close()
+        then: "AttachmentException thown"
+        thrown(AttachmentException)
+
+    }
+    def "Failed to delete document due to room got resolved"(){
+        given:"Delete Document parameters"
         mock()
         String id = "aa-ship-1"
         String documentId = "1"
@@ -1865,8 +2001,9 @@ class SituationRoomServiceSpec extends Specification {
         //localDocumentStore.delete(_) >> {throw new IOException()}
         service.deleteAttachment(id, documentId)
         stream.close()
-        then: "AttachmentException thown"
-        thrown(AttachmentException)
+        then: "InvalidChatRequest Exception thown"
+        def ex = thrown (InvalidChatRequest)
+        ex.message == "This room has been Resolved.File can't be deleted."
 
     }
 
@@ -1876,14 +2013,16 @@ class SituationRoomServiceSpec extends Specification {
         authContext.getCurrentUser() >> "user1"
         ResolveRoomDto resolutionRequestDto = new ResolveRoomDto()
         resolutionRequestDto.resolution = Lists.newArrayList("resolution1")
-        resolutionRequestDto.remark = "thanks";
+        resolutionRequestDto.remark = "thanks"
+        def participants = Sets.newHashSet()
+        def mockRoom = mockedChatRoom("room1", getDummySnapshot(), participants, "user1", ChatRoomStatus.OPEN)
+        addChatParticipant(mockRoom, "user1", ChatRoomParticipantStatus.JOINED)
 
         def entity = new ArrayList();
         entity.add("json1");
         String jsonString = ChatRoomUtil.objectToJson(entity);
         byte[] bytes = ChatRoomUtil.objectToByteArray(jsonString)
         when: "Calling upload function"
-        def mockRoom = mockedChatRoom("1", bytes, Lists.newArrayList(), "user1", ChatRoomStatus.RESOLVED )
         roomRepository.findById(_) >> new Optional()
         initNewSituationRoomService()
         mockRoom.getAttachments() >> null
@@ -1903,16 +2042,18 @@ class SituationRoomServiceSpec extends Specification {
         authContext.getCurrentUser() >> "user1"
         ResolveRoomDto resolutionRequestDto = new ResolveRoomDto()
         resolutionRequestDto.resolution = Lists.newArrayList("resolution1")
-        resolutionRequestDto.remark = "thanks";
+        resolutionRequestDto.remark = "thanks"
+        def participants = Sets.newHashSet()
+        def mockRoom = mockedChatRoom("room1", getDummySnapshot(), participants, "user1", ChatRoomStatus.OPEN)
+        addChatParticipant(mockRoom, "user1", ChatRoomParticipantStatus.JOINED)
 
-        def entity = new ArrayList();
-        entity.add("json1");
-        String jsonString = ChatRoomUtil.objectToJson(entity);
-        byte[] bytes = ChatRoomUtil.objectToByteArray(jsonString);
+        def entity = new ArrayList()
+        entity.add("json1")
+        String jsonString = ChatRoomUtil.objectToJson(entity)
+        byte[] bytes = ChatRoomUtil.objectToByteArray(jsonString)
         documentStoreService.getDocumentStore() >> localDocumentStore
 
         when: "calling delete document API"
-        def mockRoom = mockedChatRoom("1", bytes, Lists.newArrayList(), "user1", ChatRoomStatus.RESOLVED )
         roomRepository.findById(_) >> new Optional(mockRoom)
         initNewSituationRoomService()
         mockRoom.getAttachments() >> null
@@ -1998,10 +2139,12 @@ class SituationRoomServiceSpec extends Specification {
                 generator,
                 entityReaderFactory,
                 attachmentValidator,
-                documentStoreService)
+                documentStoreService,
+                dctService)
         service.setRestTemplate(restTemplate)
         service.setChannelTeamId(CHANNEL_TEAM_ID)
         service.setMattermostUrl("http://localhost:80/api/v4")
+        service.setuserUrl("http://localhost:9090/api/v1/ums/users")
     }
 
 
@@ -2016,6 +2159,8 @@ class SituationRoomServiceSpec extends Specification {
         attachmentValidator = Mock(AttachmentValidator)
         documentStoreService = Mock(DocumentStoreService)
         localDocumentStore = Mock(LocalDocumentStore)
+        dctService = Mock(DctServiceRestTemplate)
+        umsUri = "http://localhost:9090/api/v1/ums/users"
     }
 
     def successHttpResponse() {
@@ -2075,10 +2220,21 @@ class SituationRoomServiceSpec extends Specification {
         attachmentMetaData.put("filePath", "filePath")
         eachAttachmentMap.put("attachmentName", "text.txt")
         eachAttachmentMap.put("attachmentMetaData",attachmentMetaData)
-        eachAttachmentMap.put("id","1")
+        eachAttachmentMap.put("id","document123")
         attachmentsList.add(eachAttachmentMap)
         return attachmentsList
 
+    }
+
+    def mockuserInfo(){
+        Optional<String> userInfo
+        JsonArray data = new JsonArray()
+        JsonObject users = new JsonObject()
+        users.addProperty("userName","1")
+        users.addProperty("firstName","test")
+        users.addProperty("lastName","data")
+        data.add(users)
+        userInfo = Optional.of(data.toString())
     }
 
     def mockAtachment1(){
@@ -2132,11 +2288,15 @@ class SituationRoomServiceSpec extends Specification {
     }
 
     def buildResolution(ResolveRoomDto request, String resolveBy) {
+        String resolvedUser
+        dctService.restTemplateForTenantService(umsUri) >> mockuserInfo()
+        resolvedUser = service.userName(resolveBy, mockuserInfo())
         ChatRoomResolution resolution = new ChatRoomResolution()
         resolution.setResolvedBy(resolveBy)
         resolution.setDate(new Date())
         resolution.setResolution(request.getResolution())
-        resolution.setRemark(request.getRemark());
+        resolution.setRemark(request.getRemark())
+        resolution.setResolvedUser(resolvedUser)
         return resolution;
     }
 
@@ -2266,4 +2426,86 @@ class SituationRoomServiceSpec extends Specification {
         channels.size() == 0
 
     }
+
+    def "test userName having firstName and lastName"() {
+
+        given:
+        Optional<String> userInfo
+        JsonArray data = new JsonArray()
+        JsonObject users = new JsonObject()
+        users.addProperty("userName","userName@doman.com")
+        users.addProperty("firstName","userFirstName")
+        users.addProperty("lastName","userLastName")
+        data.add(users)
+        userInfo = Optional.of(data.toString())
+
+        mock()
+
+        when:
+        initNewSituationRoomService();
+        String userName = service.userName("userName@doman.com", userInfo)
+        then:
+        userName == "userFirstName userLastName"
+    }
+
+    def "test userName not having firstName and lastName"() {
+
+        given:
+        Optional<String> userInfo
+        JsonArray data = new JsonArray()
+        JsonObject users = new JsonObject()
+        users.addProperty("userName","userName@doman.com")
+        data.add(users)
+        userInfo = Optional.of(data.toString())
+
+        mock()
+
+        when:
+        initNewSituationRoomService();
+        String userName = service.userName("userName@doman.com", userInfo)
+        then:
+        userName == "userName@doman.com"
+    }
+
+    def "test userName not having firstName and having lastName"() {
+
+        given:
+        Optional<String> userInfo
+        JsonArray data = new JsonArray()
+        JsonObject users = new JsonObject()
+        users.addProperty("userName","userName@doman.com")
+        users.addProperty("lastName","userLastName")
+        data.add(users)
+        userInfo = Optional.of(data.toString())
+
+        mock()
+
+        when:
+        initNewSituationRoomService();
+        String userName = service.userName("userName@doman.com", userInfo)
+        then:
+        userName == "userLastName"
+    }
+
+    def "test userName having firstName and not having lastName"() {
+
+        given:
+        Optional<String> userInfo
+        JsonArray data = new JsonArray()
+        JsonObject users = new JsonObject()
+        users.addProperty("userName","userName@doman.com")
+        users.addProperty("firstName","userFirstName")
+        data.add(users)
+        userInfo = Optional.of(data.toString())
+
+        mock()
+
+        when:
+        initNewSituationRoomService();
+        String userName = service.userName("userName@doman.com", userInfo)
+        then:
+        userName == "userFirstName"
+    }
+
+
 }
