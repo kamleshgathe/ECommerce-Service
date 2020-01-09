@@ -151,7 +151,6 @@ dependencies {
     // optional dependencies for using Spock
     testRuntime "net.bytebuddy:byte-buddy:1.6.5"          // allows mocking of classes (in addition to interfaces)
 
-    testCompile group: 'com.h2database', name: 'h2', version: '1.4.196'
     testCompile 'org.spockframework:spock-spring:1.1-groovy-2.4'
 
 }
