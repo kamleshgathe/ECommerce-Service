@@ -1646,7 +1646,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
             MessagePayload payload = buildMessagePayload(user, chatRoom);
             try {
                 pushMessage.sendMessagesAsync(payload);
-            } catch (ServiceBusException | IOException e) {
+            } catch (Exception e) {
                 LOGGER.error("Message Bus Exception while pushing message: ", e);
             }
         });
