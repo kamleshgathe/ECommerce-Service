@@ -63,6 +63,10 @@ datalake:
   clientkey: vLw30RPsY+FFQacp3Ip+loWYGUoiHsIPkkcbDaZ7vr4=
   account: cdcicddatalake.azuredatalakestore.net
 
+messageBroker:
+  connectionString: null
+  queueName: null
+
 # only enabled for development and testing
 ---
 spring:
@@ -108,5 +112,8 @@ local:
   store:
     location: /jda/attachments
 
+messageBroker:
+  connectionString: null
+  queueName: null
 ---
 #end of development  profile

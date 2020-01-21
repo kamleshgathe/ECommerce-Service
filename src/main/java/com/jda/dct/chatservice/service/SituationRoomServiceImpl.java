@@ -1,5 +1,5 @@
 /**
- * Copyright © 2019, JDA Software Group, Inc. ALL RIGHTS RESERVED.
+ * Copyright © 2020, JDA Software Group, Inc. ALL RIGHTS RESERVED.
  * <p>
  * This software is the confidential information of JDA Software, Inc., and is licensed
  * as restricted rights software. The use,reproduction, or disclosure of this software
@@ -54,17 +54,23 @@ import com.jda.dct.domain.ChatRoomParticipant;
 import com.jda.dct.domain.ChatRoomParticipantStatus;
 import com.jda.dct.domain.ChatRoomResolution;
 import com.jda.dct.domain.ChatRoomStatus;
+import com.jda.dct.domain.MessageContent;
+import com.jda.dct.domain.MessagePayload;
 import com.jda.dct.domain.ProxyTokenMapping;
 import com.jda.dct.domain.exceptions.DctIoException;
 import com.jda.dct.domain.util.StringUtil;
 import com.jda.dct.foundation.process.access.DctServiceRestTemplate;
 import com.jda.dct.ignitecaches.springimpl.Tenants;
 import com.jda.dct.search.SearchConstants;
+import com.jda.dct.util.MessageClientType;
+import com.jda.dct.util.NotificationType;
+import com.jda.dct.util.PushMessage;
 import com.jda.luminate.ingest.rest.services.attachments.AttachmentValidator;
 import com.jda.luminate.ingest.util.InputStreamWrapper;
 import com.jda.luminate.io.documentstore.DocumentStoreService;
 import com.jda.luminate.io.documentstore.exception.DocumentException;
 import com.jda.luminate.security.contexts.AuthContext;
+import com.microsoft.azure.servicebus.primitives.ServiceBusException;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -80,7 +86,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
+import javax.annotation.PostConstruct;
 import javax.transaction.Transactional;
 import org.apache.tika.mime.MimeTypeException;
 import org.assertj.core.util.Lists;
@@ -115,12 +125,14 @@ public class SituationRoomServiceImpl implements SituationRoomService {
 
     @Value("${dct.situationRoom.mattermost.host}")
     private String mattermostUrl;
-
     @Value("${dct.situationRoom.token}")
     private String adminAccessToken;
-
     @Value("${dct.situationRoom.mattermost.teamId}")
     private String channelTeamId;
+    @Value("${messageBroker.connectionString}")
+    private String connectionString;
+    @Value("${messageBroker.queueName}")
+    private String queueName;
 
     private final AuthContext authContext;
     private final SituationRoomRepository roomRepository;
@@ -131,6 +143,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     private final EntityReaderFactory entityReaderFactory;
     private final UniqueRoomNameGenerator generator;
     private DctServiceRestTemplate dctService;
+    private PushMessage pushMessage;
 
     @Value("${tenant.umsUri}")
     private String umsUri;
@@ -162,6 +175,18 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         this.attachmentValidator = attachmentValidator;
         this.documentStoreService = documentStoreService;
         this.dctService = dctService;
+    }
+
+    @PostConstruct
+    void init() {
+        if (!StringUtils.isEmpty(connectionString)
+                && !StringUtils.isEmpty(queueName)) {
+            try {
+                pushMessage = new PushMessage(connectionString, queueName, MessageClientType.QUEUE);
+            } catch (Exception e) {
+                LOGGER.error("Exception :" + e.getMessage());
+            }
+        }
     }
 
     /**
@@ -229,8 +254,8 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         Tenants.setCurrent(authContext.getCurrentTid());
         HttpEntity<Map> response = createRemoteServerChatRoom(request);
         String roomId = roomId(response.getBody());
-        createChatRoomInApp(request, roomId);
-        setupParticipantsIfNotBefore(request.getParticipants(), channelTeamId);
+        ChatRoom room = createChatRoomInApp(request, roomId);
+        setupParticipantsIfNotBefore(request.getParticipants(), channelTeamId, room);
         addParticipantsToRoom(authContext.getCurrentUser(), roomId);
         return response.getBody();
     }
@@ -314,7 +339,8 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     @Transactional
     public Map<String, Object> inviteUsers(String channel, AddUserToRoomDto request) {
         validateInviteUsersInputs(channel, authContext.getCurrentUser(), request);
-        setupParticipantsIfNotBefore(request.getUsers(), channelTeamId);
+        ChatRoom chatRoom = getChatRoom(channel);
+        setupParticipantsIfNotBefore(request.getUsers(), channelTeamId, chatRoom);
         updateParticipantOfRooms(request.getUsers(), channel);
         Map<String, Object> status = new HashMap<>();
         status.put("Status", "Success");
@@ -990,11 +1016,12 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         return response;
     }
 
-    private void createChatRoomInApp(ChatRoomCreateDto request, String roomId) {
+    private ChatRoom createChatRoomInApp(ChatRoomCreateDto request, String roomId) {
         ChatRoom chatRoom = buildChatRoom(roomId, request);
         LOGGER.debug("Going to create chat room {} meta information into system", chatRoom.getRoomName());
         saveChatRoom(chatRoom);
         LOGGER.debug("Chat room {} meta information persisted successfully", chatRoom.getRoomName());
+        return chatRoom;
     }
 
     private ChatRoomParticipant removeParticipantInApp(String roomId, String targetUser) {
@@ -1074,8 +1101,11 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         return participants;
     }
 
-    private void setupParticipantsIfNotBefore(List<String> users, String teamId) {
+    private void setupParticipantsIfNotBefore(List<String> users, String teamId, ChatRoom room) {
         users.forEach(user -> setupUser(user, teamId));
+        ExecutorService service = Executors.newSingleThreadExecutor();
+        service.submit(() -> pushAlert(users, room));
+        service.shutdown();
     }
 
     private ProxyTokenMapping setupUser(String appUserId, String teamId) {
@@ -1605,6 +1635,50 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         Optional<String> userInfo;
         userInfo = dctService.restTemplateForTenantService(umsUri);
         return userInfo;
+    }
+
+    private void pushAlert(List<String> users, ChatRoom chatRoom) {
+        if (StringUtils.isEmpty(connectionString)
+                || StringUtils.isEmpty(queueName)) {
+            LOGGER.error("ConnectionString or QueueName not configured properly");
+        }
+        if (pushMessage != null) {
+            users.forEach(user -> {
+                MessagePayload payload = buildMessagePayload(user, chatRoom);
+                try {
+                    pushMessage.sendMessagesAsync(payload);
+                } catch (Exception e) {
+                    LOGGER.error("Message Bus Exception while pushing message: ", e);
+                }
+            });
+        }
+    }
+
+    private ChatRoom getChatRoom(String roomId) {
+        roomIdInputValidation(roomId);
+        Optional<ChatRoom> room = getChatRoomById(roomId);
+        if (!room.isPresent()) {
+            throw new ChatException(ChatException.ErrorCode.INVALID_CHAT_ROOM, roomId);
+        }
+        return room.get();
+    }
+
+    private MessagePayload buildMessagePayload(String user, ChatRoom room) {
+        MessagePayload payload = new MessagePayload();
+        payload.setCanAudit(true);
+        payload.setCategory(NotificationType.SITUATION_ROOM.toString());
+        payload.setCustomerKey("");
+        payload.setMessageId(UUID.randomUUID().toString());
+        payload.setUserId(user);
+        MessageContent messageContent = new MessageContent();
+        messageContent.setBigtext("Room is created " + room.getRoomName() + "by " + room.getCreatedBy());
+        messageContent.setImageUri(null);
+        messageContent.setMessage(room.getDescription());
+        messageContent.setStyle("style");
+        messageContent.setSubtitle(null);
+        messageContent.setTitle(room.getRoomName());
+        payload.setMessageContent(messageContent);
+        return payload;
     }
 
 }
