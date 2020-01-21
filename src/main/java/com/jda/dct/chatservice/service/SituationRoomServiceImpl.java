@@ -1642,14 +1642,16 @@ public class SituationRoomServiceImpl implements SituationRoomService {
                 || StringUtils.isEmpty(queueName)) {
             LOGGER.error("ConnectionString or QueueName not configured properly");
         }
-        users.forEach(user -> {
-            MessagePayload payload = buildMessagePayload(user, chatRoom);
-            try {
-                pushMessage.sendMessagesAsync(payload);
-            } catch (Exception e) {
-                LOGGER.error("Message Bus Exception while pushing message: ", e);
-            }
-        });
+        if (pushMessage != null) {
+            users.forEach(user -> {
+                MessagePayload payload = buildMessagePayload(user, chatRoom);
+                try {
+                    pushMessage.sendMessagesAsync(payload);
+                } catch (Exception e) {
+                    LOGGER.error("Message Bus Exception while pushing message: ", e);
+                }
+            });
+        }
     }
 
     private ChatRoom getChatRoom(String roomId) {
