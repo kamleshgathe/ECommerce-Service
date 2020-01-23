@@ -30,6 +30,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.jda.dct.app.constants.AttachmentConstants;
 import com.jda.dct.app.exception.AttachmentException;
+import com.jda.dct.chatservice.constants.ChatRoomConstants;
 import com.jda.dct.chatservice.domainreader.EntityReaderFactory;
 import com.jda.dct.chatservice.dto.downstream.AddParticipantDto;
 import com.jda.dct.chatservice.dto.downstream.CreateChannelDto;
@@ -1670,7 +1671,8 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         payload.setMessageId(UUID.randomUUID().toString());
         payload.setUserId(user);
         MessageContent messageContent = new MessageContent();
-        messageContent.setBigtext("Room is created " + room.getRoomName() + "by " + room.getCreatedBy());
+        messageContent.setBigtext(ChatRoomConstants.INVITATION
+                + room.getRoomName() + ChatRoomConstants.USER + room.getCreatedBy());
         messageContent.setImageUri(null);
         messageContent.setMessage(room.getDescription());
         messageContent.setStyle("style");
