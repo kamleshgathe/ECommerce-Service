@@ -29,7 +29,7 @@ public final class ChatRoomConstants {
     public static final String USER_NAME =  "userName";
     public static final String SPACE =  " ";
     public static final String INVITATION = "You are invited for the room ";
-    public static final String USER = "by user ";
+    public static final String USER = " by user ";
 
     private ChatRoomConstants() {
         //private constructor to make to avoid mistaken initialization
