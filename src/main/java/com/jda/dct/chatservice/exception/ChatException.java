@@ -33,6 +33,7 @@ public class ChatException extends DctException {
         USER_NOT_INVITED("usernotinvited","User {0} not invited to room {1}"),
         UNABLE_TO_JOIN_ROOM("unabletojoin","Unable to joined situation room."),
         UNABLE_TO_UPDATE_ROLE("unabletoupdaterole","Unable to update roles."),
+        INVALID_RESOLVEDBY_USER("invalidresolvedbyuser", "Room can only be resolved by creator."),
         UNABLE_TO_GET_CHANNEL_POSTS("unabletogetchannelposts", "Unable to get posts for room {0}");
 
         private final String code;
