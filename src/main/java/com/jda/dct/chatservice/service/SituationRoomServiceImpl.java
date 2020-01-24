@@ -506,7 +506,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
             throw new ChatException(ChatException.ErrorCode.INVALID_ROOM);
         }
         ChatRoom room = record.get();
-
+        validateResolveAccess(currentUser, room);
         room.setStatus(ChatRoomStatus.RESOLVED);
         room.setResolution(buildResolution(request, currentUser));
         room.setLmd(room.getResolution().getDate());
@@ -516,6 +516,12 @@ public class SituationRoomServiceImpl implements SituationRoomService {
 
         LOGGER.info("Room {} status has changed to resolved by user {}", roomId, currentUser);
         return toChatContext(resolvedRoom, currentUser);
+    }
+
+    private void validateResolveAccess(String currentUser, ChatRoom room) {
+        if (!(currentUser != null && currentUser.equalsIgnoreCase(room.getCreatedBy()))) {
+            throw new ChatException(ChatException.ErrorCode.INVALID_RESOLVEDBY_USER);
+        }
     }
 
     private void saveResolveRoomReadStatus(ChatRoom chatRoom, String currentUser) {

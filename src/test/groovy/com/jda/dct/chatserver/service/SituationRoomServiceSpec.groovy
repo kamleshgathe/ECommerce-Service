@@ -1153,6 +1153,31 @@ class SituationRoomServiceSpec extends Specification {
         thrown(InvalidChatRequest)
     }
 
+    def "resolve room should failed caller is not creator"() {
+        given: "Initialize inputs"
+        mock()
+        authContext.getCurrentUser() >> "user2"
+        ResolveRoomDto request = new ResolveRoomDto()
+        request.resolution = Lists.newArrayList("resolution1")
+        request.remark = "thanks";
+
+        byte[] snapshot = getDummySnapshot()
+        Set<ChatRoomParticipant> participants = Sets.newHashSet();
+        def mockRoom = mockedChatRoom("room1", snapshot, participants, "user1", ChatRoomStatus.OPEN)
+
+        addChatParticipant(mockRoom, "user1", ChatRoomParticipantStatus.JOINED)
+        addChatParticipant(mockRoom, "user2", ChatRoomParticipantStatus.JOINED)
+        initNewSituationRoomService()
+        mockRoom.getResolution() >> buildResolution(request, "user1")
+
+        roomRepository.findById("1") >> Optional.of(mockRoom)
+        when: "Calling resolve room"
+        initNewSituationRoomService()
+        service.resolve("1", request)
+        then: "Save room should get called"
+        thrown(ChatException)
+    }
+
     def "Update Read resolve room should succeed"() {
         given: "Initialize inputs"
         mock()
