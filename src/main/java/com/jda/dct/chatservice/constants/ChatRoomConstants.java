@@ -28,8 +28,11 @@ public final class ChatRoomConstants {
     public static final String LAST_NAME =  "lastName";
     public static final String USER_NAME =  "userName";
     public static final String SPACE =  " ";
-    public static final String INVITATION = "You are invited for the room ";
-    public static final String USER = " by user ";
+    public static final String INVITATION = "You are invited to join ";
+    public static final String USER = " by ";
+    public static final String INVITE_REQUEST = "Situation Room Invitation Request";
+    public static final String BIGTEXT = "bigtext";
+    public static final boolean TRUE = true;
 
     private ChatRoomConstants() {
         //private constructor to make to avoid mistaken initialization

@@ -66,6 +66,7 @@ datalake:
 messageBroker:
   connectionString: null
   queueName: null
+  customerKey: null
 
 # only enabled for development and testing
 ---
@@ -115,5 +116,6 @@ local:
 messageBroker:
   connectionString: null
   queueName: null
+  customerKey: LCT-DEV-DARK
 ---
 #end of development  profile

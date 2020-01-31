@@ -134,6 +134,8 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     private String connectionString;
     @Value("${messageBroker.queueName}")
     private String queueName;
+    @Value("${messageBroker.customerKey}")
+    private String customerKey;
 
     private final AuthContext authContext;
     private final SituationRoomRepository roomRepository;
@@ -1638,18 +1640,26 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         return userInfo;
     }
 
+    /**
+     * This Method is used to Push the Alert for mobile Application users.
+     * *
+     */
     private void pushAlert(List<String> users, ChatRoom chatRoom) {
         if (StringUtils.isEmpty(connectionString)
                 || StringUtils.isEmpty(queueName)) {
             LOGGER.error("ConnectionString or QueueName not configured properly");
         }
+        Optional<String> userInfo;
+        userInfo = this.userData();
+        final String[] userName = {null};
         if (pushMessage != null) {
             users.forEach(user -> {
-                MessagePayload payload = buildMessagePayload(user, chatRoom);
                 try {
+                    userName[0] = userName(user, userInfo);
+                    MessagePayload payload = buildMessagePayload(userName[0], chatRoom);
                     pushMessage.sendMessagesAsync(payload);
                 } catch (Exception e) {
-                    LOGGER.error("Message Bus Exception while pushing message: ", e);
+                    LOGGER.error("Message Bus Exception while pushing message for user : " + userName[0] + e);
                 }
             });
         }
@@ -1666,20 +1676,19 @@ public class SituationRoomServiceImpl implements SituationRoomService {
 
     private MessagePayload buildMessagePayload(String user, ChatRoom room) {
         MessagePayload payload = new MessagePayload();
-        payload.setCanAudit(true);
+        payload.setCanAudit(ChatRoomConstants.TRUE);
         payload.setCategory(NotificationType.SITUATION_ROOM.toString());
-        payload.setCustomerKey("");
+        payload.setCustomerKey(customerKey);
         payload.setMessageId(UUID.randomUUID().toString());
         payload.setUserId(user);
         MessageContent messageContent = new MessageContent();
         messageContent.setBigtext(ChatRoomConstants.INVITATION
                 + room.getRoomName() + ChatRoomConstants.USER + room.getCreatedBy());
         messageContent.setImageUri(null);
-        messageContent.setMessage(room.getDescription());
-        messageContent.setStyle("style");
+        messageContent.setStyle(ChatRoomConstants.BIGTEXT);
         messageContent.setSubtitle(null);
-        messageContent.setTitle(room.getRoomName());
-        payload.setMessageContent(messageContent);
+        messageContent.setTitle(ChatRoomConstants.INVITE_REQUEST);
+        payload.setMessage(messageContent);
         return payload;
     }
 
