@@ -1649,17 +1649,13 @@ public class SituationRoomServiceImpl implements SituationRoomService {
                 || StringUtils.isEmpty(queueName)) {
             LOGGER.error("ConnectionString or QueueName not configured properly");
         }
-        Optional<String> userInfo;
-        userInfo = this.userData();
-        final String[] userName = {null};
         if (pushMessage != null) {
             users.forEach(user -> {
                 try {
-                    userName[0] = userName(user, userInfo);
-                    MessagePayload payload = buildMessagePayload(userName[0], chatRoom);
+                    MessagePayload payload = buildMessagePayload(user, chatRoom);
                     pushMessage.sendMessagesAsync(payload);
                 } catch (Exception e) {
-                    LOGGER.error("Message Bus Exception while pushing message for user : " + userName[0] + e);
+                    LOGGER.error("Message Bus Exception while pushing message for user : " + user + e);
                 }
             });
         }
@@ -1682,8 +1678,11 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         payload.setMessageId(UUID.randomUUID().toString());
         payload.setUserId(user);
         MessageContent messageContent = new MessageContent();
+        Optional<String> userInfo;
+        userInfo = this.userData();
+        String userName = userName(room.getCreatedBy(), userInfo);
         messageContent.setBigtext(ChatRoomConstants.INVITATION
-                + room.getRoomName() + ChatRoomConstants.USER + room.getCreatedBy());
+                + room.getRoomName() + ChatRoomConstants.USER + userName);
         messageContent.setImageUri(null);
         messageContent.setStyle(ChatRoomConstants.BIGTEXT);
         messageContent.setSubtitle(null);
