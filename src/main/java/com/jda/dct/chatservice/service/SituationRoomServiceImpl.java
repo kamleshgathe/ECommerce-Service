@@ -1691,6 +1691,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         NavigationProps navProps = new NavigationProps();
         navProps.setType(NotificationType.SITUATION_ROOM.toString());
         navProps.setObjectId(room.getRoomName());
+        messageContent.setNavprops(navProps);
         payload.setMessage(messageContent);
         return payload;
     }
