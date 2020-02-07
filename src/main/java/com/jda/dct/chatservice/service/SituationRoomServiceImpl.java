@@ -56,6 +56,7 @@ import com.jda.dct.domain.ChatRoomResolution;
 import com.jda.dct.domain.ChatRoomStatus;
 import com.jda.dct.domain.MessageContent;
 import com.jda.dct.domain.MessagePayload;
+import com.jda.dct.domain.NavigationProps;
 import com.jda.dct.domain.ProxyTokenMapping;
 import com.jda.dct.domain.exceptions.DctIoException;
 import com.jda.dct.domain.util.StringUtil;
@@ -1678,7 +1679,6 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     private MessagePayload buildMessagePayload(String user, ChatRoom room) {
         MessagePayload payload = new MessagePayload();
         payload.setCanAudit(ChatRoomConstants.TRUE);
-        payload.setCategory(NotificationType.SITUATION_ROOM.toString());
         payload.setCustomerKey(customerKey);
         payload.setMessageId(UUID.randomUUID().toString());
         payload.setUserId(user);
@@ -1692,6 +1692,11 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         messageContent.setStyle(ChatRoomConstants.BIGTEXT);
         messageContent.setSubtitle(null);
         messageContent.setTitle(ChatRoomConstants.INVITE_REQUEST);
+        messageContent.setCategory(NotificationType.SITUATION_ROOM.toString());
+        NavigationProps navProps = new NavigationProps();
+        navProps.setType(NotificationType.SITUATION_ROOM.toString());
+        navProps.setObjectId(room.getRoomName());
+        messageContent.setNavprops(navProps);
         payload.setMessage(messageContent);
         return payload;
     }
