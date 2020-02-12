@@ -1681,7 +1681,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         payload.setCanAudit(ChatRoomConstants.TRUE);
         payload.setCustomerKey(customerKey);
         payload.setMessageId(UUID.randomUUID().toString());
-        payload.setUserId(user);
+        payload.setUserId(user.toLowerCase());
         MessageContent messageContent = new MessageContent();
         Optional<String> userInfo;
         userInfo = this.userData();
