@@ -1691,7 +1691,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         messageContent.setImageUri(null);
         messageContent.setStyle(ChatRoomConstants.BIGTEXT);
         messageContent.setSubtitle(null);
-        messageContent.setTitle(ChatRoomConstants.INVITE_REQUEST);
+        messageContent.setTitle(userName + ChatRoomConstants.INVITE_REQUEST);
         messageContent.setCategory(NotificationType.SITUATION_ROOM.toString());
         NavigationProps navProps = new NavigationProps();
         navProps.setType(NotificationType.SITUATION_ROOM.toString());
