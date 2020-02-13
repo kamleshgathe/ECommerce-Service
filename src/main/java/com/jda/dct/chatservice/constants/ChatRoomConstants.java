@@ -30,7 +30,7 @@ public final class ChatRoomConstants {
     public static final String SPACE =  " ";
     public static final String INVITATION = "You are invited to join ";
     public static final String USER = " by ";
-    public static final String INVITE_REQUEST = "Situation Room Invitation Request";
+    public static final String INVITE_REQUEST = " invited you to a Situation Room";
     public static final String BIGTEXT = "bigtext";
     public static final boolean TRUE = true;
 
