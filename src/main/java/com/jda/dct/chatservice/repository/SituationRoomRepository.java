@@ -30,8 +30,8 @@ public interface SituationRoomRepository extends CrudRepository<ChatRoom,String>
             + " or upper(cr.description) like :searchTerm "
             + " or upper(cr.situation_type) like :searchTerm "
             + " or upper(cr.entity_type) like :searchTerm "
-            + " or json_search( upper(cr.resolution) , 'one', :searchTerm ) is not null "
-            + " or json_search( upper(cr.domain_object_ids) , 'one', :searchTerm ) is not null ) "
+            + " or json_search( upper(@cr.resolution) , 'one', :searchTerm ) is not null "
+            + " or json_search( upper(@cr.domain_object_ids) , 'one', :searchTerm ) is not null ) "
             + " order by cr.lmd desc ", nativeQuery = true)
     List<ChatRoom> getChatRoomsBySearch(String searchTerm, String currentUser);
 
@@ -43,7 +43,7 @@ public interface SituationRoomRepository extends CrudRepository<ChatRoom,String>
             + " or upper(cr.description) like :searchTerm "
             + " or upper(cr.situation_type) like :searchTerm "
             + " or upper(cr.entity_type) like :searchTerm "
-            + " or json_search( upper(cr.resolution) , 'one', :searchTerm ) is not null ) "
+            + " or json_search( upper(@cr.resolution) , 'one', :searchTerm ) is not null ) "
             + " order by cr.lmd desc ", nativeQuery = true)
     List<ChatRoom> getChatRoomsBySearchInObjectId(String searchTerm, String currentUser, String objectId);
 
