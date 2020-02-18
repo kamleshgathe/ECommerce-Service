@@ -1692,10 +1692,10 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         messageContent.setStyle(ChatRoomConstants.BIGTEXT);
         messageContent.setSubtitle(null);
         messageContent.setTitle(userName + ChatRoomConstants.INVITE_REQUEST);
-        messageContent.setCategory(NotificationType.SITUATION_ROOM.toString());
         NavigationProps navProps = new NavigationProps();
         navProps.setType(NotificationType.SITUATION_ROOM.toString());
         navProps.setObjectId(room.getRoomName());
+        navProps.setCategoryType(NotificationType.SITUATION_ROOM.toString());
         messageContent.setNavprops(navProps);
         payload.setMessage(messageContent);
         return payload;
