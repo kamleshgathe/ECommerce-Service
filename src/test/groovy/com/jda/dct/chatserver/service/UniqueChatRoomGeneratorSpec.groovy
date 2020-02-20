@@ -14,7 +14,7 @@ class UniqueChatRoomGeneratorSpec extends Specification {
     def "test random string should be of valid length"() {
         when: "Getting next random name"
         UniqueRoomNameGenerator generator = new UniqueRoomNameGenerator()
-        def str = generator.next();
+        def str = generator.next()
         then: "Should not be null and of valid length"
         str != null
         str.length() == 22
