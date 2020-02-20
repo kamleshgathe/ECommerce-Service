@@ -21,7 +21,7 @@ public class UniqueRoomNameGenerator extends SecureRandom {
 
     private static final int DEFAULT_NAME_LENGTH = 22;
     private static final String ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789";
-    int length = 5;
+    private static final int length = 5;
 
 
     private char randomChar() {
