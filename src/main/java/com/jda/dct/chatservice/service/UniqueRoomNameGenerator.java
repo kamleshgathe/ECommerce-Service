@@ -17,14 +17,15 @@ import org.springframework.stereotype.Component;
  * UniqueIdentifierGenerator will provide random string.
  */
 @Component
-public class UniqueRoomNameGenerator {
+public class UniqueRoomNameGenerator extends SecureRandom {
 
     private static final int DEFAULT_NAME_LENGTH = 22;
     private static final String ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789";
-    private Random rng = new SecureRandom();
+    int length = 5;
+
 
     private char randomChar() {
-        return ALPHABET.charAt(rng.nextInt(ALPHABET.length()));
+        return ALPHABET.charAt(this.next(length));
     }
 
     /**
