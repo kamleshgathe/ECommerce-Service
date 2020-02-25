@@ -246,7 +246,7 @@ class SituationRoomControllerSpec extends Specification {
         def service = mockedChatService()
         def authContext = mockedAuthContext()
         def mockChannels = Mock(List)
-        service.    getChannels(_,_,_) >> mockChannels
+        service.getChannels(_,_,_) >> mockChannels
         mockChannels.size() >> 5
         authContext.getCurrentTid() >> "tid1"
         when: "Get rooms"
