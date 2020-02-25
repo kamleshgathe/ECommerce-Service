@@ -54,12 +54,14 @@ import com.jda.dct.domain.ChatRoomParticipant;
 import com.jda.dct.domain.ChatRoomParticipantStatus;
 import com.jda.dct.domain.ChatRoomResolution;
 import com.jda.dct.domain.ChatRoomStatus;
+import com.jda.dct.domain.DctBoBase;
 import com.jda.dct.domain.MessageContent;
 import com.jda.dct.domain.MessagePayload;
 import com.jda.dct.domain.NavigationProps;
 import com.jda.dct.domain.ProxyTokenMapping;
 import com.jda.dct.domain.exceptions.DctIoException;
 import com.jda.dct.domain.util.StringUtil;
+import com.jda.dct.exec.permission.PermissionHelper;
 import com.jda.dct.foundation.process.access.DctServiceRestTemplate;
 import com.jda.dct.ignitecaches.springimpl.Tenants;
 import com.jda.dct.search.SearchConstants;
@@ -70,6 +72,7 @@ import com.jda.luminate.ingest.rest.services.attachments.AttachmentValidator;
 import com.jda.luminate.ingest.util.InputStreamWrapper;
 import com.jda.luminate.io.documentstore.DocumentStoreService;
 import com.jda.luminate.io.documentstore.exception.DocumentException;
+import com.jda.luminate.objects.Pair;
 import com.jda.luminate.security.contexts.AuthContext;
 import com.microsoft.azure.servicebus.primitives.ServiceBusException;
 
@@ -147,8 +150,9 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     private final UniqueRoomNameGenerator generator;
     private DctServiceRestTemplate dctService;
     private PushMessage pushMessage;
+    private PermissionHelper permissionHelper;
 
-    @Value("${tenant.umsUri}")
+    @Value("${tenant.umsUserUri}")
     private String umsUri;
 
     private RestTemplate restTemplate = new RestTemplate();
@@ -168,7 +172,8 @@ public class SituationRoomServiceImpl implements SituationRoomService {
                                     @Autowired EntityReaderFactory entityReaderFactory,
                                     @Autowired AttachmentValidator attachmentValidator,
                                     @Autowired DocumentStoreService documentStoreService,
-                                    @Autowired DctServiceRestTemplate dctService) {
+                                    @Autowired DctServiceRestTemplate dctService,
+                                    @Autowired PermissionHelper permissionHelper) {
         this.authContext = authContext;
         this.roomRepository = roomRepository;
         this.tokenRepository = tokenRepository;
@@ -178,6 +183,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         this.attachmentValidator = attachmentValidator;
         this.documentStoreService = documentStoreService;
         this.dctService = dctService;
+        this.permissionHelper = permissionHelper;
     }
 
     @PostConstruct
@@ -1354,8 +1360,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         context.setParticipants(channelUsers);
         context.setPurpose(room.getDescription());
         context.setSituationType(room.getSituationType());
-        context.setEntity(ChatRoomUtil.jsonToObject(
-                (String) ChatRoomUtil.byteArrayToObject(room.getContexts())));
+        context.setEntity(handleRestrictedEntity(room.getContexts(),room.getEntityType()));
         context.setCreatedAt(room.getCreationDate().getTime());
         context.setUpdatedAt(room.getLmd().getTime());
         context.setLastPostAt(room.getLastPostAt().getTime());
@@ -1365,6 +1370,28 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         context.setExpiredAt(0);
         context.setExtraUpdateAt(0);
         return context;
+    }
+
+    private List handleRestrictedEntity(byte[] entity, String entityType) {
+        List list = null;
+        String entityInString = (String) ChatRoomUtil.byteArrayToObject(entity);
+        Class entityClass = entityReaderFactory.getEntityClass(entityType);
+        List<String> allowedObject = permissionHelper.getPermittedObjects();
+        if (entityClass != null) {
+            List filteredList = new ArrayList<>();
+            list = ChatRoomUtil.jsonToObject(entityInString, entityClass);
+            for (Object base: list) {
+                Pair<String, String> modelSubtype = ChatRoomUtil.getModelAndSubtype((DctBoBase) base);
+                if (allowedObject != null && allowedObject.contains(modelSubtype.getSecond())) {
+                    permissionHelper.handleRestrictedField((DctBoBase) base);
+                    filteredList.add(base);
+                }
+            }
+            list = filteredList;
+        } else {
+            list = ChatRoomUtil.jsonToObject(entityInString);
+        }
+        return list;
     }
 
     private ChatRoom buildChatRoom(String id, ChatRoomCreateDto request) {

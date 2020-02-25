@@ -9,6 +9,11 @@ package com.jda.dct.chatserver.util
 
 import com.jda.dct.chatservice.exception.ChatException
 import com.jda.dct.chatservice.utils.ChatRoomUtil
+import com.jda.dct.domain.ChatRoom
+import com.jda.dct.domain.stateful.Delivery
+import com.jda.dct.domain.stateful.PurchaseOrder
+import com.jda.dct.domain.stateful.Shipment
+import com.jda.luminate.common.objects.Pair
 import org.assertj.core.util.Lists
 import org.assertj.core.util.Maps
 import org.springframework.web.client.ResourceAccessException
@@ -74,5 +79,49 @@ public class ChatRoomUtilSpec extends Specification {
 
         then: "Expect exception"
         thrown(ChatException)
+    }
+
+    def "test json to Object "() {
+        given: "Initialize Object"
+        List<PurchaseOrder> objects = new ArrayList<>()
+
+        objects.add(new PurchaseOrder())
+
+        when: "Converting to byte array"
+        ChatRoomUtil.jsonToObject(ChatRoomUtil.objectToJson(objects), PurchaseOrder);
+
+        then: "Expect exception"
+        noExceptionThrown()
+    }
+
+    def "test json to Object exceptiomn"() {
+        given: "Initialize Object"
+        List<String> objects = new ArrayList<>()
+
+        objects.add("json1")
+
+        when: "Converting to byte array"
+        ChatRoomUtil.jsonToObject(ChatRoomUtil.objectToJson(objects), PurchaseOrder);
+
+        then: "Expect exception"
+        thrown(ChatException)
+    }
+
+    def "test getModelAndSubtype"() {
+        given:
+        Delivery delivery = new Delivery();
+        delivery.setDeliveryType("inboundDelivery")
+        Shipment shipment = new Shipment()
+        shipment.setShipmentType("inboundShipment")
+        PurchaseOrder po = new PurchaseOrder()
+        po.setPurchaseOrderType("standardPO")
+        when:
+        Pair<String,String> pair = ChatRoomUtil.getModelAndSubtype(delivery);
+        Pair<String,String> pairS = ChatRoomUtil.getModelAndSubtype(shipment);
+        Pair<String,String> pairP = ChatRoomUtil.getModelAndSubtype(po);
+        then:
+        pair != null && pair.getFirst() == 'delivery' && pair.getSecond() == 'inboundDelivery'
+        pairS != null && pairS.getFirst() == 'shipment' && pairS.getSecond() == 'inboundShipment'
+        pairP != null && pairP.getFirst() == 'purchaseOrder' && pairP.getSecond() == 'standardPO'
     }
 }

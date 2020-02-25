@@ -8,9 +8,18 @@
 package com.jda.dct.chatservice.utils;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.jda.dct.chatservice.exception.ChatException;
+import com.jda.dct.domain.DctBoBase;
+import com.jda.dct.domain.Node;
+import com.jda.dct.domain.stateful.Delivery;
+import com.jda.dct.domain.stateful.PurchaseOrder;
+import com.jda.dct.domain.stateful.SalesOrder;
+import com.jda.dct.domain.stateful.Shipment;
+import com.jda.dct.foundation.process.ModelConstants;
+import com.jda.luminate.objects.Pair;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -20,12 +29,17 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.util.UriComponentsBuilder;
 
 
 @Component
 public class ChatRoomUtil {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(ChatRoomUtil.class);
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
@@ -102,6 +116,23 @@ public class ChatRoomUtil {
      * Convert json string to object.
      *
      * @param json String representing json.
+     * @param clazz entity  class type.
+     * @return Object representing json string.
+     */
+    public static List jsonToObject(String json, Class clazz) {
+        try {
+            JavaType type = OBJECT_MAPPER.getTypeFactory()
+                .constructCollectionType(List.class, clazz);
+            return OBJECT_MAPPER.readValue(json,type);
+        } catch (IOException e) {
+            throw new ChatException(ChatException.ErrorCode.RESTORE_SNAPSHOT_ERROR);
+        }
+    }
+
+    /**
+     * Convert json string to object.
+     *
+     * @param json String representing json.
      * @return Object representing json string.
      */
     public static List jsonToObject(String json) {
@@ -134,5 +165,38 @@ public class ChatRoomUtil {
     public static URI buildUrlString(String baseUrl, String cxtPath, String params) {
         return UriComponentsBuilder.fromHttpUrl(baseUrl)
             .path(cxtPath).query(params).build(true).toUri();
+    }
+
+    /**
+     * get model and subtype pair.
+     * @param obj base object.
+     * @return
+     */
+    public static Pair<String, String> getModelAndSubtype(DctBoBase obj) {
+        Pair<String, String> result = new Pair<>();
+        String model = null;
+        String subType = null;
+        // Next: have generic util for all models
+        if (obj instanceof PurchaseOrder) {
+            model = ModelConstants.PURCHASE_ORDER;
+            subType = ((PurchaseOrder) obj).getPurchaseOrderType();
+        } else if (obj instanceof SalesOrder) {
+            model = ModelConstants.SALES_ORDER;
+            subType = ((SalesOrder) obj).getSalesOrderType();
+        } else if (obj instanceof Shipment) {
+            model = ModelConstants.SHIPMENT;
+            subType = ((Shipment) obj).getShipmentType();
+        } else if (obj instanceof Delivery) {
+            model = ModelConstants.DELIVERY;
+            subType = ((Delivery) obj).getDeliveryType();
+        } else if (obj instanceof Node) {
+            model = ModelConstants.NODE;
+            subType = ((Node) obj).getNodeType();
+        } else {
+            LOGGER.debug("object {} not supported for permission check yet.", obj.getId());
+        }
+        result.setFirst(model);
+        result.setSecond(subType);
+        return result;
     }
 }

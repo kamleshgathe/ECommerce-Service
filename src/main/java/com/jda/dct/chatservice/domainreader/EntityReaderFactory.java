@@ -38,12 +38,20 @@ public class EntityReaderFactory {
     private AuthContext authContext;
 
     private final Map<String, DctDaoBase> repoMap;
+    private final Map<String, Class> classMap = new HashMap<>();
 
     /**
      * Constructor for domain entity reader.
      */
     private EntityReaderFactory() {
         repoMap = new HashMap<>();
+        classMap.put(TYPE_SHIPMENT, Shipment.class);
+        classMap.put(TYPE_CAPACITY, Node.class);
+        classMap.put(TYPE_DELIVERY, Delivery.class);
+        classMap.put(TYPE_INVENTORY, Node.class);
+        classMap.put(TYPE_PROCUREMENT, Node.class);
+        classMap.put(TYPE_PURCHASE_ORDER, PurchaseOrder.class);
+        classMap.put(TYPE_SALES_ORDER, SalesOrder.class);
     }
 
     /**
@@ -62,6 +70,16 @@ public class EntityReaderFactory {
         }
 
         return repoMap.get(type).getById(authContext.getCurrentTid(), id);
+    }
+
+    /**
+     * Class type of given entity.
+     * @param entityType SR entity type.
+     * @return
+     */
+    public Class getEntityClass(String entityType) {
+        Assert.isTrue(Strings.isNotEmpty(entityType), "Entity type can't be null or empty");
+        return classMap.get(entityType);
     }
 
     /**

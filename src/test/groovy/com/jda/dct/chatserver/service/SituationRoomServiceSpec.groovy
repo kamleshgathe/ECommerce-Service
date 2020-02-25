@@ -38,7 +38,9 @@ import com.jda.dct.domain.ChatRoomStatus
 import com.jda.dct.domain.MessageContent
 import com.jda.dct.domain.MessagePayload
 import com.jda.dct.domain.ProxyTokenMapping
+import com.jda.dct.domain.stateful.PurchaseOrder
 import com.jda.dct.domain.util.StringUtil
+import com.jda.dct.exec.permission.PermissionHelper
 import com.jda.dct.foundation.process.access.DctServiceRestTemplate
 import com.jda.dct.search.SearchConstants
 import com.jda.dct.util.NotificationType
@@ -74,6 +76,7 @@ class SituationRoomServiceSpec extends Specification {
     AttachmentValidator attachmentValidator;
     DocumentStoreService documentStoreService
     DctServiceRestTemplate dctService
+    PermissionHelper permissionHelper
     String umsUri
     @Shared
     LocalDocumentStore localDocumentStore
@@ -2216,7 +2219,8 @@ class SituationRoomServiceSpec extends Specification {
                 entityReaderFactory,
                 attachmentValidator,
                 documentStoreService,
-                dctService)
+                dctService,
+                permissionHelper)
         service.setRestTemplate(restTemplate)
         service.setChannelTeamId(CHANNEL_TEAM_ID)
         service.setMattermostUrl("http://localhost:80/api/v4")
@@ -2236,6 +2240,7 @@ class SituationRoomServiceSpec extends Specification {
         documentStoreService = Mock(DocumentStoreService)
         localDocumentStore = Mock(LocalDocumentStore)
         dctService = Mock(DctServiceRestTemplate)
+        permissionHelper = Mock(PermissionHelper)
         umsUri = "http://localhost:9090/api/v1/ums/users"
     }
 
