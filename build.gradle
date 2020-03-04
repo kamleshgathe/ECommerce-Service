@@ -125,7 +125,7 @@ dependencies {
     compile group: "com.jda.dct", name: "ingest", version: "${depVersion}", changing: true
     compile group: "com.jda.dct", name: "app", version: "${depVersion}", changing: true
     compile group: "com.jda.dct", name: "core", version: "${depVersion}", changing: true
-
+    compile group: "com.jda.dct", name: "push-notification", version: "${depVersion}", changing: true
 
 //    compile group: 'org.elasticsearch', name: 'elasticsearch', version: '5.6.15'
 //    compile group: 'org.elasticsearch.client', name: 'elasticsearch-rest-client', version: '5.6.15'
@@ -133,7 +133,6 @@ dependencies {
     compile group: 'org.elasticsearch', name: 'elasticsearch', version: '6.3.2'
     compile group: 'org.elasticsearch.client', name: 'elasticsearch-rest-client', version: '6.3.2'
     compile group: 'org.elasticsearch.client', name: 'elasticsearch-rest-high-level-client', version: '6.3.2'
-    compile group: 'com.microsoft.azure', name: 'azure-servicebus', version: '3.1.3'
 
     compile 'com.jsoniter:jsoniter:0.9.19'
 

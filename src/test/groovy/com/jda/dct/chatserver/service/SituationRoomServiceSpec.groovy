@@ -43,8 +43,8 @@ import com.jda.dct.domain.util.StringUtil
 import com.jda.dct.exec.permission.PermissionHelper
 import com.jda.dct.foundation.process.access.DctServiceRestTemplate
 import com.jda.dct.search.SearchConstants
-import com.jda.dct.util.NotificationType
-import com.jda.dct.util.PushMessage
+import com.jda.dct.util.push.NotificationType
+import com.jda.dct.util.push.PushMessage
 import com.jda.luminate.ingest.rest.services.attachments.AttachmentValidator
 import com.jda.luminate.ingest.util.InputStreamWrapper
 import com.jda.luminate.io.documentstore.DocumentStoreService
