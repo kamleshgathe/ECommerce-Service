@@ -339,6 +339,7 @@ class SituationRoomServiceSpec extends Specification {
 
     def "test create channel expect exception if input null"() {
         given:
+        mock()
         def channel = null
         when: "Calling create channel"
         initNewSituationRoomService()
@@ -349,6 +350,7 @@ class SituationRoomServiceSpec extends Specification {
 
     def "test create channel expect exception if no domian entity"() {
         given:
+        mock()
         def channel = new ChatRoomCreateDto();
         when: "Calling create channel"
         initNewSituationRoomService()
@@ -359,6 +361,7 @@ class SituationRoomServiceSpec extends Specification {
 
     def "test create channel expect exception if no participant"() {
         given:
+        mock()
         def channel = new ChatRoomCreateDto()
         channel.setObjectIds(Lists.newArrayList("1", "2"))
         when: "Calling create channel"
@@ -370,6 +373,7 @@ class SituationRoomServiceSpec extends Specification {
 
     def "test create channel expect exception if team id missing"() {
         given:
+        mock()
         def channel = new ChatRoomCreateDto();
         channel.setObjectIds(Lists.newArrayList("1", "2"))
         channel.setParticipants(Lists.newArrayList("1", "2"))
@@ -382,6 +386,7 @@ class SituationRoomServiceSpec extends Specification {
 
     def "test create channel expect exception if entity type missing"() {
         given:
+        mock()
         def channel = new ChatRoomCreateDto();
         channel.setObjectIds(Lists.newArrayList("1", "2"))
         channel.setParticipants(Lists.newArrayList("1", "2"))
@@ -394,6 +399,7 @@ class SituationRoomServiceSpec extends Specification {
 
     def "test create channel expect exception if name missing"() {
         given:
+        mock()
         def channel = new ChatRoomCreateDto();
         channel.setObjectIds(Lists.newArrayList("1", "2"))
         channel.setParticipants(Lists.newArrayList("1", "2"))
@@ -407,6 +413,7 @@ class SituationRoomServiceSpec extends Specification {
 
     def "test create channel expect exception if purpose missing"() {
         given:
+        mock()
         def channel = new ChatRoomCreateDto()
         channel.setObjectIds(Lists.newArrayList("1", "2"))
         channel.setParticipants(Lists.newArrayList("1", "2"))
@@ -421,6 +428,7 @@ class SituationRoomServiceSpec extends Specification {
 
     def "test create channel expect exception if situation type missing"() {
         given:
+        mock()
         def channel = new ChatRoomCreateDto()
         channel.setObjectIds(Lists.newArrayList("1", "2"))
         channel.setParticipants(Lists.newArrayList("1", "2"))
@@ -525,6 +533,56 @@ class SituationRoomServiceSpec extends Specification {
         service.createChannel(channel)
         then: "Should succeed"
         1 * generator.next() >> "abcdhahsmss"
+    }
+
+    def "test create channel should throw exception if no Create Permission"() {
+        given:
+        mock()
+        permissionHelper = Mock(PermissionHelper)
+        List<String> permissionList = new ArrayList<>()
+        permissionList.add("VIEW")
+        permissionHelper.getPermissions("Situation Room") >> permissionList
+        def channel = new ChatRoomCreateDto()
+        def user = "1"
+        def ptm1 = proxyTokenMapping("1", "remote_user1", "token1")
+        def ptm2 = proxyTokenMapping("2", "remote_user2", "token1")
+        def participants = Sets.newHashSet()
+        def room = Mock(ChatRoom)
+        room.getCreatedBy() >> user
+        room.getParticipants() >> participants
+        addChatParticipant(room, "1", ChatRoomParticipantStatus.PENDING)
+        addChatParticipant(room, "2", ChatRoomParticipantStatus.PENDING)
+
+        authContext.getCurrentUser() >> user
+
+        tokenRepository.findByAppUserId("1") >> ptm1
+        tokenRepository.findByAppUserId("2") >> ptm2
+
+        roomRepository.findById(_ as String) >> Optional.of(room)
+        tokenRepository.save({
+            ProxyTokenMapping ptm -> ptm.getAppUserId() == "1" ? ptm1 : ptm2
+        });
+        restTemplate.exchange(_ as String, _ as HttpMethod, _ as HttpEntity, Map.class, *_) >>
+                {
+                    args ->
+                        Map body = Maps.newHashMap()
+                        if (args[0].contains("/channels")) {
+                            body.put("id", "1")
+                        }
+                        return mockedResponseEntity(HttpStatus.OK, body)
+                }
+
+        channel.setObjectIds(Lists.newArrayList("1", "2"))
+        channel.setParticipants(Lists.newArrayList("1", "2"))
+        channel.setEntityType("shipment")
+        channel.setName("name1")
+        channel.setSituationType("shipment_delayed")
+        channel.setPurpose("situation room for shipment delayed")
+        when: "Calling create channel"
+        initNewSituationRoomService()
+        service.createChannel(channel)
+        then: "Should get exception"
+        thrown(InvalidChatRequest)
     }
 
     def "test create room name with space should succeed"() {
@@ -2242,6 +2300,13 @@ class SituationRoomServiceSpec extends Specification {
         dctService = Mock(DctServiceRestTemplate)
         permissionHelper = Mock(PermissionHelper)
         umsUri = "http://localhost:9090/api/v1/ums/users"
+        mockPermission()
+    }
+
+    def mockPermission() {
+        List<String> permissionList = new ArrayList<>()
+        permissionList.add("CREATE")
+        permissionHelper.getPermissions("Situation Room") >> permissionList
     }
 
     def successHttpResponse() {
