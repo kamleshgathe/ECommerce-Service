@@ -771,6 +771,67 @@ class SituationRoomServiceSpec extends Specification {
         channels.get(2).getYourStatus() != null && channels.get(2).getYourStatus() == ChatRoomParticipantStatus.PENDING
     }
 
+    def "getting all the channels should fail if no SR Permission"() {
+        given:
+        mock()
+        permissionHelper = Mock(PermissionHelper)
+        List<String> permissionList = new ArrayList<>()
+        permissionHelper.getPermissions("Situation Room") >> permissionList
+        def user = "appUser"
+        def participants1 = Sets.newHashSet()
+        def participants2 = Sets.newHashSet()
+        def participants3 = Sets.newHashSet()
+
+        def allParticipantsInRepo = Lists.newArrayList();
+        byte[] snapshot = getDummySnapshot();
+
+        def lmd1 = new Date(1551615877000)
+        def lmd2 = new Date(1551443077000)
+        def lmd3 = new Date(1551702277000)
+
+        def openRoom1 = mockedChatRoomWithInputLmd("room1", snapshot, participants1, user, ChatRoomStatus.NEW, lmd1)
+        def openRoom2 = mockedChatRoomWithInputLmd("room2", snapshot, participants2, user, ChatRoomStatus.NEW, lmd2)
+        def resolvedRoom = mockedChatRoomWithInputLmd("room3", snapshot, participants3, user, ChatRoomStatus.RESOLVED, lmd3)
+
+        ChatRoomParticipant r1p1 = addChatParticipant(openRoom1, "AppUser", ChatRoomParticipantStatus.JOINED)
+        ChatRoomParticipant r2p1 = addChatParticipant(openRoom2, "appUser", ChatRoomParticipantStatus.PENDING)
+        ChatRoomParticipant r3p1 = addChatParticipant(resolvedRoom, "appuser", ChatRoomParticipantStatus.JOINED)
+
+        allParticipantsInRepo.add(r1p1)
+        allParticipantsInRepo.add(r2p1)
+        allParticipantsInRepo.add(r3p1)
+        Collections.sort(allParticipantsInRepo, new Comparator<ChatRoomParticipant>() {
+            @Override
+            int compare(ChatRoomParticipant p1, ChatRoomParticipant p2) {
+                Date d1 = p1.getRoom().getLmd();
+                Date d2 = p2.getRoom().getLmd();
+                return d2 - d1;
+            }
+        })
+        authContext.getCurrentUser() >> "appUser"
+
+        when: "getting all the channels from the service"
+        initNewSituationRoomService()
+        List<ChatContext> channels = service.getChannels(null, null, null)
+        then: "Should get exception"
+        thrown(InvalidChatRequest)
+    }
+
+    def "test add users to existing channel expect exception if no SR permission"() {
+        given: "Setup request"
+        mock()
+        permissionHelper = Mock(PermissionHelper)
+        List<String> permissionList = new ArrayList<>()
+        permissionHelper.getPermissions("Situation Room") >> permissionList
+        authContext.getCurrentUser() >> "user"
+        def request = new AddUserToRoomDto();
+        when: "Calling create channel"
+        initNewSituationRoomService()
+        service.inviteUsers(null, request)
+        then: "Should get exception"
+        thrown(InvalidChatRequest)
+    }
+
     def "test add users to existing channel expect exception if channel is missing"() {
         given: "Setup request"
         mock()
@@ -1267,6 +1328,32 @@ class SituationRoomServiceSpec extends Specification {
         }
     }
 
+    def "Update Read resolve room should fail if no SR Permission"() {
+        given: "Initialize inputs"
+        mock()
+        permissionHelper = Mock(PermissionHelper)
+        List<String> permissionList = new ArrayList<>()
+        permissionHelper.getPermissions("Situation Room") >> permissionList
+
+        def roomId = "room1"
+        def currentUser = "user1"
+        authContext.getCurrentUser() >> currentUser
+
+        byte[] snapshot = getDummySnapshot()
+        Set<ChatRoomParticipant> participants = Sets.newHashSet()
+        def mockRoom = mockedChatRoom(roomId, snapshot, participants, currentUser, ChatRoomStatus.RESOLVED)
+        addChatParticipant(mockRoom, currentUser, ChatRoomParticipantStatus.JOINED)
+        addChatParticipant(mockRoom, "user2", ChatRoomParticipantStatus.JOINED)
+
+        participantRepository.findByUserNameOrderByRoomLmdDesc(currentUser) >> mockRoom.getParticipants().toList()
+
+        when: "Calling Read resolve rooms"
+        initNewSituationRoomService()
+        service.readResolvedChannel()
+        then: "Should get exception"
+        thrown(InvalidChatRequest)
+    }
+
     def "resolve room should succeed"() {
         given: "Initialize inputs"
         mock()
@@ -1403,6 +1490,36 @@ class SituationRoomServiceSpec extends Specification {
         response.isEmpty()
     }
 
+    def "test unread should fail if no SR Permission"() {
+        given: "Initialize"
+        mock()
+        permissionHelper = Mock(PermissionHelper)
+        List<String> permissionList = new ArrayList<>()
+        permissionHelper.getPermissions("Situation Room") >> permissionList
+        def user = "user1";
+        authContext.getCurrentUser() >> user
+        def token = proxyTokenMappingWithToken("abcd")
+        tokenRepository.findByAppUserId(user) >> token
+
+        def participants = Sets.newHashSet()
+        def room = mockedChatRoom("room1", getDummySnapshot(), participants, user, ChatRoomStatus.OPEN)
+        ChatRoomParticipant participant = addChatParticipant(room, user, ChatRoomParticipantStatus.JOINED)
+
+        participantRepository.findByUserNameAndStatusOrderByRoomLmdDesc(user, ChatRoomParticipantStatus.JOINED) >> Lists.newArrayList(participant)
+        def room1UnreadResponse = Maps.newHashMap();
+        room1UnreadResponse.put("team_id", "lct")
+        room1UnreadResponse.put("channel_id", "1234")
+        room1UnreadResponse.put("msg_count", 5)
+        room1UnreadResponse.put("mention_count", 0)
+
+        restTemplate.exchange(*_) >> ResponseEntity.status(HttpStatus.OK).body(room1UnreadResponse)
+
+        when: "Calling unread"
+        initNewSituationRoomService()
+        List response = service.getUnreadCount();
+        then: "Should get exception"
+        thrown(InvalidChatRequest)
+    }
 
     def "test unread should succeed"() {
         given: "Initialize"
@@ -1702,6 +1819,46 @@ class SituationRoomServiceSpec extends Specification {
         0 * restTemplate.exchange(_ as String, _ as HttpMethod, _ as HttpEntity, Map.class, *_)
     }
 
+    def "Upload file for Situation Room if no SR permission"() {
+        given: "Multipart file to upload"
+        mock()
+        permissionHelper = Mock(PermissionHelper)
+        List<String> permissionList = new ArrayList<>()
+        permissionHelper.getPermissions("Situation Room") >> permissionList
+        def currentUser = "1"
+        def roomId = "room1"
+        def tokenMapping = new ProxyTokenMapping()
+        tokenMapping.setAppUserId("user1")
+        tokenMapping.setRemoteUserId("abcd")
+        tokenMapping.setProxyToken("token1")
+
+        def participants = Sets.newHashSet()
+        def mockRoom = mockedChatRoom(roomId, getDummySnapshot(), participants, currentUser, ChatRoomStatus.OPEN)
+        mockRoom.getChats() >> ChatRoomUtil.objectToByteArray(new ArrayList())
+        addChatParticipant(mockRoom, currentUser, ChatRoomParticipantStatus.JOINED)
+
+        def file = new MockMultipartFile("data", "filename.txt",
+                "text/plain", "some data".getBytes())
+
+        when: "Calling upload function"
+        documentStoreService.getDocumentStore() >> localDocumentStore
+        authContext.getCurrentUser() >> currentUser
+        roomRepository.findById(_ as String) >> Optional.of(mockRoom)
+        tokenRepository.findByAppUserId(currentUser) >> tokenMapping
+        restTemplate.exchange(_ as String, _ as HttpMethod, _ as HttpEntity, Map.class, *_) >>
+                {
+                    Map body = Maps.newHashMap();
+                    body.put("id", "111")
+                    return mockedResponseEntity(HttpStatus.OK, body)
+                }
+        dctService.restTemplateForTenantService(umsUri) >> mockuserInfo()
+        initNewSituationRoomService()
+        List<Attachment> response = service.upload(roomId, file, "Test")
+
+        then: "Should get exception"
+        thrown(InvalidChatRequest)
+    }
+
     def "Upload file for Situation Room"() {
         given: "Multipart file to upload"
         mock()
@@ -1928,6 +2085,49 @@ class SituationRoomServiceSpec extends Specification {
         thrown(ChatException)
     }
 
+    def "Get document should be passed with valid inputs if no SR Permission"(){
+        given:"download attachment parameters"
+        mock()
+        permissionHelper = Mock(PermissionHelper)
+        List<String> permissionList = new ArrayList<>()
+        permissionHelper.getPermissions("Situation Room") >> permissionList
+        String id = "aa-ship-1"
+        String documentId = "1"
+        def stream = new ByteArrayInputStream("test".getBytes())
+        //documentStoreService.getDocumentStore() >> localDocumentStore
+
+        authContext.getCurrentUser() >> "user1"
+        ResolveRoomDto resolutionRequestDto = new ResolveRoomDto()
+        resolutionRequestDto.resolution = Lists.newArrayList("resolution1")
+        resolutionRequestDto.remark = "thanks";
+
+        def entity = new ArrayList();
+        entity.add("json1");
+        String jsonString = ChatRoomUtil.objectToJson(entity);
+        byte[] bytes = ChatRoomUtil.objectToByteArray(jsonString);
+        documentStoreService.getDocumentStore() >> localDocumentStore
+        localDocumentStore.retrieve(_) >> Optional.of(stream)
+
+        when: "calling get document API"
+        def mockRoom = mockedChatRoom("1", bytes, Lists.newArrayList(), "user1", ChatRoomStatus.RESOLVED )
+        roomRepository.findById(_) >> new Optional(mockRoom)
+        initNewSituationRoomService()
+        List<Object> attachmentsList = new ArrayList<>()
+        Map<String, Object> eachAttachmentMap = new LinkedHashMap<String, Object>()
+        Map<String, Object> attachmentMetaData = new LinkedHashMap<String, String>()
+        attachmentMetaData.put("filePath","test")
+        eachAttachmentMap.put("attachmentName", "text.txt")
+        eachAttachmentMap.put("attachmentMetaData",attachmentMetaData)
+        eachAttachmentMap.put("id","1")
+        attachmentsList.add(eachAttachmentMap)
+        mockRoom.getAttachments() >> attachmentsList
+
+        InputStreamWrapper streamWrapper = service.getDocument(id, documentId)
+        stream.close()
+        then: "Should get exception"
+        thrown(InvalidChatRequest)
+    }
+
     def "Get document should be passed with valid inputs"(){
         given:"download attachment parameters"
         mock()
@@ -1967,6 +2167,49 @@ class SituationRoomServiceSpec extends Specification {
         then: "should return input stream for download"
         assert streamWrapper.getInputStream() != null
         streamWrapper.getInputStream().close()
+    }
+
+    def "Get document should be fail if no SR Permission"(){
+        given:"download attachment parameters"
+        mock()
+        permissionHelper = Mock(PermissionHelper)
+        List<String> permissionList = new ArrayList<>()
+        permissionHelper.getPermissions("Situation Room") >> permissionList
+        String id = "aa-ship-1"
+        String documentId = "1"
+        def stream = new ByteArrayInputStream("test".getBytes())
+        //documentStoreService.getDocumentStore() >> localDocumentStore
+
+        authContext.getCurrentUser() >> "user1"
+        ResolveRoomDto resolutionRequestDto = new ResolveRoomDto()
+        resolutionRequestDto.resolution = Lists.newArrayList("resolution1")
+        resolutionRequestDto.remark = "thanks";
+
+        def entity = new ArrayList();
+        entity.add("json1");
+        String jsonString = ChatRoomUtil.objectToJson(entity);
+        byte[] bytes = ChatRoomUtil.objectToByteArray(jsonString);
+        documentStoreService.getDocumentStore() >> localDocumentStore
+        localDocumentStore.retrieve(_) >> Optional.of(stream)
+
+        when: "calling get document API"
+        def mockRoom = mockedChatRoom("1", bytes, Lists.newArrayList(), "user1", ChatRoomStatus.RESOLVED )
+        roomRepository.findById(_) >> new Optional(mockRoom)
+        initNewSituationRoomService()
+        List<Object> attachmentsList = new ArrayList<>()
+        Map<String, Object> eachAttachmentMap = new LinkedHashMap<String, Object>()
+        Map<String, Object> attachmentMetaData = new LinkedHashMap<String, String>()
+        attachmentMetaData.put("filePath","test")
+        eachAttachmentMap.put("attachmentName", "text.txt")
+        eachAttachmentMap.put("attachmentMetaData",attachmentMetaData)
+        eachAttachmentMap.put("id","1")
+        attachmentsList.add(eachAttachmentMap)
+        mockRoom.getAttachments() >> attachmentsList
+
+        InputStreamWrapper streamWrapper = service.getDocument(id, documentId)
+        stream.close()
+        then: "Should get exception"
+        thrown(InvalidChatRequest)
     }
 
     def "Failed to download document due to incorrect filename from object"(){
@@ -2026,6 +2269,43 @@ class SituationRoomServiceSpec extends Specification {
         stream.close()
         then: "Exception should thrown"
         thrown(AttachmentException)
+
+    }
+
+    def "Failed to delete document due to if no SR permission"(){
+        given:"Delete Document parameters"
+        mock()
+        permissionHelper = Mock(PermissionHelper)
+        List<String> permissionList = new ArrayList<>()
+        permissionHelper.getPermissions("Situation Room") >> permissionList
+        String id = "aa-ship-1"
+        String documentId = "1"
+        def stream = new ByteArrayInputStream("test".getBytes())
+
+        authContext.getCurrentUser() >> "user1"
+        ResolveRoomDto resolutionRequestDto = new ResolveRoomDto()
+        resolutionRequestDto.resolution = Lists.newArrayList("resolution1")
+        resolutionRequestDto.remark = "thanks"
+        def participants = Sets.newHashSet()
+        def mockRoom = mockedChatRoom("room1", getDummySnapshot(), participants, "user1", ChatRoomStatus.OPEN)
+        addChatParticipant(mockRoom, "user1", ChatRoomParticipantStatus.JOINED)
+
+        def entity = new ArrayList()
+        entity.add("json1")
+        String jsonString = ChatRoomUtil.objectToJson(entity)
+        byte[] bytes = ChatRoomUtil.objectToByteArray(jsonString)
+
+
+        when: "calling Document API"
+        roomRepository.findById(_) >> new Optional(mockRoom)
+        initNewSituationRoomService()
+        mockRoom.getAttachments() >> mockAtachment1()
+        documentStoreService.getDocumentStore() >> localDocumentStore
+        //localDocumentStore.delete(_) >> {throw new IOException()}
+        service.deleteAttachment(id, documentId)
+        stream.close()
+        then: "Should get exception"
+        thrown(InvalidChatRequest)
 
     }
 
@@ -2111,6 +2391,7 @@ class SituationRoomServiceSpec extends Specification {
         thrown(AttachmentException)
 
     }
+
     def "Failed to delete document due to room got resolved"(){
         given:"Delete Document parameters"
         mock()
@@ -2144,6 +2425,8 @@ class SituationRoomServiceSpec extends Specification {
 
     }
 
+
+
     def "Fail to download file for Situation Room due to wrong Chat id"() {
         given: "Multipart file to upload"
         mock()
@@ -2168,7 +2451,6 @@ class SituationRoomServiceSpec extends Specification {
         then:
         thrown(ChatException)
     }
-
 
     def "Fail to download file for Situation Room due to no attachment"(){
         given:"Delete document"
@@ -2198,7 +2480,6 @@ class SituationRoomServiceSpec extends Specification {
         then:
         thrown(AttachmentException)
     }
-
 
     def "Fail to get document due to invalid room"(){
         given:"download attachment parameters"
@@ -2570,6 +2851,31 @@ class SituationRoomServiceSpec extends Specification {
         List<ChatContext> channels = service.searchChannels(requestParams)
         then: "should return empty channels"
         channels.size() == 0
+
+    }
+
+    def "search the channels should fail if no SR Permission"() {
+        given:
+        mock()
+        permissionHelper = Mock(PermissionHelper)
+        List<String> permissionList = new ArrayList<>()
+        permissionHelper.getPermissions("Situation Room") >> permissionList
+        def user = "1"
+        def roomId = "room1"
+        def currentUser = "user1"
+
+        authContext.getCurrentUser() >> currentUser
+        participantRepository.findByUserNameOrderByRoomLmdDesc(currentUser) >> null
+
+        Map<String, String> requestParams = new HashMap<>()
+        requestParams.put(SearchConstants.SEARCH_TEXT, "")
+        requestParams.put(ChatRoomConstants.DOMAIN_OBJECT_ID, "9437877-Shipment-45466756757655465")
+
+        when: "getting the channels from the service"
+        initNewSituationRoomService()
+        List<ChatContext> channels = service.searchChannels(requestParams)
+        then: "Should get exception"
+        thrown(InvalidChatRequest)
 
     }
 
