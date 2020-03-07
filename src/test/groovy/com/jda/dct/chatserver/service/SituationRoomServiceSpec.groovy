@@ -724,6 +724,10 @@ class SituationRoomServiceSpec extends Specification {
     def "getting all the channels should return in sorted order"() {
         given:
         mock()
+        permissionHelper = Mock(PermissionHelper)
+        List<String> permissionList = new ArrayList<>()
+        permissionList.add("VIEW")
+        permissionHelper.getPermissions("Situation Room") >> permissionList
         def user = "appUser"
         def participants1 = Sets.newHashSet()
         def participants2 = Sets.newHashSet()
@@ -1303,6 +1307,10 @@ class SituationRoomServiceSpec extends Specification {
     def "Update Read resolve room should succeed"() {
         given: "Initialize inputs"
         mock()
+        permissionHelper = Mock(PermissionHelper)
+        List<String> permissionList = new ArrayList<>()
+        permissionList.add("UPDATE")
+        permissionHelper.getPermissions("Situation Room") >> permissionList
         def roomId = "room1"
         def currentUser = "user1"
         authContext.getCurrentUser() >> currentUser
