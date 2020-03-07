@@ -125,6 +125,10 @@ public class SituationRoomServiceImpl implements SituationRoomService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SituationRoomServiceImpl.class);
     private static final String CHANNEL_ID = "channel_id";
+    private static final String SITUATION_ROOM = "Situation Room";
+    private static final String PERMISSION_VALUE_CREATE = "CREATE";
+    private static final String PERMISSION_VALUE_UPDATE = "UPDATE";
+    private static final String PERMISSION_VALUE_VIEW = "VIEW";
 
     @Value("${dct.situationRoom.mattermost.host}")
     private String mattermostUrl;
@@ -363,6 +367,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
      */
     @Override
     public ChatContext getChannelContext(String channelId) {
+        AssertUtil.isTrue(getRoomPermission(), "You are not authorized to view Channel Context");
         AssertUtil.isTrue(!StringUtils.isEmpty(channelId), "Channel id can't be null or empty");
         LOGGER.info("Going to fetch chat room {} context request by user {}", channelId, authContext.getCurrentUser());
         Optional<ChatRoom> chatRoom = getChatRoomById(channelId);
@@ -376,8 +381,17 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         return toChatContext(chatRoom.get(), authContext.getCurrentUser());
     }
 
+    private boolean getRoomPermission() {
+        List<String> generalRoomPermissions = permissionHelper.getPermissions(SITUATION_ROOM);
+        return !CollectionUtils.isEmpty(generalRoomPermissions)
+                && (generalRoomPermissions.contains(PERMISSION_VALUE_CREATE)
+                || generalRoomPermissions.contains(PERMISSION_VALUE_UPDATE)
+                || generalRoomPermissions.contains(PERMISSION_VALUE_VIEW));
+    }
+
     @Override
     public List<ChatContext> getChannels(String by, String type, String requestQueryParam) {
+        AssertUtil.isTrue(getRoomPermission(), "You don't have View Room Permission");
         String currentUser = authContext.getCurrentUser();
         List<ChatRoomParticipant> participants;
         if (!StringUtils.isEmpty(requestQueryParam)) {
@@ -435,6 +449,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
 
     @Override
     public List<Map<String, Object>> getUnreadCount() {
+        AssertUtil.isTrue(getRoomPermission(), "You are not authorized to view unread count");
         String currentUser = authContext.getCurrentUser();
         List<Map<String, Object>> response = new ArrayList<>();
         LOGGER.info("User {} called for unread message count", currentUser);
@@ -478,6 +493,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
 
     @Override
     public Map<String, Object> readResolvedChannel() {
+        AssertUtil.isTrue(getRoomPermission(), "You don't have any Situation Room Permission");
         String currentUser = authContext.getCurrentUser();
         LOGGER.info("Participant {} is going to save all resolved Rooms read status", currentUser);
 
@@ -603,6 +619,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
 
     @Override
     public List<Attachment> upload(String roomId, MultipartFile file, String comment) {
+        AssertUtil.isTrue(getRoomPermission(), "You are not authorized to attach file in Situation Room");
         LOGGER.debug("Uploading document for SR  {} ", roomId);
         String path = PATH_PREFIX + PATH_DELIMITER + roomId;
         String fileName = file.getOriginalFilename();
@@ -667,6 +684,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
 
     @Override
     public InputStreamWrapper getDocument(String roomId, String documentId) throws IOException {
+        AssertUtil.isTrue(getRoomPermission(), "You are not authorized to download files from Situation Room");
         LOGGER.debug("Downloading document for SR  {} ", roomId);
         List<Attachment> attachmentsList;
         String filePath;
@@ -700,6 +718,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
 
     @Override
     public void deleteAttachment(String roomId, String documentId) throws IOException {
+        AssertUtil.isTrue(getRoomPermission(), "You are not authorized to delete files from Situation Room");
         LOGGER.debug("Deleting document for SR  {} ", roomId);
         List<Attachment> attachmentsList;
         String filePath;
@@ -911,6 +930,10 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     }
 
     private void validateChannelCreationRequest(ChatRoomCreateDto request) {
+        List<String> generalRoomPermissions = permissionHelper.getPermissions(SITUATION_ROOM);
+        boolean createRoomPermission = !CollectionUtils.isEmpty(generalRoomPermissions)
+                && generalRoomPermissions.contains(PERMISSION_VALUE_CREATE);
+        AssertUtil.isTrue(createRoomPermission, "You don't have Create Room Permission");
         AssertUtil.notNull(request, "Room creation input can't be null");
         AssertUtil.notEmpty(request.getObjectIds(), "Reference domain object can't be null or empty");
         AssertUtil.notEmpty(request.getParticipants(), "Participants can't be null");
@@ -948,6 +971,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
 
     private void validateInviteUsersInputs(String roomId, String currentUser, AddUserToRoomDto request) {
         LOGGER.debug("Validating invite user request");
+        AssertUtil.isTrue(getRoomPermission(), "You are not authorized to add users into SR");
         roomIdInputValidation(roomId);
         AssertUtil.notNull(request, "Request can't be null");
         AssertUtil.notEmpty(request.getUsers(), "Users can't be empty");
@@ -1620,6 +1644,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
      */
     @Override
     public List<ChatContext> searchChannels(Map<String, String> requestParams) {
+        AssertUtil.isTrue(getRoomPermission(), "You don't have Search Room Permission");
         String currentUser = authContext.getCurrentUser();
         LOGGER.debug("User {} is searching in SR with search string {} ", currentUser, requestParams);
 
