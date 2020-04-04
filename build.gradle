@@ -1,7 +1,7 @@
 buildscript {
     ext {
 
-        springBootVersion = '2.2.4.RELEASE'
+        springBootVersion = '2.2.6.RELEASE'
     }
     repositories {
         mavenLocal()
@@ -126,10 +126,7 @@ dependencies {
     compile group: "com.jda.dct", name: "app", version: "${depVersion}", changing: true
     compile group: "com.jda.dct", name: "core", version: "${depVersion}", changing: true
     compile group: "com.jda.dct", name: "push-notification", version: "${depVersion}", changing: true
-
-//    compile group: 'org.elasticsearch', name: 'elasticsearch', version: '5.6.15'
-//    compile group: 'org.elasticsearch.client', name: 'elasticsearch-rest-client', version: '5.6.15'
-//    compile group: 'org.elasticsearch.client', name: 'elasticsearch-rest-high-level-client', version: '5.6.15'
+    
     compile group: 'org.elasticsearch', name: 'elasticsearch', version: '6.3.2'
     compile group: 'org.elasticsearch.client', name: 'elasticsearch-rest-client', version: '6.3.2'
     compile group: 'org.elasticsearch.client', name: 'elasticsearch-rest-high-level-client', version: '6.3.2'
