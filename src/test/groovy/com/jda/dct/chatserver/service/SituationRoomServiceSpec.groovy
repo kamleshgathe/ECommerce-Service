@@ -144,6 +144,41 @@ class SituationRoomServiceSpec extends Specification {
         tokenDto.teamId == CHANNEL_TEAM_ID
     }
 
+    def "test get token if user not in LCT but in mattermost (multi-tenant) "() {
+        given: "a user does not exist in LCT but exist in matteromost"
+        def user = "user1"
+
+        mock()
+        _ * authContext.getCurrentUser() >> user
+        1 * tokenRepository.findByAppUserId(user) >> null;
+        tokenRepository.save(_ as ProxyTokenMapping) >> proxyTokenMappingWithToken("token")
+        tokenRepository.findByAppUserId(user) >> proxyTokenMappingWithoutToken();
+        restTemplate.exchange(_ as String, _ as HttpMethod, _ as HttpEntity, *_) >> {
+            args ->
+                Map body = Maps.newHashMap()
+                if (args[0].toString().endsWith("/users")) {
+                    //create user failed, as it exists in mattermost
+                    throw new Exception()
+                } else if (args[0].contains("/usernames")) {
+                    body.put("id", "123")
+                    return mockedResponseEntity(HttpStatus.OK, [body])
+                } else if (args[0].contains("/roles")) {
+                    body.put("status", "ok")
+                } else {
+                    body.put("token", "token")
+                }
+                return mockedResponseEntity(HttpStatus.OK, body)
+        }
+        when: "get user token"
+        initNewSituationRoomService();
+        TokenDto tokenDto = service.getSessionToken();
+
+        then: " POST /users/usernames should be called to get existing user"
+
+        tokenDto.teamId == CHANNEL_TEAM_ID
+    }
+
+
     def "test post message should throw exception if input is null"() {
         given: "Intialize mocks"
         mock()
