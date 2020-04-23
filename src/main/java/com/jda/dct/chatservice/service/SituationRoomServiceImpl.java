@@ -1151,7 +1151,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         ProxyTokenMapping proxyTokenMapping = getUserTokenMapping(appUserId);
         if (proxyTokenMapping == null) {
             LOGGER.warn("User {} does not exists into system", appUserId);
-            Map<String, Object> newUserResponse = crateUser(appUserId);
+            Map<String, Object> newUserResponse = createUser(appUserId);
             setupRoles(remoteUserId(newUserResponse));
             proxyTokenMapping = addUserTokenMapping(appUserId, remoteUserId(newUserResponse));
             proxyTokenMapping = setupAccessToken(proxyTokenMapping);
@@ -1256,21 +1256,41 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     }
 
 
-    private Map<String, Object> crateUser(String appUserId) {
+    private Map<String, Object> createUser(String appUserId) {
         LOGGER.warn("Creating new user{} into system", appUserId);
         RemoteUserDto newUser = buildNewRemoteUser(appUserId);
         HttpHeaders headers = getHttpHeader(adminAccessToken);
         HttpEntity<RemoteUserDto> requestEntity = new HttpEntity<>(newUser, headers);
-        ResponseEntity<Map> response = restTemplate.exchange(
+        try {
+            ResponseEntity<Map> response = restTemplate.exchange(
                 getRemoteActionUrl(getUsersPath()),
                 HttpMethod.POST,
                 requestEntity,
                 Map.class);
 
-        LOGGER.info("User {} created in system and with id {}", appUserId,
+            LOGGER.info("User {} created in system and with id {}", appUserId,
                 response.getBody().get("id"));
-
-        return response.getBody();
+            return response.getBody();
+        } catch (Exception e) {
+            //if user creation failed, there could be the case that the user
+            //already created from another tenant, so call get user by username api
+            List<String> userNames = new ArrayList<>(1);
+            userNames.add(newUser.getUsername());
+            ResponseEntity<ArrayList> response = restTemplate.exchange(
+                getRemoteActionUrl(getUsersPath() + "/usernames"),
+                HttpMethod.POST,
+                new HttpEntity<List<String>>(userNames, headers),
+                ArrayList.class);
+            List users = response.getBody();
+            LOGGER.info("User {} already exist ??, just retrieve in system and with id {}", appUserId,
+                response.getBody());
+            if (users.size() > 0) {
+                //found the user, return
+                return (Map<String,Object>) users.get(0);
+            }
+            //if the user does not exist, something wrong, rethrow the exception
+            throw e;
+        }
     }
 
     private void setupRoles(String userId) {
