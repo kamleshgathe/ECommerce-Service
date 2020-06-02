@@ -52,8 +52,7 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
     "com.jda.luminate.common.aspects",
     "com.jda.luminate.io.documentstore",
     "com.jda.luminate.ingest.rest.services",
-    "com.jda.luminate.common.cache",
-    "com.jda.luminate.documentation"
+    "com.jda.luminate.common.cache"
 })
 
 @EntityScan(basePackages = {"com.jda.dct.domain"})
