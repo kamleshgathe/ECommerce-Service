@@ -15,7 +15,8 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath "org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}"
+        classpath "org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}",
+                  "info.solidsoft.gradle.pitest:gradle-pitest-plugin:1.4.0"
     }
 }
 
@@ -37,6 +38,7 @@ apply plugin: 'com.jfrog.artifactory'
 apply plugin: 'maven-publish'
 apply plugin: 'checkstyle'
 apply plugin: 'project-report'
+apply plugin: 'info.solidsoft.pitest'
 
 checkstyle {
     toolVersion "8.8"
@@ -238,6 +240,13 @@ test {
     systemProperties = System.properties
     systemProperty 'spring.profiles.active', 'development'
     jvmArgs('-Djava.util.logging.config.file=none')
+}
+
+pitest {
+    threads = 4
+    outputFormats = ['XML','HTML']
+    useClasspathFile = true
+    timestampedReports = false
 }
 
 license {
