@@ -178,6 +178,18 @@ class SituationRoomServiceSpec extends Specification {
         tokenDto.teamId == CHANNEL_TEAM_ID
     }
 
+    def "verify emailID and Username different for long username"() {
+        given: "Initialize userIds"
+        def appUserId1 = "a4b654e9@#%^&*d9b6d2b46d48ee026bfc5f23aea15221777711434rtyei3456123987_AcmeUser1@dcttestllc.onmicrosoft.com"
+        def appUserId2 = "a4b654e9@#%^&*d9b6d2b46d48ee026bfc5f23aea15221777711434rtyei3456123987_AcmeUser2@dcttestllc.onmicrosoft.com"
+        when: "Calling buildNewRemoteUser"
+        initNewSituationRoomService()
+        def remoteUser1 = service.buildNewRemoteUser(appUserId1)
+        def remoteUser2 = service.buildNewRemoteUser(appUserId2)
+        then: "Should get exception"
+        assert remoteUser1.username != remoteUser2.username
+        assert remoteUser1.email != remoteUser2.email
+    }
 
     def "test post message should throw exception if input is null"() {
         given: "Intialize mocks"
