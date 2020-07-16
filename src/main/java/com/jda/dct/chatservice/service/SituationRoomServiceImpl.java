@@ -7,7 +7,9 @@
  */
 package com.jda.dct.chatservice.service;
 
+import static com.jda.dct.chatservice.constants.ChatRoomConstants.BOUND;
 import static com.jda.dct.chatservice.constants.ChatRoomConstants.DOMAIN_OBJECT_ID;
+import static com.jda.dct.chatservice.constants.ChatRoomConstants.EMPTY;
 import static com.jda.dct.chatservice.constants.ChatRoomConstants.FILTER_BY_USER;
 import static com.jda.dct.chatservice.constants.ChatRoomConstants.FIRST_NAME;
 import static com.jda.dct.chatservice.constants.ChatRoomConstants.LAST_NAME;
@@ -20,6 +22,7 @@ import static com.jda.dct.chatservice.constants.ChatRoomConstants.PATH_PREFIX;
 import static com.jda.dct.chatservice.constants.ChatRoomConstants.PERCENT_SIGN;
 import static com.jda.dct.chatservice.constants.ChatRoomConstants.QUOTATION_MARK;
 import static com.jda.dct.chatservice.constants.ChatRoomConstants.SPACE;
+import static com.jda.dct.chatservice.constants.ChatRoomConstants.SPECIAL_CHARECTER;
 import static com.jda.dct.chatservice.constants.ChatRoomConstants.USER_NAME;
 import static com.jda.dct.chatservice.utils.ChatRoomUtil.buildUrlString;
 
@@ -77,6 +80,7 @@ import com.jda.luminate.security.contexts.AuthContext;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -88,6 +92,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
@@ -159,6 +164,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     private String umsUri;
 
     private RestTemplate restTemplate = new RestTemplate();
+    private Random random = new Random();
 
     /**
      * Mattermost chat service constructor.
@@ -1510,8 +1516,11 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         return dto;
     }
 
-    private RemoteUserDto buildNewRemoteUser(String username) {
-        username = username.replace("@", "");
+    protected RemoteUserDto buildNewRemoteUser(String username) {
+        username = username.replaceAll(SPECIAL_CHARECTER,EMPTY);
+        long currentTime = Instant.now().toEpochMilli();
+        String randomValue = String.valueOf(random.nextInt(BOUND));
+        username = randomValue + currentTime + username;
         username = username.length() < MAX_REMOTE_USERNAME_LENGTH
                 ? username : username.substring(0, MAX_REMOTE_USERNAME_LENGTH);
         RemoteUserDto user = new RemoteUserDto();
