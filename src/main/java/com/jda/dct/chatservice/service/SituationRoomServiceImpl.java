@@ -7,20 +7,7 @@
  */
 package com.jda.dct.chatservice.service;
 
-import static com.jda.dct.chatservice.constants.ChatRoomConstants.DOMAIN_OBJECT_ID;
-import static com.jda.dct.chatservice.constants.ChatRoomConstants.FILTER_BY_USER;
-import static com.jda.dct.chatservice.constants.ChatRoomConstants.FIRST_NAME;
-import static com.jda.dct.chatservice.constants.ChatRoomConstants.LAST_NAME;
-import static com.jda.dct.chatservice.constants.ChatRoomConstants.MATTERMOST_CHANNELS;
-import static com.jda.dct.chatservice.constants.ChatRoomConstants.MATTERMOST_POSTS;
-import static com.jda.dct.chatservice.constants.ChatRoomConstants.MATTERMOST_USERS;
-import static com.jda.dct.chatservice.constants.ChatRoomConstants.MAX_REMOTE_USERNAME_LENGTH;
-import static com.jda.dct.chatservice.constants.ChatRoomConstants.PATH_DELIMITER;
-import static com.jda.dct.chatservice.constants.ChatRoomConstants.PATH_PREFIX;
-import static com.jda.dct.chatservice.constants.ChatRoomConstants.PERCENT_SIGN;
-import static com.jda.dct.chatservice.constants.ChatRoomConstants.QUOTATION_MARK;
-import static com.jda.dct.chatservice.constants.ChatRoomConstants.SPACE;
-import static com.jda.dct.chatservice.constants.ChatRoomConstants.USER_NAME;
+import static com.jda.dct.chatservice.constants.ChatRoomConstants.*;
 import static com.jda.dct.chatservice.utils.ChatRoomUtil.buildUrlString;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -77,6 +64,7 @@ import com.jda.luminate.security.contexts.AuthContext;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -1511,7 +1499,9 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     }
 
     private RemoteUserDto buildNewRemoteUser(String username) {
-        username = username.replace("@", "");
+        username = username.replaceAll(SPECIAL_CHARECTER,EMPTY);
+        long currentTime = Instant.now().toEpochMilli();
+        username = currentTime + username;
         username = username.length() < MAX_REMOTE_USERNAME_LENGTH
                 ? username : username.substring(0, MAX_REMOTE_USERNAME_LENGTH);
         RemoteUserDto user = new RemoteUserDto();
