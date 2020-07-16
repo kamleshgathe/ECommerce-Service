@@ -1516,7 +1516,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         return dto;
     }
 
-    public RemoteUserDto buildNewRemoteUser(String username) {
+    protected RemoteUserDto buildNewRemoteUser(String username) {
         username = username.replaceAll(SPECIAL_CHARECTER,EMPTY);
         long currentTime = Instant.now().toEpochMilli();
         String randomValue = String.valueOf(random.nextInt(BOUND));
