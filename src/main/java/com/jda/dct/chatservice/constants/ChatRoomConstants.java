@@ -10,6 +10,7 @@ package com.jda.dct.chatservice.constants;
 public final class ChatRoomConstants {
     public static final int MAX_REMOTE_USERNAME_LENGTH = 64;
     public static final String SPECIAL_CHARECTER = "[^A-Za-z0-9]";
+    public static final int BOUND = 999999;
 
     public static final String FILTER_BY_USER = "user";
     public static final String MATTERMOST_POSTS = "/posts";
