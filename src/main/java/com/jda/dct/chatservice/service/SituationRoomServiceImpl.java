@@ -7,7 +7,22 @@
  */
 package com.jda.dct.chatservice.service;
 
-import static com.jda.dct.chatservice.constants.ChatRoomConstants.*;
+import static com.jda.dct.chatservice.constants.ChatRoomConstants.DOMAIN_OBJECT_ID;
+import static com.jda.dct.chatservice.constants.ChatRoomConstants.EMPTY;
+import static com.jda.dct.chatservice.constants.ChatRoomConstants.FILTER_BY_USER;
+import static com.jda.dct.chatservice.constants.ChatRoomConstants.FIRST_NAME;
+import static com.jda.dct.chatservice.constants.ChatRoomConstants.LAST_NAME;
+import static com.jda.dct.chatservice.constants.ChatRoomConstants.MATTERMOST_CHANNELS;
+import static com.jda.dct.chatservice.constants.ChatRoomConstants.MATTERMOST_POSTS;
+import static com.jda.dct.chatservice.constants.ChatRoomConstants.MATTERMOST_USERS;
+import static com.jda.dct.chatservice.constants.ChatRoomConstants.MAX_REMOTE_USERNAME_LENGTH;
+import static com.jda.dct.chatservice.constants.ChatRoomConstants.PATH_DELIMITER;
+import static com.jda.dct.chatservice.constants.ChatRoomConstants.PATH_PREFIX;
+import static com.jda.dct.chatservice.constants.ChatRoomConstants.PERCENT_SIGN;
+import static com.jda.dct.chatservice.constants.ChatRoomConstants.QUOTATION_MARK;
+import static com.jda.dct.chatservice.constants.ChatRoomConstants.SPACE;
+import static com.jda.dct.chatservice.constants.ChatRoomConstants.SPECIAL_CHARECTER;
+import static com.jda.dct.chatservice.constants.ChatRoomConstants.USER_NAME;
 import static com.jda.dct.chatservice.utils.ChatRoomUtil.buildUrlString;
 
 import com.google.common.annotations.VisibleForTesting;
