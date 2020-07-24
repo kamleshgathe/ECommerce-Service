@@ -41,6 +41,7 @@ import com.jda.dct.domain.ProxyTokenMapping
 import com.jda.dct.domain.stateful.PurchaseOrder
 import com.jda.dct.domain.util.StringUtil
 import com.jda.dct.exec.permission.PermissionHelper
+import com.jda.dct.foundation.process.BusinessProcessConfig
 import com.jda.dct.foundation.process.access.DctServiceRestTemplate
 import com.jda.dct.search.SearchConstants
 import com.jda.dct.util.push.NotificationType
@@ -78,6 +79,7 @@ class SituationRoomServiceSpec extends Specification {
     DctServiceRestTemplate dctService
     PermissionHelper permissionHelper
     String umsUri
+    BusinessProcessConfig config
     @Shared
     LocalDocumentStore localDocumentStore
 
@@ -774,7 +776,7 @@ class SituationRoomServiceSpec extends Specification {
         permissionHelper = Mock(PermissionHelper)
         List<String> permissionList = new ArrayList<>()
         permissionList.add("VIEW")
-        permissionHelper.getPermissions("Situation Room") >> permissionList
+        permissionHelper.getPermissions("Situation Room", _) >> permissionList
         def user = "appUser"
         def participants1 = Sets.newHashSet()
         def participants2 = Sets.newHashSet()
@@ -1357,7 +1359,7 @@ class SituationRoomServiceSpec extends Specification {
         permissionHelper = Mock(PermissionHelper)
         List<String> permissionList = new ArrayList<>()
         permissionList.add("UPDATE")
-        permissionHelper.getPermissions("Situation Room") >> permissionList
+        permissionHelper.getPermissions("Situation Room", _) >> permissionList
         def roomId = "room1"
         def currentUser = "user1"
         authContext.getCurrentUser() >> currentUser
@@ -2614,7 +2616,8 @@ class SituationRoomServiceSpec extends Specification {
                 attachmentValidator,
                 documentStoreService,
                 dctService,
-                permissionHelper)
+                permissionHelper,
+                config)
         service.setRestTemplate(restTemplate)
         service.setChannelTeamId(CHANNEL_TEAM_ID)
         service.setMattermostUrl("http://localhost:80/api/v4")
@@ -2636,13 +2639,15 @@ class SituationRoomServiceSpec extends Specification {
         dctService = Mock(DctServiceRestTemplate)
         permissionHelper = Mock(PermissionHelper)
         umsUri = "http://localhost:9090/api/v1/ums/users"
+        config = Mock(BusinessProcessConfig)
+        config.getSubtypeModelMap() >> ["standardPO": "purchaseOrder"]
         mockPermission()
     }
 
     def mockPermission() {
         List<String> permissionList = new ArrayList<>()
         permissionList.add("CREATE")
-        permissionHelper.getPermissions("Situation Room") >> permissionList
+        permissionHelper.getPermissions("Situation Room", _) >> permissionList
     }
 
     def successHttpResponse() {

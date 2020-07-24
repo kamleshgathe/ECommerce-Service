@@ -65,6 +65,7 @@ import com.jda.dct.domain.ProxyTokenMapping;
 import com.jda.dct.domain.exceptions.DctIoException;
 import com.jda.dct.domain.util.StringUtil;
 import com.jda.dct.exec.permission.PermissionHelper;
+import com.jda.dct.foundation.process.BusinessProcessConfig;
 import com.jda.dct.foundation.process.access.DctServiceRestTemplate;
 import com.jda.dct.ignitecaches.springimpl.Tenants;
 import com.jda.dct.search.SearchConstants;
@@ -159,6 +160,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     private DctServiceRestTemplate dctService;
     private PushMessage pushMessage;
     private PermissionHelper permissionHelper;
+    private BusinessProcessConfig config;
 
     @Value("${tenant.umsUserUri}")
     private String umsUri;
@@ -182,7 +184,8 @@ public class SituationRoomServiceImpl implements SituationRoomService {
                                     @Autowired AttachmentValidator attachmentValidator,
                                     @Autowired DocumentStoreService documentStoreService,
                                     @Autowired DctServiceRestTemplate dctService,
-                                    @Autowired PermissionHelper permissionHelper) {
+                                    @Autowired PermissionHelper permissionHelper,
+                                    @Autowired BusinessProcessConfig config) {
         this.authContext = authContext;
         this.roomRepository = roomRepository;
         this.tokenRepository = tokenRepository;
@@ -193,6 +196,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         this.documentStoreService = documentStoreService;
         this.dctService = dctService;
         this.permissionHelper = permissionHelper;
+        this.config = config;
     }
 
     @PostConstruct
@@ -388,7 +392,8 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     }
 
     private boolean getRoomPermission() {
-        List<String> generalRoomPermissions = permissionHelper.getPermissions(SITUATION_ROOM);
+        List<String> generalRoomPermissions = permissionHelper.getPermissions(SITUATION_ROOM,
+                config.getSubtypeModelMap());
         return !CollectionUtils.isEmpty(generalRoomPermissions)
                 && (generalRoomPermissions.contains(PERMISSION_VALUE_CREATE)
                 || generalRoomPermissions.contains(PERMISSION_VALUE_UPDATE)
@@ -936,7 +941,8 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     }
 
     private void validateChannelCreationRequest(ChatRoomCreateDto request) {
-        List<String> generalRoomPermissions = permissionHelper.getPermissions(SITUATION_ROOM);
+        List<String> generalRoomPermissions = permissionHelper.getPermissions(SITUATION_ROOM,
+                config.getSubtypeModelMap());
         boolean createRoomPermission = !CollectionUtils.isEmpty(generalRoomPermissions)
                 && generalRoomPermissions.contains(PERMISSION_VALUE_CREATE);
         AssertUtil.isTrue(createRoomPermission, "You don't have Create Room Permission");
