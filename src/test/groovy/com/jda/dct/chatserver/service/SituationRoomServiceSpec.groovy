@@ -717,7 +717,7 @@ class SituationRoomServiceSpec extends Specification {
         def expectedResponse = "Room can only be removed by Creator"
         mock()
         authContext.getCurrentUser() >> "User2"
-        ChatRoom mockdRoom = Mock(ChatRoom);
+        ChatRoom mockdRoom = Mock(ChatRoom)
         mockdRoom.getCreatedBy() >> "User1"
         roomRepository.findById(_ as String) >> Optional.of(mockdRoom)
         when: "Calling delete channel"
@@ -737,6 +737,90 @@ class SituationRoomServiceSpec extends Specification {
         authContext.getCurrentUser() >> user
         ChatRoom mockdRoom = Mock(ChatRoom)
         mockdRoom.getCreatedBy() >> user
+        mockdRoom.getId() >> roomId
+        roomRepository.findById(_ as String) >> Optional.of(mockdRoom)
+
+        1 * roomRepository.deleteById(_ as String)
+        def ptm1 = proxyTokenMapping(user, "remote_user1", "token1")
+        def ptm2 = proxyTokenMapping("User2", "remote_user2", "token1")
+        tokenRepository.findByAppUserId(user) >> ptm1
+        tokenRepository.findByAppUserId("User2") >> ptm2
+        tokenRepository.save({
+            ProxyTokenMapping ptm -> ptm.getAppUserId() == user ? ptm1 : ptm2
+        });
+        restTemplate.exchange(_ as String, _ as HttpMethod, _ as HttpEntity, Map.class, *_) >>
+                {
+                    args ->
+                        Map body = Maps.newHashMap();
+                        if (args[0].contains("/channels")) {
+                            body.put("status", "OK")
+                            body.put("deletedRoomId", roomId)
+                        }
+                        return mockedResponseEntity(HttpStatus.OK, body)
+                }
+
+
+        when: "Calling remove channel"
+        initNewSituationRoomService()
+        Map<String, Object> response = service.removeChannel(roomId)
+        then: "Should succeed"
+        response != null
+        response.size() == 2
+        response.get("status") == "OK"
+        response.get("deletedRoomId") == roomId
+    }
+
+    def "test delete channel should succeed for camelCase userName and created user"() {
+        given:
+        mock()
+        def user = "mRa@dcttestllc.onmicrosoft.com"
+        def roomId = "a5kr3xy6af8gipmw5r47cfzoir"
+
+        authContext.getCurrentUser() >> user
+        ChatRoom mockdRoom = Mock(ChatRoom)
+        mockdRoom.getCreatedBy() >> "MrA@dcttestllc.onmicrosoft.com"
+        mockdRoom.getId() >> roomId
+        roomRepository.findById(_ as String) >> Optional.of(mockdRoom)
+
+        1 * roomRepository.deleteById(_ as String)
+        def ptm1 = proxyTokenMapping(user, "remote_user1", "token1")
+        def ptm2 = proxyTokenMapping("User2", "remote_user2", "token1")
+        tokenRepository.findByAppUserId(user) >> ptm1
+        tokenRepository.findByAppUserId("User2") >> ptm2
+        tokenRepository.save({
+            ProxyTokenMapping ptm -> ptm.getAppUserId() == user ? ptm1 : ptm2
+        });
+        restTemplate.exchange(_ as String, _ as HttpMethod, _ as HttpEntity, Map.class, *_) >>
+                {
+                    args ->
+                        Map body = Maps.newHashMap();
+                        if (args[0].contains("/channels")) {
+                            body.put("status", "OK")
+                            body.put("deletedRoomId", roomId)
+                        }
+                        return mockedResponseEntity(HttpStatus.OK, body)
+                }
+
+
+        when: "Calling remove channel"
+        initNewSituationRoomService()
+        Map<String, Object> response = service.removeChannel(roomId)
+        then: "Should succeed"
+        response != null
+        response.size() == 2
+        response.get("status") == "OK"
+        response.get("deletedRoomId") == roomId
+    }
+
+    def "test delete channel should succeed with same UserName with different cases"() {
+        given:
+        mock()
+        def user = "joan.johnstone@loblaw.ca"
+        def roomId = "a5kr3xy6af8gipmw5r47cfzoir"
+
+        authContext.getCurrentUser() >> user
+        ChatRoom mockdRoom = Mock(ChatRoom)
+        mockdRoom.getCreatedBy() >> "Joan.Johnstone@loblaw.ca"
         mockdRoom.getId() >> roomId
         roomRepository.findById(_ as String) >> Optional.of(mockdRoom)
 
@@ -2196,7 +2280,7 @@ class SituationRoomServiceSpec extends Specification {
         authContext.getCurrentUser() >> "user1"
         ResolveRoomDto resolutionRequestDto = new ResolveRoomDto()
         resolutionRequestDto.resolution = Lists.newArrayList("resolution1")
-        resolutionRequestDto.remark = "thanks";
+        resolutionRequestDto.remark = "thanks"
 
         def entity = new ArrayList();
         entity.add("json1");
@@ -3017,6 +3101,27 @@ class SituationRoomServiceSpec extends Specification {
         String userName = service.userName("userName@doman.com", userInfo)
         then:
         userName == "userFirstName"
+    }
+
+    def "test userName having information for camelCase"() {
+
+        given:
+        Optional<String> userInfo
+        JsonArray data = new JsonArray()
+        JsonObject users = new JsonObject()
+        users.addProperty("userName","User.Name@doman.com")
+        users.addProperty("firstName","FirstName")
+        users.addProperty("lastName","LastName")
+        data.add(users)
+        userInfo = Optional.of(data.toString())
+
+        mock()
+
+        when:
+        initNewSituationRoomService();
+        String userName = service.userName("user.name@doman.com", userInfo)
+        then:
+        userName == "FirstName LastName"
     }
 
 
