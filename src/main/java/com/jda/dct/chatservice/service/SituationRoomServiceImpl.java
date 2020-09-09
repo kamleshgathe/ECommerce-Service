@@ -347,7 +347,8 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         if (!room.isPresent()) {
             throw new ChatException(ChatException.ErrorCode.ROOM_NOT_EXISTS);
         }
-        AssertUtil.isTrue(room.get().getCreatedBy().equals(currentUser), "Room can only be removed by Creator");
+        AssertUtil.isTrue(room.get().getCreatedBy().equalsIgnoreCase(currentUser),
+                "Room can only be removed by Creator");
     }
 
     /**
@@ -873,7 +874,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
             for (JsonElement userJson : val) {
                 JsonObject users = userJson.getAsJsonObject();
                 if (users.has(USER_NAME) && !StringUtils.isEmpty(users.get(USER_NAME))
-                        && users.get(USER_NAME).getAsString().trim().contentEquals(user.trim())) {
+                        && users.get(USER_NAME).getAsString().trim().equalsIgnoreCase(user.trim())) {
                     userName = parseFromJsonElement(users, userName);
                     break;
                 }
