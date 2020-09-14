@@ -16,7 +16,7 @@ buildscript {
     }
     dependencies {
         classpath "org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}",
-                  "info.solidsoft.gradle.pitest:gradle-pitest-plugin:1.4.0"
+                  "info.solidsoft.gradle.pitest:gradle-pitest-plugin:1.5.1"
     }
 }
 
