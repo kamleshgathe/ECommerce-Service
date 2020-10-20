@@ -11,6 +11,9 @@ import com.jda.dct.chatservice.service.MattermostPassthroughService;
 import com.jda.dct.ignitecaches.springimpl.Tenants;
 import com.jda.luminate.security.contexts.AuthContext;
 import javax.servlet.http.HttpServletRequest;
+
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
@@ -25,6 +28,8 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @RequestMapping("/chat/passthrough")
+@Api(tags = "Mattermost API's", value = "matterMostApis",
+        description = "Provides API's for accessing matter most functionalities.")
 public class MattermostPassthroughController {
 
     private final MattermostPassthroughService service;
@@ -50,6 +55,7 @@ public class MattermostPassthroughController {
      * @return
      */
     @RequestMapping("/**")
+    @ApiOperation(value = "Makes a direct call to mattermost.", hidden = true)
     public ResponseEntity passthrough(@RequestBody(required = false) String body,
                                       HttpMethod method,
                                       HttpServletRequest request) {
