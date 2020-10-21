@@ -10,10 +10,12 @@ package com.jda.dct.chatservice.controller;
 import com.jda.dct.chatservice.service.MattermostPassthroughService;
 import com.jda.dct.ignitecaches.springimpl.Tenants;
 import com.jda.luminate.security.contexts.AuthContext;
-import javax.servlet.http.HttpServletRequest;
 
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
+
+import javax.servlet.http.HttpServletRequest;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
