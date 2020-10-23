@@ -14,4 +14,4 @@ COPY /build/libs/${app}-${version}.jar /opt/${app}/service.jar
 
 WORKDIR /opt/${app}
 
-CMD ["/bin/sh", "-c", "java $JAVA_OPTIONS -Djava.util.logging.config.file=none -Dappdynamics.agent.uniqueHostId=$(sed -e 's#.*/##' /proc/self/cgroup | grep -v '^$' | uniq | sed -rn -e 's/^(.{12}).*/\\1/p') $APPD_NODE_ARGS $APPD_ARGS -jar service.jar"]
+CMD ["/bin/sh", "-c", "java $JAVA_OPTIONS -Djava.util.logging.config.file=none -Dappdynamics.agent.uniqueHostId=$(cat /proc/sys/kernel/random/uuid) $APPD_NODE_ARGS $APPD_ARGS -jar service.jar"]
