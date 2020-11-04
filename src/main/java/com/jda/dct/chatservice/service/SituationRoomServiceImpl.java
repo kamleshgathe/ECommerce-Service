@@ -377,6 +377,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
      * @return ChatContext Channel context object
      */
     @Override
+    @Transactional
     public ChatContext getChannelContext(String channelId) {
         AssertUtil.isTrue(getRoomPermission(), "You are not authorized to view Channel Context");
         AssertUtil.isTrue(!StringUtils.isEmpty(channelId), "Channel id can't be null or empty");
@@ -402,6 +403,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     }
 
     @Override
+    @Transactional
     public List<ChatContext> getChannels(String by, String type, String requestQueryParam) {
         AssertUtil.isTrue(getRoomPermission(), "You don't have View Room Permission");
         String currentUser = authContext.getCurrentUser();
@@ -1679,6 +1681,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
      * @return List    -- response will be search result in form of chat context object list
      */
     @Override
+    @Transactional
     public List<ChatContext> searchChannels(Map<String, String> requestParams) {
         AssertUtil.isTrue(getRoomPermission(), "You don't have Search Room Permission");
         String currentUser = authContext.getCurrentUser();
