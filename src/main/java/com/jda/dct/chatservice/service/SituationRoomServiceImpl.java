@@ -239,6 +239,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
      * @return Map object, contains response from remote system.
      */
     @Override
+    @Transactional
     public Map<String, Object> postMessage(Map<String, Object> chat) {
         String currentUser = authContext.getCurrentUser();
         validatePostMessageRequest(currentUser, chat);
