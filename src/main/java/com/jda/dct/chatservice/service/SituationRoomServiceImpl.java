@@ -960,7 +960,8 @@ public class SituationRoomServiceImpl implements SituationRoomService {
                 "Situation type can't be null or empty");
     }
 
-    private void validatePostMessageRequest(String currentUser, Map<String, Object> request) {
+    @Transactional
+    protected void validatePostMessageRequest(String currentUser, Map<String, Object> request) {
         LOGGER.debug("Validating post message request");
         AssertUtil.notNull(request, "Post message can't be null");
         AssertUtil.notEmpty(request, "Post message can't be empty");
@@ -994,6 +995,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         validateRoomState(roomId, currentUser, "New invitation can't be sent for resolved room");
     }
 
+    @Transactional
     private void validateResolveRoomInputs(String roomId, String currentUser, ResolveRoomDto request) {
         LOGGER.debug("Validating resolve room request");
         roomIdInputValidation(roomId);
@@ -1038,7 +1040,8 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         AssertUtil.isTrue(!StringUtils.isEmpty(roomId), "Room Id can't be null or empty");
     }
 
-    private void validateRoomState(String roomId,
+    @Transactional
+    protected void validateRoomState(String roomId,
                                    String currentUser,
                                    String invalidStatusMsg) {
         Optional<ChatRoom> room = getChatRoomById(roomId);
@@ -1078,7 +1081,8 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         return chatRoom;
     }
 
-    private ChatRoomParticipant removeParticipantInApp(String roomId, String targetUser) {
+    @Transactional
+    protected ChatRoomParticipant removeParticipantInApp(String roomId, String targetUser) {
         Optional<ChatRoom> roomRecord = getChatRoomById(roomId);
         if (!roomRecord.isPresent()) {
             throw new ChatException(ChatException.ErrorCode.INVALID_CHAT_ROOM, roomId);
@@ -1198,7 +1202,8 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         LOGGER.info("User {} added to team {} successfully", remoteUserId, teamId);
     }
 
-    private Map<String, Object> addParticipantsToRoom(String user, String roomId) {
+    @Transactional
+    protected Map<String, Object> addParticipantsToRoom(String user, String roomId) {
         Optional<ChatRoom> roomRecord = getChatRoomById(roomId);
         if (!roomRecord.isPresent()) {
             throw new ChatException(ChatException.ErrorCode.INVALID_CHAT_ROOM, roomId);
@@ -1368,7 +1373,8 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         LOGGER.debug("Chat archived successfully for room {}", getRoomIdFromPostMessage(chat));
     }
 
-    private void updateParticipantOfRooms(List<String> users, String roomId) {
+    @Transactional
+    protected void updateParticipantOfRooms(List<String> users, String roomId) {
         LOGGER.debug("Going to add new participants for room {}", roomId);
         Optional<ChatRoom> record = getChatRoomById(roomId);
         if (!record.isPresent()) {
