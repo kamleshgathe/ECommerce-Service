@@ -15,12 +15,13 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath "org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}"
+        classpath "org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}",
+                  "info.solidsoft.gradle.pitest:gradle-pitest-plugin:1.5.1"
     }
 }
 
 plugins {
-    id "com.jfrog.artifactory" version "4.9.0"
+    id "com.jfrog.artifactory" version "4.16.0"
     id "org.sonarqube" version "2.6.2"
     id "com.github.hierynomus.license" version "0.15.0"
 }
@@ -37,6 +38,7 @@ apply plugin: 'com.jfrog.artifactory'
 apply plugin: 'maven-publish'
 apply plugin: 'checkstyle'
 apply plugin: 'project-report'
+apply plugin: 'info.solidsoft.pitest'
 
 checkstyle {
     toolVersion "8.8"
@@ -125,6 +127,8 @@ dependencies {
     compile group: "com.jda.dct", name: "app", version: "${depVersion}", changing: true
     compile group: "com.jda.dct", name: "core", version: "${depVersion}", changing: true
     compile group: "com.jda.dct", name: "push-notification", version: "${depVersion}", changing: true
+    compile group: 'com.jda.luminate', name: 'swagger-doc', version: "${platformVersion}", changing: true
+
 
     compile group: 'org.elasticsearch', name: 'elasticsearch', version: '6.3.2'
     compile group: 'org.elasticsearch.client', name: 'elasticsearch-rest-client', version: '6.3.2'
@@ -238,6 +242,13 @@ test {
     systemProperties = System.properties
     systemProperty 'spring.profiles.active', 'development'
     jvmArgs('-Djava.util.logging.config.file=none')
+}
+
+pitest {
+    threads = 4
+    outputFormats = ['XML','HTML']
+    useClasspathFile = true
+    timestampedReports = false
 }
 
 license {

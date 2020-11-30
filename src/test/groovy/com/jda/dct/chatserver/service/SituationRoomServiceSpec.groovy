@@ -41,6 +41,7 @@ import com.jda.dct.domain.ProxyTokenMapping
 import com.jda.dct.domain.stateful.PurchaseOrder
 import com.jda.dct.domain.util.StringUtil
 import com.jda.dct.exec.permission.PermissionHelper
+import com.jda.dct.foundation.process.BusinessProcessConfig
 import com.jda.dct.foundation.process.access.DctServiceRestTemplate
 import com.jda.dct.search.SearchConstants
 import com.jda.dct.util.push.NotificationType
@@ -78,6 +79,7 @@ class SituationRoomServiceSpec extends Specification {
     DctServiceRestTemplate dctService
     PermissionHelper permissionHelper
     String umsUri
+    BusinessProcessConfig config
     @Shared
     LocalDocumentStore localDocumentStore
 
@@ -178,6 +180,18 @@ class SituationRoomServiceSpec extends Specification {
         tokenDto.teamId == CHANNEL_TEAM_ID
     }
 
+    def "verify emailID and Username different for long username"() {
+        given: "Initialize userIds"
+        def appUserId1 = "a4b654e9@#%^&*d9b6d2b46d48ee026bfc5f23aea15221777711434rtyei3456123987_AcmeUser1@dcttestllc.onmicrosoft.com"
+        def appUserId2 = "a4b654e9@#%^&*d9b6d2b46d48ee026bfc5f23aea15221777711434rtyei3456123987_AcmeUser2@dcttestllc.onmicrosoft.com"
+        when: "Calling buildNewRemoteUser"
+        initNewSituationRoomService()
+        def remoteUser1 = service.buildNewRemoteUser(appUserId1)
+        def remoteUser2 = service.buildNewRemoteUser(appUserId2)
+        then: "Should get exception"
+        assert remoteUser1.username != remoteUser2.username
+        assert remoteUser1.email != remoteUser2.email
+    }
 
     def "test post message should throw exception if input is null"() {
         given: "Intialize mocks"
@@ -703,7 +717,7 @@ class SituationRoomServiceSpec extends Specification {
         def expectedResponse = "Room can only be removed by Creator"
         mock()
         authContext.getCurrentUser() >> "User2"
-        ChatRoom mockdRoom = Mock(ChatRoom);
+        ChatRoom mockdRoom = Mock(ChatRoom)
         mockdRoom.getCreatedBy() >> "User1"
         roomRepository.findById(_ as String) >> Optional.of(mockdRoom)
         when: "Calling delete channel"
@@ -756,13 +770,97 @@ class SituationRoomServiceSpec extends Specification {
         response.get("deletedRoomId") == roomId
     }
 
+    def "test delete channel should succeed for camelCase userName and created user"() {
+        given:
+        mock()
+        def user = "mRa@dcttestllc.onmicrosoft.com"
+        def roomId = "a5kr3xy6af8gipmw5r47cfzoir"
+
+        authContext.getCurrentUser() >> user
+        ChatRoom mockdRoom = Mock(ChatRoom)
+        mockdRoom.getCreatedBy() >> "MrA@dcttestllc.onmicrosoft.com"
+        mockdRoom.getId() >> roomId
+        roomRepository.findById(_ as String) >> Optional.of(mockdRoom)
+
+        1 * roomRepository.deleteById(_ as String)
+        def ptm1 = proxyTokenMapping(user, "remote_user1", "token1")
+        def ptm2 = proxyTokenMapping("User2", "remote_user2", "token1")
+        tokenRepository.findByAppUserId(user) >> ptm1
+        tokenRepository.findByAppUserId("User2") >> ptm2
+        tokenRepository.save({
+            ProxyTokenMapping ptm -> ptm.getAppUserId() == user ? ptm1 : ptm2
+        });
+        restTemplate.exchange(_ as String, _ as HttpMethod, _ as HttpEntity, Map.class, *_) >>
+                {
+                    args ->
+                        Map body = Maps.newHashMap();
+                        if (args[0].contains("/channels")) {
+                            body.put("status", "OK")
+                            body.put("deletedRoomId", roomId)
+                        }
+                        return mockedResponseEntity(HttpStatus.OK, body)
+                }
+
+
+        when: "Calling remove channel"
+        initNewSituationRoomService()
+        Map<String, Object> response = service.removeChannel(roomId)
+        then: "Should succeed"
+        response != null
+        response.size() == 2
+        response.get("status") == "OK"
+        response.get("deletedRoomId") == roomId
+    }
+
+    def "test delete channel should succeed with same UserName with different cases"() {
+        given:
+        mock()
+        def user = "joan.johnstone@loblaw.ca"
+        def roomId = "a5kr3xy6af8gipmw5r47cfzoir"
+
+        authContext.getCurrentUser() >> user
+        ChatRoom mockdRoom = Mock(ChatRoom)
+        mockdRoom.getCreatedBy() >> "Joan.Johnstone@loblaw.ca"
+        mockdRoom.getId() >> roomId
+        roomRepository.findById(_ as String) >> Optional.of(mockdRoom)
+
+        1 * roomRepository.deleteById(_ as String)
+        def ptm1 = proxyTokenMapping(user, "remote_user1", "token1")
+        def ptm2 = proxyTokenMapping("User2", "remote_user2", "token1")
+        tokenRepository.findByAppUserId(user) >> ptm1
+        tokenRepository.findByAppUserId("User2") >> ptm2
+        tokenRepository.save({
+            ProxyTokenMapping ptm -> ptm.getAppUserId() == user ? ptm1 : ptm2
+        });
+        restTemplate.exchange(_ as String, _ as HttpMethod, _ as HttpEntity, Map.class, *_) >>
+                {
+                    args ->
+                        Map body = Maps.newHashMap();
+                        if (args[0].contains("/channels")) {
+                            body.put("status", "OK")
+                            body.put("deletedRoomId", roomId)
+                        }
+                        return mockedResponseEntity(HttpStatus.OK, body)
+                }
+
+
+        when: "Calling remove channel"
+        initNewSituationRoomService()
+        Map<String, Object> response = service.removeChannel(roomId)
+        then: "Should succeed"
+        response != null
+        response.size() == 2
+        response.get("status") == "OK"
+        response.get("deletedRoomId") == roomId
+    }
+
     def "getting all the channels should return in sorted order"() {
         given:
         mock()
         permissionHelper = Mock(PermissionHelper)
         List<String> permissionList = new ArrayList<>()
         permissionList.add("VIEW")
-        permissionHelper.getPermissions("Situation Room") >> permissionList
+        permissionHelper.getPermissions("Situation Room", _) >> permissionList
         def user = "appUser"
         def participants1 = Sets.newHashSet()
         def participants2 = Sets.newHashSet()
@@ -1345,7 +1443,7 @@ class SituationRoomServiceSpec extends Specification {
         permissionHelper = Mock(PermissionHelper)
         List<String> permissionList = new ArrayList<>()
         permissionList.add("UPDATE")
-        permissionHelper.getPermissions("Situation Room") >> permissionList
+        permissionHelper.getPermissions("Situation Room", _) >> permissionList
         def roomId = "room1"
         def currentUser = "user1"
         authContext.getCurrentUser() >> currentUser
@@ -2182,7 +2280,7 @@ class SituationRoomServiceSpec extends Specification {
         authContext.getCurrentUser() >> "user1"
         ResolveRoomDto resolutionRequestDto = new ResolveRoomDto()
         resolutionRequestDto.resolution = Lists.newArrayList("resolution1")
-        resolutionRequestDto.remark = "thanks";
+        resolutionRequestDto.remark = "thanks"
 
         def entity = new ArrayList();
         entity.add("json1");
@@ -2602,7 +2700,8 @@ class SituationRoomServiceSpec extends Specification {
                 attachmentValidator,
                 documentStoreService,
                 dctService,
-                permissionHelper)
+                permissionHelper,
+                config)
         service.setRestTemplate(restTemplate)
         service.setChannelTeamId(CHANNEL_TEAM_ID)
         service.setMattermostUrl("http://localhost:80/api/v4")
@@ -2624,13 +2723,15 @@ class SituationRoomServiceSpec extends Specification {
         dctService = Mock(DctServiceRestTemplate)
         permissionHelper = Mock(PermissionHelper)
         umsUri = "http://localhost:9090/api/v1/ums/users"
+        config = Mock(BusinessProcessConfig)
+        config.getSubtypeModelMap() >> ["standardPO": "purchaseOrder"]
         mockPermission()
     }
 
     def mockPermission() {
         List<String> permissionList = new ArrayList<>()
         permissionList.add("CREATE")
-        permissionHelper.getPermissions("Situation Room") >> permissionList
+        permissionHelper.getPermissions("Situation Room", _) >> permissionList
     }
 
     def successHttpResponse() {
@@ -3000,6 +3101,27 @@ class SituationRoomServiceSpec extends Specification {
         String userName = service.userName("userName@doman.com", userInfo)
         then:
         userName == "userFirstName"
+    }
+
+    def "test userName having information for camelCase"() {
+
+        given:
+        Optional<String> userInfo
+        JsonArray data = new JsonArray()
+        JsonObject users = new JsonObject()
+        users.addProperty("userName","User.Name@doman.com")
+        users.addProperty("firstName","FirstName")
+        users.addProperty("lastName","LastName")
+        data.add(users)
+        userInfo = Optional.of(data.toString())
+
+        mock()
+
+        when:
+        initNewSituationRoomService();
+        String userName = service.userName("user.name@doman.com", userInfo)
+        then:
+        userName == "FirstName LastName"
     }
 
 

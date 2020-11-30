@@ -7,7 +7,9 @@
  */
 package com.jda.dct.chatservice.service;
 
+import static com.jda.dct.chatservice.constants.ChatRoomConstants.BOUND;
 import static com.jda.dct.chatservice.constants.ChatRoomConstants.DOMAIN_OBJECT_ID;
+import static com.jda.dct.chatservice.constants.ChatRoomConstants.EMPTY;
 import static com.jda.dct.chatservice.constants.ChatRoomConstants.FILTER_BY_USER;
 import static com.jda.dct.chatservice.constants.ChatRoomConstants.FIRST_NAME;
 import static com.jda.dct.chatservice.constants.ChatRoomConstants.LAST_NAME;
@@ -20,6 +22,7 @@ import static com.jda.dct.chatservice.constants.ChatRoomConstants.PATH_PREFIX;
 import static com.jda.dct.chatservice.constants.ChatRoomConstants.PERCENT_SIGN;
 import static com.jda.dct.chatservice.constants.ChatRoomConstants.QUOTATION_MARK;
 import static com.jda.dct.chatservice.constants.ChatRoomConstants.SPACE;
+import static com.jda.dct.chatservice.constants.ChatRoomConstants.SPECIAL_CHARECTER;
 import static com.jda.dct.chatservice.constants.ChatRoomConstants.USER_NAME;
 import static com.jda.dct.chatservice.utils.ChatRoomUtil.buildUrlString;
 
@@ -62,6 +65,7 @@ import com.jda.dct.domain.ProxyTokenMapping;
 import com.jda.dct.domain.exceptions.DctIoException;
 import com.jda.dct.domain.util.StringUtil;
 import com.jda.dct.exec.permission.PermissionHelper;
+import com.jda.dct.foundation.process.BusinessProcessConfig;
 import com.jda.dct.foundation.process.access.DctServiceRestTemplate;
 import com.jda.dct.ignitecaches.springimpl.Tenants;
 import com.jda.dct.search.SearchConstants;
@@ -77,6 +81,7 @@ import com.jda.luminate.security.contexts.AuthContext;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -88,6 +93,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
@@ -154,11 +160,13 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     private DctServiceRestTemplate dctService;
     private PushMessage pushMessage;
     private PermissionHelper permissionHelper;
+    private BusinessProcessConfig config;
 
     @Value("${tenant.umsUserUri}")
     private String umsUri;
 
     private RestTemplate restTemplate = new RestTemplate();
+    private Random random = new Random();
 
     /**
      * Mattermost chat service constructor.
@@ -176,7 +184,8 @@ public class SituationRoomServiceImpl implements SituationRoomService {
                                     @Autowired AttachmentValidator attachmentValidator,
                                     @Autowired DocumentStoreService documentStoreService,
                                     @Autowired DctServiceRestTemplate dctService,
-                                    @Autowired PermissionHelper permissionHelper) {
+                                    @Autowired PermissionHelper permissionHelper,
+                                    @Autowired BusinessProcessConfig config) {
         this.authContext = authContext;
         this.roomRepository = roomRepository;
         this.tokenRepository = tokenRepository;
@@ -187,6 +196,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         this.documentStoreService = documentStoreService;
         this.dctService = dctService;
         this.permissionHelper = permissionHelper;
+        this.config = config;
     }
 
     @PostConstruct
@@ -229,6 +239,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
      * @return Map object, contains response from remote system.
      */
     @Override
+    @Transactional
     public Map<String, Object> postMessage(Map<String, Object> chat) {
         String currentUser = authContext.getCurrentUser();
         validatePostMessageRequest(currentUser, chat);
@@ -337,7 +348,8 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         if (!room.isPresent()) {
             throw new ChatException(ChatException.ErrorCode.ROOM_NOT_EXISTS);
         }
-        AssertUtil.isTrue(room.get().getCreatedBy().equals(currentUser), "Room can only be removed by Creator");
+        AssertUtil.isTrue(room.get().getCreatedBy().equalsIgnoreCase(currentUser),
+                "Room can only be removed by Creator");
     }
 
     /**
@@ -366,6 +378,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
      * @return ChatContext Channel context object
      */
     @Override
+    @Transactional
     public ChatContext getChannelContext(String channelId) {
         AssertUtil.isTrue(getRoomPermission(), "You are not authorized to view Channel Context");
         AssertUtil.isTrue(!StringUtils.isEmpty(channelId), "Channel id can't be null or empty");
@@ -382,7 +395,8 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     }
 
     private boolean getRoomPermission() {
-        List<String> generalRoomPermissions = permissionHelper.getPermissions(SITUATION_ROOM);
+        List<String> generalRoomPermissions = permissionHelper.getPermissions(SITUATION_ROOM,
+                config.getSubtypeModelMap());
         return !CollectionUtils.isEmpty(generalRoomPermissions)
                 && (generalRoomPermissions.contains(PERMISSION_VALUE_CREATE)
                 || generalRoomPermissions.contains(PERMISSION_VALUE_UPDATE)
@@ -390,6 +404,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     }
 
     @Override
+    @Transactional
     public List<ChatContext> getChannels(String by, String type, String requestQueryParam) {
         AssertUtil.isTrue(getRoomPermission(), "You don't have View Room Permission");
         String currentUser = authContext.getCurrentUser();
@@ -862,7 +877,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
             for (JsonElement userJson : val) {
                 JsonObject users = userJson.getAsJsonObject();
                 if (users.has(USER_NAME) && !StringUtils.isEmpty(users.get(USER_NAME))
-                        && users.get(USER_NAME).getAsString().trim().contentEquals(user.trim())) {
+                        && users.get(USER_NAME).getAsString().trim().equalsIgnoreCase(user.trim())) {
                     userName = parseFromJsonElement(users, userName);
                     break;
                 }
@@ -930,7 +945,8 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     }
 
     private void validateChannelCreationRequest(ChatRoomCreateDto request) {
-        List<String> generalRoomPermissions = permissionHelper.getPermissions(SITUATION_ROOM);
+        List<String> generalRoomPermissions = permissionHelper.getPermissions(SITUATION_ROOM,
+                config.getSubtypeModelMap());
         boolean createRoomPermission = !CollectionUtils.isEmpty(generalRoomPermissions)
                 && generalRoomPermissions.contains(PERMISSION_VALUE_CREATE);
         AssertUtil.isTrue(createRoomPermission, "You don't have Create Room Permission");
@@ -944,7 +960,8 @@ public class SituationRoomServiceImpl implements SituationRoomService {
                 "Situation type can't be null or empty");
     }
 
-    private void validatePostMessageRequest(String currentUser, Map<String, Object> request) {
+    @Transactional
+    protected void validatePostMessageRequest(String currentUser, Map<String, Object> request) {
         LOGGER.debug("Validating post message request");
         AssertUtil.notNull(request, "Post message can't be null");
         AssertUtil.notEmpty(request, "Post message can't be empty");
@@ -978,6 +995,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         validateRoomState(roomId, currentUser, "New invitation can't be sent for resolved room");
     }
 
+    @Transactional
     private void validateResolveRoomInputs(String roomId, String currentUser, ResolveRoomDto request) {
         LOGGER.debug("Validating resolve room request");
         roomIdInputValidation(roomId);
@@ -1022,7 +1040,8 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         AssertUtil.isTrue(!StringUtils.isEmpty(roomId), "Room Id can't be null or empty");
     }
 
-    private void validateRoomState(String roomId,
+    @Transactional
+    protected void validateRoomState(String roomId,
                                    String currentUser,
                                    String invalidStatusMsg) {
         Optional<ChatRoom> room = getChatRoomById(roomId);
@@ -1062,7 +1081,8 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         return chatRoom;
     }
 
-    private ChatRoomParticipant removeParticipantInApp(String roomId, String targetUser) {
+    @Transactional
+    protected ChatRoomParticipant removeParticipantInApp(String roomId, String targetUser) {
         Optional<ChatRoom> roomRecord = getChatRoomById(roomId);
         if (!roomRecord.isPresent()) {
             throw new ChatException(ChatException.ErrorCode.INVALID_CHAT_ROOM, roomId);
@@ -1182,7 +1202,8 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         LOGGER.info("User {} added to team {} successfully", remoteUserId, teamId);
     }
 
-    private Map<String, Object> addParticipantsToRoom(String user, String roomId) {
+    @Transactional
+    protected Map<String, Object> addParticipantsToRoom(String user, String roomId) {
         Optional<ChatRoom> roomRecord = getChatRoomById(roomId);
         if (!roomRecord.isPresent()) {
             throw new ChatException(ChatException.ErrorCode.INVALID_CHAT_ROOM, roomId);
@@ -1352,7 +1373,8 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         LOGGER.debug("Chat archived successfully for room {}", getRoomIdFromPostMessage(chat));
     }
 
-    private void updateParticipantOfRooms(List<String> users, String roomId) {
+    @Transactional
+    protected void updateParticipantOfRooms(List<String> users, String roomId) {
         LOGGER.debug("Going to add new participants for room {}", roomId);
         Optional<ChatRoom> record = getChatRoomById(roomId);
         if (!record.isPresent()) {
@@ -1510,8 +1532,11 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         return dto;
     }
 
-    private RemoteUserDto buildNewRemoteUser(String username) {
-        username = username.replace("@", "");
+    protected RemoteUserDto buildNewRemoteUser(String username) {
+        username = username.replaceAll(SPECIAL_CHARECTER,EMPTY);
+        long currentTime = Instant.now().toEpochMilli();
+        String randomValue = String.valueOf(random.nextInt(BOUND));
+        username = randomValue + currentTime + username;
         username = username.length() < MAX_REMOTE_USERNAME_LENGTH
                 ? username : username.substring(0, MAX_REMOTE_USERNAME_LENGTH);
         RemoteUserDto user = new RemoteUserDto();
@@ -1663,6 +1688,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
      * @return List    -- response will be search result in form of chat context object list
      */
     @Override
+    @Transactional
     public List<ChatContext> searchChannels(Map<String, String> requestParams) {
         AssertUtil.isTrue(getRoomPermission(), "You don't have Search Room Permission");
         String currentUser = authContext.getCurrentUser();

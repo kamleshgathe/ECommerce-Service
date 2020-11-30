@@ -3,8 +3,15 @@ FROM openjdk:8
 ARG version 
 ARG app
 
+ADD build/AppServerAgent-4.5.1.23676.zip /tmp/
+RUN mkdir -p /opt/appdynamics/appagent && \
+    unzip -oq /tmp/AppServerAgent-4.5.1.23676.zip -d /opt/appdynamics/appagent && \
+    rm /tmp/AppServerAgent-4.5.1.23676.zip
+
+COPY build/custom-interceptors.xml /opt/appdynamics/appagent/ver4.5.1.23676/conf
+
 COPY /build/libs/${app}-${version}.jar /opt/${app}/service.jar
 
 WORKDIR /opt/${app}
 
-CMD ["/bin/sh", "-c", "java $JAVA_OPTIONS -Djava.util.logging.config.file=none -jar service.jar"]
+CMD ["/bin/sh", "-c", "java $JAVA_OPTIONS -Djava.util.logging.config.file=none -Dappdynamics.agent.uniqueHostId=$(cat /proc/sys/kernel/random/uuid) $APPD_NODE_ARGS $APPD_ARGS -jar service.jar"]

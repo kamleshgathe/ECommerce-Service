@@ -19,10 +19,15 @@ import com.jda.dct.ignitecaches.springimpl.Tenants;
 import com.jda.luminate.common.base.ResponseDataWrapper;
 import com.jda.luminate.ingest.util.InputStreamWrapper;
 import com.jda.luminate.security.contexts.AuthContext;
+
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
+
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import javax.validation.constraints.NotEmpty;
+
 import org.apache.poi.ss.formula.functions.T;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.InputStreamResource;
@@ -43,6 +48,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/chat")
+@Api(tags = "Chat API's", value = "kpiApis",
+        description = "Provides API's for accessing chat functionalities.")
 public class ChatRoomController {
 
 
@@ -68,6 +75,7 @@ public class ChatRoomController {
     @GetMapping(value = "/token",
         consumes = MediaType.APPLICATION_JSON_VALUE,
         produces = MediaType.APPLICATION_JSON_VALUE)
+    @ApiOperation(value = "Returns the token for the user and the team.")
     public ResponseEntity<TokenDto> getAccessToken() {
         Tenants.setCurrent(authContext.getCurrentTid());
         return ResponseEntity.ok(service.getSessionToken());
@@ -82,6 +90,7 @@ public class ChatRoomController {
     @GetMapping(value = "/channels",
         consumes = MediaType.ALL_VALUE,
         produces = MediaType.APPLICATION_JSON_VALUE)
+    @ApiOperation(value = "Returns the list of channels for the user, objectType and the ids.")
     public ResponseEntity<List<ChatContext>> getChannels(
             @RequestParam(value = "by", required = false) String by,
             @RequestParam(value = "type", required = false) String type,
@@ -94,6 +103,7 @@ public class ChatRoomController {
     @PostMapping(value = "/posts",
         consumes = MediaType.APPLICATION_JSON_VALUE,
         produces = MediaType.APPLICATION_JSON_VALUE)
+    @ApiOperation(value = "Add a new post to the chanel.")
     public ResponseEntity<Map<String, Object>> postMessageToChannel(@RequestBody Map<String, Object> request) {
         Tenants.setCurrent(authContext.getCurrentTid());
         return ResponseEntity.ok(service.postMessage(request));
@@ -107,6 +117,7 @@ public class ChatRoomController {
     @PostMapping(value = "/channels",
         consumes = MediaType.APPLICATION_JSON_VALUE,
         produces = MediaType.APPLICATION_JSON_VALUE)
+    @ApiOperation(value = "Adds a new chat room.")
     public ResponseEntity<Map<String, Object>> addNewChannel(@RequestBody ChatRoomCreateDto request) {
 
         Tenants.setCurrent(authContext.getCurrentTid());
@@ -120,6 +131,7 @@ public class ChatRoomController {
      */
     @DeleteMapping(value = "/channels/{channel_id}",
             produces = MediaType.APPLICATION_JSON_VALUE)
+    @ApiOperation(value = "Delete a chat room.")
     public ResponseEntity<Map<String, Object>> deleteChannel(@PathVariable("channel_id") String channelId) {
 
         Tenants.setCurrent(authContext.getCurrentTid());
@@ -129,6 +141,7 @@ public class ChatRoomController {
     @PostMapping(value = "/channels/{channel_id}/members",
         consumes = MediaType.APPLICATION_JSON_VALUE,
         produces = MediaType.APPLICATION_JSON_VALUE)
+    @ApiOperation(value = "Add users to the chat room.")
     public ResponseEntity<Map<String, Object>> inviteUsers(@PathVariable("channel_id") String channelId,
                                                            @RequestBody AddUserToRoomDto request) {
         Tenants.setCurrent(authContext.getCurrentTid());
@@ -138,6 +151,7 @@ public class ChatRoomController {
     @PostMapping(value = "/channels/{channel_id}/members/{user_id}/delete",
         consumes = MediaType.ALL_VALUE,
         produces = MediaType.APPLICATION_JSON_VALUE)
+    @ApiOperation(value = "Remove the user from a chat room.")
     public ResponseEntity<Map<String, Object>> removeUser(@PathVariable("channel_id") String channelId,
                                                           @PathVariable("user_id") String userId) {
         Tenants.setCurrent(authContext.getCurrentTid());
@@ -147,6 +161,7 @@ public class ChatRoomController {
     @GetMapping(value = "/channels/{channel_id}/context",
         consumes = MediaType.ALL_VALUE,
         produces = MediaType.APPLICATION_JSON_VALUE)
+    @ApiOperation(value = "Returns the context from a chat room.")
     public ResponseEntity<ChatContext> getChatRoomContext(@PathVariable("channel_id") String channelId) {
         Tenants.setCurrent(authContext.getCurrentTid());
         return ResponseEntity.ok(service.getChannelContext(channelId));
@@ -155,6 +170,7 @@ public class ChatRoomController {
     @PutMapping(value = "/channels/{channel_id}/join",
         consumes = MediaType.ALL_VALUE,
         produces = MediaType.APPLICATION_JSON_VALUE)
+    @ApiOperation(value = "Join the chat room.")
     public ResponseEntity<Map<String, Object>> join(@PathVariable("channel_id") String channelId) {
         Tenants.setCurrent(authContext.getCurrentTid());
         return ResponseEntity.ok(service.acceptInvitation(channelId));
@@ -163,6 +179,7 @@ public class ChatRoomController {
     @GetMapping(value = "/channels/unReadCount",
         consumes = MediaType.ALL_VALUE,
         produces = MediaType.APPLICATION_JSON_VALUE)
+    @ApiOperation(value = "Returns the unReadCount of the chat rooms for the user.")
     public ResponseEntity<List<Map<String, Object>>> getUserUnreadCount() {
         Tenants.setCurrent(authContext.getCurrentTid());
         return ResponseEntity.ok(service.getUnreadCount());
@@ -171,6 +188,7 @@ public class ChatRoomController {
     @PostMapping(value = "/channels/{channel_id}/resolve",
         consumes = MediaType.APPLICATION_JSON_VALUE,
         produces = MediaType.APPLICATION_JSON_VALUE)
+    @ApiOperation(value = "Resolve the chat room.")
     public ResponseEntity<ChatContext> resolve(@PathVariable("channel_id") String roomId,
                                                @RequestBody ResolveRoomDto resolveRequest) {
         Tenants.setCurrent(authContext.getCurrentTid());
@@ -180,6 +198,7 @@ public class ChatRoomController {
     @PutMapping(value = "/channels/readResolved",
             consumes = MediaType.ALL_VALUE,
             produces = MediaType.APPLICATION_JSON_VALUE)
+    @ApiOperation(value = "Marks the resolved chat rooms as read.")
     public ResponseEntity<Map<String, Object>> readResolvedChannel() {
         Tenants.setCurrent(authContext.getCurrentTid());
         return ResponseEntity.ok(service.readResolvedChannel());
@@ -194,6 +213,7 @@ public class ChatRoomController {
      */
     @GetMapping(value = "/channels/search",
             produces = MediaType.APPLICATION_JSON_VALUE)
+    @ApiOperation(value = "Search the chat rooms for the given text.")
     public ResponseEntity<List<ChatContext>> searchChannels(
             @RequestParam Map<String, String> requestParams) {
         Tenants.setCurrent(authContext.getCurrentTid());
@@ -206,6 +226,7 @@ public class ChatRoomController {
 
     @PostMapping(value = "/channels/{channel_id}/uploadAttachment",
             produces = MediaType.APPLICATION_JSON_VALUE)
+    @ApiOperation(value = "Add an attachment to the chat room.")
     public ResponseEntity<ResponseDataWrapper<Attachment>> upload(@PathVariable("channel_id") String roomId,
                                            @RequestParam(value = "file", required = false) MultipartFile file,
                                            @RequestParam(value = "comment", required = false) String comment) {
@@ -219,6 +240,7 @@ public class ChatRoomController {
      * This method helps to download attachment for a particular ChatRoom.
      */
     @GetMapping(value = "/channels/{channel_id}/attachments/{documentId}")
+    @ApiOperation(value = "Download an attachment from a chat room.")
     public ResponseEntity<InputStreamResource> downloadAttachment(@PathVariable("channel_id") String roomId,
                                                                   @PathVariable final String documentId)
             throws IOException {
@@ -241,6 +263,7 @@ public class ChatRoomController {
      */
     @DeleteMapping(value = "/channels/{channel_id}/attachments/{documentId}",
             produces = MediaType.APPLICATION_JSON_VALUE)
+    @ApiOperation(value = "Delete the attachment from a chat room.")
     public ResponseEntity<ResponseDataWrapper<T>> deleteAttachment(
             @NotEmpty @PathVariable("channel_id") String channelId,
             @NotEmpty @PathVariable String documentId) throws IOException {
