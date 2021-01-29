@@ -38,6 +38,7 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
     "com.jda.dct.foundation.process",
     "com.jda.dct.ignitecaches.autoconfig",
     "com.jda.dct.ignitecaches.springimpl",
+    "com.jda.dct.ignite.compute",
     "com.jda.dct.foundation.tenantutils",
     "com.jda.dct.exec.lib.actions",
     "com.jda.dct.domain.util",
