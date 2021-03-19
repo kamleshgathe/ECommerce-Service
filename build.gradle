@@ -1,7 +1,7 @@
 buildscript {
     ext {
 
-        springBootVersion = '2.3.9.RELEASE'
+        springBootVersion = '2.2.8.RELEASE'
     }
     repositories {
         maven {
@@ -84,7 +84,7 @@ configurations {
             eachDependency {
                 drd ->
                     if (drd.requested.group == 'org.springframework.kafka') {
-                        drd.useVersion '2.6.7'
+                        drd.useVersion '2.2.4.RELEASE'
                     }
             }
             cacheChangingModulesFor 0, 'seconds'
