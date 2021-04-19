@@ -12,6 +12,10 @@
         <appender-ref ref="STDOUT" />
     </root>
 
+    <logger name="com.jda" level="warn" additivity="false">
+        <appender-ref ref="STDOUT" />
+    </logger>
+
     <include optional="true" file="/jda/dct/config/transportation-service/logback_override.xml"/>
 
 </configuration>
