@@ -21,13 +21,13 @@ buildscript {
 
 plugins {
     id "com.jfrog.artifactory" version "4.16.0"
-    id "org.sonarqube" version "2.6.2"
-    id "com.github.hierynomus.license" version "0.15.0"
+    id "org.sonarqube" version "3.2.0"
+//    id "com.github.hierynomus.license" version "0.15.0"
 }
 
 
 apply plugin: 'groovy'
-apply plugin: 'maven'
+apply plugin: 'java-library'
 apply plugin: 'org.springframework.boot'
 apply plugin: 'io.spring.dependency-management'
 apply plugin: 'jacoco'
@@ -36,6 +36,12 @@ apply plugin: 'maven-publish'
 apply plugin: 'checkstyle'
 apply plugin: 'project-report'
 apply plugin: 'info.solidsoft.pitest'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(14)
+    }
+}
 
 checkstyle {
     toolVersion "8.8"
@@ -105,37 +111,38 @@ repositories {
 
 
 dependencies {
-    compile group: 'org.codehaus.groovy', name: 'groovy-all', version: '2.5.6'
-    compile 'org.springframework.data:spring-data-commons'
-    compile 'org.springframework.boot:spring-boot-starter-web'
-    compile 'org.springframework.boot:spring-boot-starter-actuator'
-    compile group: "com.jda.dct", name: "toys", version: "${depVersion}", changing: true
-    compile group: "com.jda.dct", name: "igniteconfig", version: "${depVersion}", changing: true
-    compile group: "com.jda.dct", name: "persist", version: "${depVersion}", changing: true
-    compile group: "com.jda.dct", name: "tenantutils", version: "${depVersion}", changing: true
-    compile group: "com.jda.dct", name: "kafkaclient", version: "${depVersion}", changing: true
-    compile group: "com.jda.dct", name: "search", version: "${depVersion}", changing: true
-    compile group: "com.jda.dct", name: "ingest", version: "${depVersion}", changing: true
-    compile group: "com.jda.dct", name: "app", version: "${depVersion}", changing: true
-    compile group: "com.jda.dct", name: "core", version: "${depVersion}", changing: true
-    compile group: "com.jda.dct", name: "push-notification", version: "${depVersion}", changing: true
-    compile group: 'com.jda.luminate', name: 'swagger-doc', version: "${platformVersion}", changing: true
-    compile group: 'org.elasticsearch', name: 'elasticsearch', version: '6.3.2'
-    compile group: 'org.elasticsearch.client', name: 'elasticsearch-rest-client', version: '6.3.2'
-    compile group: 'org.elasticsearch.client', name: 'elasticsearch-rest-high-level-client', version: '6.3.2'
-    compile 'com.jsoniter:jsoniter:0.9.19'
+    def excludeGroovyAll = { exclude group: 'org.codehaus.groovy'}
+    implementation localGroovy()
+    api 'org.springframework.data:spring-data-commons'
+    api 'org.springframework.boot:spring-boot-starter-web'
+    api 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation group: "com.jda.dct", name: "toys", version: "${depVersion}", changing: true, excludeGroovyAll
+    implementation group: "com.jda.dct", name: "igniteconfig", version: "${depVersion}", changing: true, excludeGroovyAll
+    implementation group: "com.jda.dct", name: "persist", version: "${depVersion}", changing: true, excludeGroovyAll
+    implementation group: "com.jda.dct", name: "tenantutils", version: "${depVersion}", changing: true, excludeGroovyAll
+    implementation group: "com.jda.dct", name: "kafkaclient", version: "${depVersion}", changing: true, excludeGroovyAll
+    implementation group: "com.jda.dct", name: "search", version: "${depVersion}", changing: true, excludeGroovyAll
+    implementation group: "com.jda.dct", name: "ingest", version: "${depVersion}", changing: true, excludeGroovyAll
+    implementation group: "com.jda.dct", name: "app", version: "${depVersion}", changing: true, excludeGroovyAll
+    implementation group: "com.jda.dct", name: "core", version: "${depVersion}", changing: true, excludeGroovyAll
+    implementation group: "com.jda.dct", name: "push-notification", version: "${depVersion}", changing: true, excludeGroovyAll
+    implementation group: 'com.jda.luminate', name: 'swagger-doc', version: "${platformVersion}", changing: true, excludeGroovyAll
+    api group: 'org.elasticsearch', name: 'elasticsearch', version: '6.3.2'
+    api group: 'org.elasticsearch.client', name: 'elasticsearch-rest-client', version: '6.3.2'
+    api group: 'org.elasticsearch.client', name: 'elasticsearch-rest-high-level-client', version: '6.3.2'
+    api 'com.jsoniter:jsoniter:0.9.19'
     zip group: 'com.jda.dct', name: 'cicd', version: '0.0.1-SNAPSHOT', classifier: 'appdynamics-container-config', ext: 'zip'
-    runtime group: 'org.springframework.boot', name: 'spring-boot-starter-actuator'
-    runtime group: 'org.mariadb.jdbc', name: 'mariadb-java-client', version: '2.4.0'
-    runtime group: 'net.bytebuddy', name: 'byte-buddy', version: '1.10.2'
-    testCompile 'org.mockito:mockito-core'
-    testCompile 'org.springframework.boot:spring-boot-starter-test'
-    testCompile 'junit:junit'
+    runtimeOnly group: 'org.springframework.boot', name: 'spring-boot-starter-actuator'
+    runtimeOnly group: 'org.mariadb.jdbc', name: 'mariadb-java-client', version: '2.4.0'
+    runtimeOnly group: 'net.bytebuddy', name: 'byte-buddy', version: '1.10.2'
+    testImplementation 'org.mockito:mockito-core'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'junit:junit'
     // mandatory dependencies for using Spock
-    testCompile "org.spockframework:spock-core:1.1-groovy-2.4"
+    testImplementation group: 'org.spockframework', name: 'spock-core', version: '2.0-M5-groovy-3.0', excludeGroovyAll
     // optional dependencies for using Spock
-    testRuntime "net.bytebuddy:byte-buddy:1.6.5"          // allows mocking of classes (in addition to interfaces)
-    testCompile 'org.spockframework:spock-spring:1.1-groovy-2.4'
+    testRuntimeOnly "net.bytebuddy:byte-buddy:1.6.5"          // allows mocking of classes (in addition to interfaces)
+    testImplementation group: 'org.spockframework', name: 'spock-spring', version: '2.0-M5-groovy-3.0', excludeGroovyAll
 }
 
 jacocoTestReport {
@@ -232,11 +239,11 @@ pitest {
     timestampedReports = false
 }
 
-license {
-    ext.year = Calendar.getInstance().get(Calendar.YEAR)
-    includes(["**/*.java", "**/*.groovy"])
-}
-classes.dependsOn(licenseFormat)
+//license {
+//    ext.year = Calendar.getInstance().get(Calendar.YEAR)
+//    includes(["**/*.java", "**/*.groovy"])
+//}
+//classes.dependsOn(licenseFormat)
 
 bootJar.dependsOn unzip
 jar.enabled = true
