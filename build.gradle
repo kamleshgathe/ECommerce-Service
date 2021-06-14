@@ -22,7 +22,7 @@ buildscript {
 plugins {
     id "com.jfrog.artifactory" version "4.16.0"
     id "org.sonarqube" version "3.2.0"
-//    id "com.github.hierynomus.license" version "0.15.0"
+    id "com.github.hierynomus.license" version "0.16.1"
 }
 
 
@@ -37,11 +37,8 @@ apply plugin: 'checkstyle'
 apply plugin: 'project-report'
 apply plugin: 'info.solidsoft.pitest'
 
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(14)
-    }
-}
+sourceCompatibility = JavaVersion.VERSION_14
+targetCompatibility = JavaVersion.VERSION_14
 
 checkstyle {
     toolVersion "8.8"
@@ -130,18 +127,19 @@ dependencies {
     api group: 'org.elasticsearch', name: 'elasticsearch', version: '6.3.2'
     api group: 'org.elasticsearch.client', name: 'elasticsearch-rest-client', version: '6.3.2'
     api group: 'org.elasticsearch.client', name: 'elasticsearch-rest-high-level-client', version: '6.3.2'
-    api 'com.jsoniter:jsoniter:0.9.19'
+    api 'com.jsoniter:jsoniter:0.9.23'
     zip group: 'com.jda.dct', name: 'cicd', version: '0.0.1-SNAPSHOT', classifier: 'appdynamics-container-config', ext: 'zip'
     runtimeOnly group: 'org.springframework.boot', name: 'spring-boot-starter-actuator'
     runtimeOnly group: 'org.mariadb.jdbc', name: 'mariadb-java-client', version: '2.4.0'
-    runtimeOnly group: 'net.bytebuddy', name: 'byte-buddy', version: '1.10.2'
-    testImplementation 'org.mockito:mockito-core'
+    runtimeOnly group: 'net.bytebuddy', name: 'byte-buddy', version: '1.11.1'
+    testImplementation group: 'org.mockito', name: 'mockito-core', version: '3.7.0'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
-    testImplementation 'junit:junit'
+    testImplementation group: 'junit', name: 'junit', version: '4.13.2'
     // mandatory dependencies for using Spock
     testImplementation group: 'org.spockframework', name: 'spock-core', version: '2.0-M5-groovy-3.0', excludeGroovyAll
     // optional dependencies for using Spock
-    testRuntimeOnly "net.bytebuddy:byte-buddy:1.6.5"          // allows mocking of classes (in addition to interfaces)
+    testRuntimeOnly "net.bytebuddy:byte-buddy:1.11.1"         // allows mocking of classes (in addition to interfaces)
+    testImplementation group: 'org.spockframework', name: 'spock-junit4', version: '2.0-M5-groovy-3.0'
     testImplementation group: 'org.spockframework', name: 'spock-spring', version: '2.0-M5-groovy-3.0', excludeGroovyAll
 }
 
@@ -222,14 +220,15 @@ bootRun {
     classpath = classpathJar.outputs.files
     systemProperties = System.properties
     systemProperty 'spring.profiles.active', 'development'
-    jvmArgs('-Djava.util.logging.config.file=none')
+    jvmArgs('-Djava.util.logging.config.file=none', '--illegal-access=warn')
 }
 
 
 test {
+    useJUnitPlatform()
     systemProperties = System.properties
     systemProperty 'spring.profiles.active', 'development'
-    jvmArgs('-Djava.util.logging.config.file=none')
+    jvmArgs('-Djava.util.logging.config.file=none', '--illegal-access=warn')
 }
 
 pitest {
@@ -239,11 +238,11 @@ pitest {
     timestampedReports = false
 }
 
-//license {
-//    ext.year = Calendar.getInstance().get(Calendar.YEAR)
-//    includes(["**/*.java", "**/*.groovy"])
-//}
-//classes.dependsOn(licenseFormat)
+license {
+    ext.year = Calendar.getInstance().get(Calendar.YEAR)
+    includes(["**/*.java", "**/*.groovy"])
+}
+classes.dependsOn(licenseFormat)
 
 bootJar.dependsOn unzip
 jar.enabled = true
