@@ -12,40 +12,28 @@ import com.google.common.collect.Maps
 import com.google.common.collect.Sets
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
-import com.jda.dct.chatservice.constants.ChatRoomConstants
 import com.jda.dct.app.constants.AttachmentConstants
 import com.jda.dct.app.exception.AttachmentException
+import com.jda.dct.chatservice.constants.ChatRoomConstants
 import com.jda.dct.chatservice.domainreader.EntityReaderFactory
-import com.jda.dct.chatservice.dto.upstream.AddUserToRoomDto
-import com.jda.dct.chatservice.dto.upstream.ChatContext
-import com.jda.dct.chatservice.dto.upstream.ChatRoomCreateDto
-import com.jda.dct.chatservice.dto.upstream.ResolveRoomDto
-import com.jda.dct.chatservice.dto.upstream.TokenDto
+import com.jda.dct.chatservice.dto.upstream.*
 import com.jda.dct.chatservice.exception.ChatException
 import com.jda.dct.chatservice.exception.InvalidChatRequest
 import com.jda.dct.chatservice.repository.ChatRoomParticipantRepository
 import com.jda.dct.chatservice.repository.ProxyTokenMappingRepository
 import com.jda.dct.chatservice.repository.SituationRoomRepository
+import com.jda.dct.chatservice.service.EmailService
 import com.jda.dct.chatservice.service.SituationRoomServiceImpl
 import com.jda.dct.chatservice.service.UniqueRoomNameGenerator
+import com.jda.dct.chatservice.service.impl.EmailServiceImpl
 import com.jda.dct.chatservice.utils.ChatRoomUtil
-import com.jda.dct.domain.Attachment
-import com.jda.dct.domain.ChatRoom
-import com.jda.dct.domain.ChatRoomParticipant
-import com.jda.dct.domain.ChatRoomParticipantStatus
-import com.jda.dct.domain.ChatRoomResolution
-import com.jda.dct.domain.ChatRoomStatus
-import com.jda.dct.domain.MessageContent
-import com.jda.dct.domain.MessagePayload
-import com.jda.dct.domain.ProxyTokenMapping
-import com.jda.dct.domain.stateful.PurchaseOrder
+import com.jda.dct.domain.*
 import com.jda.dct.domain.util.StringUtil
 import com.jda.dct.exec.permission.PermissionHelper
 import com.jda.dct.foundation.process.BusinessProcessConfig
 import com.jda.dct.foundation.process.access.DctServiceRestTemplate
+import com.jda.dct.foundation.process.access.UserCache
 import com.jda.dct.search.SearchConstants
-import com.jda.dct.util.push.NotificationType
-import com.jda.dct.util.push.PushMessage
 import com.jda.luminate.ingest.rest.services.attachments.AttachmentValidator
 import com.jda.luminate.ingest.util.InputStreamWrapper
 import com.jda.luminate.io.documentstore.DocumentStoreService
@@ -82,9 +70,13 @@ class SituationRoomServiceSpec extends Specification {
     BusinessProcessConfig config
     @Shared
     LocalDocumentStore localDocumentStore
-
+    @Shared
+    EmailService emailService
+    @Shared
+    UserCache userCache
     @Subject
     SituationRoomServiceImpl service;
+
 
     def "test get token expect exception if current user is null"() {
         given:
@@ -2701,7 +2693,7 @@ class SituationRoomServiceSpec extends Specification {
                 documentStoreService,
                 dctService,
                 permissionHelper,
-                config)
+                config, emailService, userCache)
         service.setRestTemplate(restTemplate)
         service.setChannelTeamId(CHANNEL_TEAM_ID)
         service.setMattermostUrl("http://localhost:80/api/v4")
@@ -2726,6 +2718,8 @@ class SituationRoomServiceSpec extends Specification {
         config = Mock(BusinessProcessConfig)
         config.getSubtypeModelMap() >> ["standardPO": "purchaseOrder"]
         mockPermission()
+        emailService = Mock(EmailServiceImpl)
+        userCache = Mock(UserCache)
     }
 
     def mockPermission() {
