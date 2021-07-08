@@ -123,6 +123,7 @@ dependencies {
     implementation group: "com.jda.dct", name: "app", version: "${depVersion}", changing: true, excludeGroovyAll
     implementation group: "com.jda.dct", name: "core", version: "${depVersion}", changing: true, excludeGroovyAll
     implementation group: "com.jda.dct", name: "push-notification", version: "${depVersion}", changing: true, excludeGroovyAll
+    implementation group: "com.jda.dct", name: "email", version: "${depVersion}", changing: true, excludeGroovyAll
     implementation group: 'com.jda.luminate', name: 'swagger-doc', version: "${platformVersion}", changing: true, excludeGroovyAll
     api group: 'org.elasticsearch', name: 'elasticsearch', version: '6.3.2'
     api group: 'org.elasticsearch.client', name: 'elasticsearch-rest-client', version: '6.3.2'
