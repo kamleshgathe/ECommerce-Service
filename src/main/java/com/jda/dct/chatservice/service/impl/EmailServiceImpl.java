@@ -45,9 +45,10 @@ public class EmailServiceImpl implements EmailService {
      */
     @Override
     @Async("emailThreadPoolTaskExecutor")
-    public boolean sendSituationRoomEmailNotification(EmailParticipantsDto emailParticipants, EmailTemplateEnum emailTemplateEnum) {
+    public boolean sendSituationRoomEmailNotification(EmailParticipantsDto emailParticipants,
+                                                      EmailTemplateEnum emailTemplateEnum) {
         String emailSubject = null;
-        switch (emailTemplateEnum){
+        switch (emailTemplateEnum) {
             case OPEN_SITUATION_ROOM:
                 emailSubject = String.format(OPEN_SITUATION_ROOM_SUBJECT_TEMPLATE, emailParticipants.getInviteeFullname());
                 break;
@@ -59,7 +60,8 @@ public class EmailServiceImpl implements EmailService {
         return sendEmailNotification(emailParticipants, emailSubject, emailTemplateEnum);
     }
 
-    private boolean sendEmailNotification(EmailParticipantsDto emailParticipants, String emailSubject, EmailTemplateEnum templateEnum) {
+    private boolean sendEmailNotification(EmailParticipantsDto emailParticipants, String emailSubject,
+                                          EmailTemplateEnum templateEnum) {
         LOGGER.info("sendEmailNotification with subject: {}, template: {}, lct url: {}",
                 emailSubject, templateEnum.getTemplateName(), lctUrl);
         String templateName = templateEnum.getTemplateName();

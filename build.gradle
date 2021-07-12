@@ -97,6 +97,7 @@ configurations {
 }
 
 repositories {
+    mavenLocal()
     maven {
         url "${artifactoryContextUrl}/jda-dev-repositories"
         credentials {

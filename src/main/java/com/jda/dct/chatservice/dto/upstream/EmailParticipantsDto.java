@@ -15,7 +15,15 @@ public class EmailParticipantsDto {
     private String creatorFullname;
     private List<ParticipantProfileDto> receivers;
 
-    public EmailParticipantsDto(String roomName, String inviteeFullname, String creatorFullname, List<ParticipantProfileDto> receivers) {
+    /**
+     * Constructor
+     * @param roomName room name
+     * @param inviteeFullname invitee full name
+     * @param creatorFullname chat room creator full name
+     * @param receivers receivers information
+     */
+    public EmailParticipantsDto(String roomName, String inviteeFullname, String creatorFullname,
+                                List<ParticipantProfileDto> receivers) {
         this.roomName = roomName;
         this.inviteeFullname = inviteeFullname;
         this.creatorFullname = creatorFullname;
