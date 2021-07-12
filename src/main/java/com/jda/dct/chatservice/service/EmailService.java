@@ -13,5 +13,6 @@ import com.jda.dct.chatservice.enums.EmailTemplateEnum;
 
 public interface EmailService {
 
-    boolean sendSituationRoomEmailNotification(EmailParticipantsDto emailParticipants, EmailTemplateEnum emailTemplateEnum);
+    boolean sendSituationRoomEmailNotification(EmailParticipantsDto emailParticipants,
+                                               EmailTemplateEnum emailTemplateEnum);
 }

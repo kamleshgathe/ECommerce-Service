@@ -12,7 +12,7 @@ public enum EmailTemplateEnum {
     RESOLVED_SITUATION_ROOM("resolvedRoom");
     private String templateName;
 
-    EmailTemplateEnum(String templateName){
+    EmailTemplateEnum(String templateName) {
         this.templateName = templateName;
     }
 
