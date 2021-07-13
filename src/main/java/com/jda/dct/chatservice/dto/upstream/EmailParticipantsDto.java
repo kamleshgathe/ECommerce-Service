@@ -16,7 +16,7 @@ public class EmailParticipantsDto {
     private List<ParticipantProfileDto> receivers;
 
     /**
-     * Constructor
+     * Constructor.
      * @param roomName room name
      * @param inviteeFullname invitee full name
      * @param creatorFullname chat room creator full name

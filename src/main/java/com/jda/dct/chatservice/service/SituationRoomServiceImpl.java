@@ -1207,7 +1207,8 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     }
 
     private void internalSendSituationRoomEmailNotidication(List<String> users, ChatRoom chatRoom,
-                                                            String inviteeFullname, EmailTemplateEnum emailTemplateEnum) {
+                                                            String inviteeFullname,
+                                                            EmailTemplateEnum emailTemplateEnum) {
         List<ParticipantProfileDto> participantProfiles = new ArrayList<>();
         EmailParticipantsDto participant = new EmailParticipantsDto(chatRoom.getRoomName(), null,
                 chatRoom.getUserName(), participantProfiles);
@@ -1858,8 +1859,8 @@ public class SituationRoomServiceImpl implements SituationRoomService {
             FeatureDef situationRoomFeature = rootFeature.getFeatures().get(SITUATION_ROOM_FEATURE_NAME);
             LOGGER.debug("situation room email notification is available check, feature: {}",
                     situationRoomFeature);
-            if (situationRoomFeature != null &&
-                    situationRoomFeature.getAvailableItems().contains(SITUATION_ROOM_EMAIL_NOTIDICATION_ITEM)) {
+            if (situationRoomFeature != null
+                    && situationRoomFeature.getAvailableItems().contains(SITUATION_ROOM_EMAIL_NOTIDICATION_ITEM)) {
                 LOGGER.info("situation room email notification feature is available");
                 if (situationRoomFeature.getDisabledItems().contains(SITUATION_ROOM_EMAIL_NOTIDICATION_ITEM)) {
                     LOGGER.info("situation room email notification feature is available but disabled");

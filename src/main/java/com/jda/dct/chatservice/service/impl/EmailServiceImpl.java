@@ -28,8 +28,8 @@ import org.springframework.stereotype.Service;
 public class EmailServiceImpl implements EmailService {
     private static final Logger LOGGER = LoggerFactory.getLogger(EmailServiceImpl.class);
 
-    private final static String OPEN_SITUATION_ROOM_SUBJECT_TEMPLATE = "%s invited you to collaborate";
-    private final static String RESOLVED_SITUATION_ROOM_SUBJECT_TEMPLATE = "%s has been handled";
+    private static final String OPEN_SITUATION_ROOM_SUBJECT_TEMPLATE = "%s invited you to collaborate";
+    private static final String RESOLVED_SITUATION_ROOM_SUBJECT_TEMPLATE = "%s has been handled";
 
     @Value("${lctUrl:}")
     protected String lctUrl;
@@ -40,7 +40,7 @@ public class EmailServiceImpl implements EmailService {
      * Send open situation room email notification to participant.
      *
      * @param emailParticipants object to store all information which is needed.
-     * @param emailTemplateEnum
+     * @param emailTemplateEnum theme leaf template.
      * @return
      */
     @Override
@@ -50,10 +50,14 @@ public class EmailServiceImpl implements EmailService {
         String emailSubject = null;
         switch (emailTemplateEnum) {
             case OPEN_SITUATION_ROOM:
-                emailSubject = String.format(OPEN_SITUATION_ROOM_SUBJECT_TEMPLATE, emailParticipants.getInviteeFullname());
+                emailSubject = String.format(OPEN_SITUATION_ROOM_SUBJECT_TEMPLATE,
+                        emailParticipants.getInviteeFullname());
                 break;
             case RESOLVED_SITUATION_ROOM:
-                emailSubject = String.format(RESOLVED_SITUATION_ROOM_SUBJECT_TEMPLATE, emailParticipants.getRoomName());
+                emailSubject = String.format(RESOLVED_SITUATION_ROOM_SUBJECT_TEMPLATE,
+                        emailParticipants.getRoomName());
+                break;
+            default:
                 break;
         }
 
@@ -66,7 +70,6 @@ public class EmailServiceImpl implements EmailService {
                 emailSubject, templateEnum.getTemplateName(), lctUrl);
         String templateName = templateEnum.getTemplateName();
         for (ParticipantProfileDto profile : emailParticipants.getReceivers()) {
-            EmailRequest emailRequest = new EmailRequest(profile.getUserId(), emailSubject, templateName);
             Map<String, Object> parameters = new HashMap<>();
             parameters.put("fullName", profile.getFullName());
             parameters.put("inviteeFullName", emailParticipants.getCreatorFullname());
@@ -74,6 +77,7 @@ public class EmailServiceImpl implements EmailService {
             parameters.put("creatorFullName", emailParticipants.getCreatorFullname());
             parameters.put("lctUrl", lctUrl);
 
+            EmailRequest emailRequest = new EmailRequest(profile.getUserId(), emailSubject, templateName);
             baseEmailNotifier.prepareEmailContent(emailRequest, parameters);
             try {
                 baseEmailNotifier.sendEmail(emailRequest);
