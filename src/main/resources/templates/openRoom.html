@@ -1,0 +1,23 @@
+<html>
+<body>
+<style>
+.button {
+    font: bold 11px Arial;
+    text-decoration: none;
+    background-color: #EEEEEE;
+    color: #333333;
+    padding: 2px 6px 2px 6px;
+    border-top: 1px solid #CCCCCC;
+    border-right: 1px solid #333333;
+    border-bottom: 1px solid #333333;
+    border-left: 1px solid #CCCCCC;
+}
+</style>
+Hello <span th:text="${fullName}"/>,
+<p>
+<span th:text="${creatorFullName}"/> has created a situation room - <span th:text="${situationRoomName}"/> and you have been invited to collaborate.
+</p>
+<p><a th:href="@{${lctUrl}}" class="button">JOIN NOW</a></p>
+
+</body>
+</html>
