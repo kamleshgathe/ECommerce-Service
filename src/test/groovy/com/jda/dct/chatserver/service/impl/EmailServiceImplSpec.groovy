@@ -36,10 +36,16 @@ class EmailServiceImplSpec extends Specification {
         ParticipantProfileDto profile2 = new ParticipantProfileDto("id2", "receiver2 full name")
         receivers.add(profile1)
         receivers.add(profile2)
-        EmailParticipantsDto emailParticipants = new EmailParticipantsDto("testRoomName", "invitteeName", "creatorName", receivers)
+        EmailParticipantsDto emailParticipants = new EmailParticipantsDto(roomName, "invitteeName", "creatorName", receivers)
+        EmailTemplateEnum emailTemplateEnum = templateEnum
         when:
-        boolean result = emailService.sendSituationRoomEmailNotification(emailParticipants, EmailTemplateEnum.OPEN_SITUATION_ROOM)
+        boolean result = emailService.sendSituationRoomEmailNotification(emailParticipants, emailTemplateEnum)
         then:
-        result
+            result == true
+
+        where:
+        templateEnum                                | roomName
+        EmailTemplateEnum.OPEN_SITUATION_ROOM       | 'testRoomName1'
+        EmailTemplateEnum.RESOLVED_SITUATION_ROOM   | 'testRoomName2'
     }
 }
