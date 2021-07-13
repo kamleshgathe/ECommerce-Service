@@ -8,6 +8,7 @@
 package com.jda.dct.chatservice.service;
 
 import com.jda.dct.chatservice.dto.upstream.EmailParticipantsDto;
+
 import com.jda.dct.chatservice.enums.EmailTemplateEnum;
 
 public interface EmailService {

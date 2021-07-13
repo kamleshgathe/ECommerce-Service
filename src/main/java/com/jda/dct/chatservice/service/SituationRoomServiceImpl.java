@@ -142,8 +142,8 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     private static final String PERMISSION_VALUE_CREATE = "CREATE";
     private static final String PERMISSION_VALUE_UPDATE = "UPDATE";
     private static final String PERMISSION_VALUE_VIEW = "VIEW";
-    private static final String SITUATION_ROOM_FEATURE_NAME = "situationRoom";
-    private static final String SITUATION_ROOM_EMAIL_NOTIDICATION_ITEM = "emailNotification";
+    protected static final String SITUATION_ROOM_FEATURE_NAME = "situationRoom";
+    protected static final String SITUATION_ROOM_EMAIL_NOTIDICATION_ITEM = "emailNotification";
 
     @Value("${dct.situationRoom.mattermost.host}")
     private String mattermostUrl;
