@@ -43,8 +43,11 @@ import com.jda.dct.chatservice.dto.downstream.TeamDto;
 import com.jda.dct.chatservice.dto.upstream.AddUserToRoomDto;
 import com.jda.dct.chatservice.dto.upstream.ChatContext;
 import com.jda.dct.chatservice.dto.upstream.ChatRoomCreateDto;
+import com.jda.dct.chatservice.dto.upstream.EmailParticipantsDto;
+import com.jda.dct.chatservice.dto.upstream.ParticipantProfileDto;
 import com.jda.dct.chatservice.dto.upstream.ResolveRoomDto;
 import com.jda.dct.chatservice.dto.upstream.TokenDto;
+import com.jda.dct.chatservice.enums.EmailTemplateEnum;
 import com.jda.dct.chatservice.exception.ChatException;
 import com.jda.dct.chatservice.repository.ChatRoomParticipantRepository;
 import com.jda.dct.chatservice.repository.ProxyTokenMappingRepository;
@@ -66,7 +69,10 @@ import com.jda.dct.domain.exceptions.DctIoException;
 import com.jda.dct.domain.util.StringUtil;
 import com.jda.dct.exec.permission.PermissionHelper;
 import com.jda.dct.foundation.process.BusinessProcessConfig;
+import com.jda.dct.foundation.process.BusinessProcesses;
+import com.jda.dct.foundation.process.FeatureDef;
 import com.jda.dct.foundation.process.access.DctServiceRestTemplate;
+import com.jda.dct.foundation.process.access.UserCache;
 import com.jda.dct.ignitecaches.springimpl.Tenants;
 import com.jda.dct.search.SearchConstants;
 import com.jda.dct.util.push.MessageClientType;
@@ -101,6 +107,7 @@ import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 import javax.annotation.PostConstruct;
 import javax.transaction.Transactional;
+
 import org.apache.tika.mime.MimeTypeException;
 import org.assertj.core.util.Lists;
 import org.assertj.core.util.Sets;
@@ -135,6 +142,8 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     private static final String PERMISSION_VALUE_CREATE = "CREATE";
     private static final String PERMISSION_VALUE_UPDATE = "UPDATE";
     private static final String PERMISSION_VALUE_VIEW = "VIEW";
+    protected static final String SITUATION_ROOM_FEATURE_NAME = "situationRoom";
+    protected static final String SITUATION_ROOM_EMAIL_NOTIDICATION_ITEM = "emailNotification";
 
     @Value("${dct.situationRoom.mattermost.host}")
     private String mattermostUrl;
@@ -161,6 +170,8 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     private PushMessage pushMessage;
     private PermissionHelper permissionHelper;
     private BusinessProcessConfig config;
+    private EmailService emailService;
+    private UserCache userCache;
 
     @Value("${tenant.umsUserUri}")
     private String umsUri;
@@ -174,6 +185,8 @@ public class SituationRoomServiceImpl implements SituationRoomService {
      * @param authContext     Auth context.
      * @param roomRepository  Repository for situation room.
      * @param tokenRepository Proxy token repository.
+     * @param emailService    Email Service
+     * @param userCache       User Cache to retrieve and cache user full name
      */
     public SituationRoomServiceImpl(@Autowired AuthContext authContext,
                                     @Autowired SituationRoomRepository roomRepository,
@@ -185,7 +198,9 @@ public class SituationRoomServiceImpl implements SituationRoomService {
                                     @Autowired DocumentStoreService documentStoreService,
                                     @Autowired DctServiceRestTemplate dctService,
                                     @Autowired PermissionHelper permissionHelper,
-                                    @Autowired BusinessProcessConfig config) {
+                                    @Autowired BusinessProcessConfig config,
+                                    @Autowired EmailService emailService,
+                                    @Autowired UserCache userCache) {
         this.authContext = authContext;
         this.roomRepository = roomRepository;
         this.tokenRepository = tokenRepository;
@@ -197,6 +212,8 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         this.dctService = dctService;
         this.permissionHelper = permissionHelper;
         this.config = config;
+        this.emailService = emailService;
+        this.userCache = userCache;
     }
 
     @PostConstruct
@@ -278,6 +295,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         HttpEntity<Map> response = createRemoteServerChatRoom(request);
         String roomId = roomId(response.getBody());
         ChatRoom room = createChatRoomInApp(request, roomId);
+        sendOpenRoomEmailNotificationIfEnabled(request.getParticipants(), room);
         setupParticipantsIfNotBefore(request.getParticipants(), channelTeamId, room);
         addParticipantsToRoom(authContext.getCurrentUser(), roomId);
         return response.getBody();
@@ -364,6 +382,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     public Map<String, Object> inviteUsers(String channel, AddUserToRoomDto request) {
         validateInviteUsersInputs(channel, authContext.getCurrentUser(), request);
         ChatRoom chatRoom = getChatRoom(channel);
+        sendOpenRoomEmailNotificationIfEnabled(request.getUsers(), chatRoom);
         setupParticipantsIfNotBefore(request.getUsers(), channelTeamId, chatRoom);
         updateParticipantOfRooms(request.getUsers(), channel);
         Map<String, Object> status = new HashMap<>();
@@ -592,6 +611,8 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         attachmentDetail.put("message", null);
         attachmentDetail.put("props", propsData);
         postMessageInRemote(attachmentDetail);
+        sendResolvedRoomEmailNotification(resolvedRoom);
+
         LOGGER.info("Attachment metaData saved in Remote successfully for room {} by user {}", roomId, currentUser);
     }
 
@@ -714,7 +735,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         if (attachmentsList == null) {
             throw new AttachmentException(AttachmentException.ErrorCode.ATTACHMENTS_NOT_FOUND, null, documentId);
         }
-        HashMap<String,Object> res = retrieve(attachmentsList, documentId);
+        HashMap<String, Object> res = retrieve(attachmentsList, documentId);
         if (res.containsKey("fileName") && res.containsKey("filePath")
                 && !res.get("filePath").toString().isEmpty() && !res.get("fileName").toString().isEmpty()) {
             filePath = res.get("filePath").toString();
@@ -739,7 +760,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         String filePath;
         String fileName;
         Optional<ChatRoom> record = getChatRoomById(roomId);
-        HashMap<String,Object> res;
+        HashMap<String, Object> res;
         int finalCount;
         validateRoomState(roomId, authContext.getCurrentUser(), "This room has been Resolved."
                 + "File can't be deleted.");
@@ -995,7 +1016,6 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         validateRoomState(roomId, currentUser, "New invitation can't be sent for resolved room");
     }
 
-    @Transactional
     private void validateResolveRoomInputs(String roomId, String currentUser, ResolveRoomDto request) {
         LOGGER.debug("Validating resolve room request");
         roomIdInputValidation(roomId);
@@ -1164,6 +1184,39 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         ExecutorService service = Executors.newSingleThreadExecutor();
         service.submit(() -> pushAlert(users, room));
         service.shutdown();
+    }
+
+    private void sendOpenRoomEmailNotificationIfEnabled(List<String> users, ChatRoom room) {
+        if (!isEmailNotificationEnabled()) {
+            return;
+        }
+
+        String inviteeFullname = userCache.getFullName(authContext.getCurrentUser());
+        internalSendSituationRoomEmailNotidication(users, room, inviteeFullname, EmailTemplateEnum.OPEN_SITUATION_ROOM);
+    }
+
+    private void sendResolvedRoomEmailNotification(ChatRoom chatRoom) {
+        if (!isEmailNotificationEnabled()) {
+            return;
+        }
+
+        List<ChatRoomParticipant> participants = participantRepository.findByRoomId(chatRoom.getId());
+        List<String> users = participants.stream().map(ChatRoomParticipant::getUserName).collect(Collectors.toList());
+
+        internalSendSituationRoomEmailNotidication(users, chatRoom, null, EmailTemplateEnum.RESOLVED_SITUATION_ROOM);
+    }
+
+    private void internalSendSituationRoomEmailNotidication(List<String> users, ChatRoom chatRoom,
+                                                            String inviteeFullname,
+                                                            EmailTemplateEnum emailTemplateEnum) {
+        List<ParticipantProfileDto> participantProfiles = new ArrayList<>();
+        EmailParticipantsDto participant = new EmailParticipantsDto(chatRoom.getRoomName(), null,
+                chatRoom.getUserName(), participantProfiles);
+        for (String userName : users) {
+            participantProfiles.add(new ParticipantProfileDto(userName, userCache.getFullName(userName)));
+        }
+
+        emailService.sendSituationRoomEmailNotification(participant, emailTemplateEnum);
     }
 
     private ProxyTokenMapping setupUser(String appUserId, String teamId) {
@@ -1425,7 +1478,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         context.setParticipants(channelUsers);
         context.setPurpose(room.getDescription());
         context.setSituationType(room.getSituationType());
-        context.setEntity(handleRestrictedEntity(room.getContexts(),room.getEntityType()));
+        context.setEntity(handleRestrictedEntity(room.getContexts(), room.getEntityType()));
         context.setCreatedAt(room.getCreationDate().getTime());
         context.setUpdatedAt(room.getLmd().getTime());
         context.setLastPostAt(room.getLastPostAt().getTime());
@@ -1445,7 +1498,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         if (entityClass != null) {
             List filteredList = new ArrayList<>();
             list = ChatRoomUtil.jsonToObject(entityInString, entityClass);
-            for (Object base: list) {
+            for (Object base : list) {
                 Pair<String, String> modelSubtype = ChatRoomUtil.getModelAndSubtype((DctBoBase) base);
                 if (allowedObject != null && allowedObject.contains(modelSubtype.getSecond())) {
                     permissionHelper.handleRestrictedField((DctBoBase) base);
@@ -1533,7 +1586,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     }
 
     protected RemoteUserDto buildNewRemoteUser(String username) {
-        username = username.replaceAll(SPECIAL_CHARECTER,EMPTY);
+        username = username.replaceAll(SPECIAL_CHARECTER, EMPTY);
         long currentTime = Instant.now().toEpochMilli();
         String randomValue = String.valueOf(random.nextInt(BOUND));
         username = randomValue + currentTime + username;
@@ -1576,7 +1629,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         String userName;
         ChatRoomResolution resolution = new ChatRoomResolution();
         userInfo = this.userData();
-        userName = userName(resolveBy,userInfo);
+        userName = userName(resolveBy, userInfo);
         resolution.setDate(new Date());
         resolution.setRemark(request.getRemark());
         resolution.setResolvedBy(resolveBy);
@@ -1798,4 +1851,27 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         return payload;
     }
 
+    private boolean isEmailNotificationEnabled() {
+        BusinessProcesses businessProcesses = config.getBusinessProcesses(authContext.getCurrentTid());
+        FeatureDef rootFeature = businessProcesses.getConfiguration().getFeature();
+        List<String> itemNames = rootFeature.getAvailableItems();
+        if (itemNames.contains(SITUATION_ROOM_FEATURE_NAME)) {
+            FeatureDef situationRoomFeature = rootFeature.getFeatures().get(SITUATION_ROOM_FEATURE_NAME);
+            LOGGER.debug("situation room email notification is available check, feature: {}",
+                    situationRoomFeature);
+            if (situationRoomFeature != null
+                    && situationRoomFeature.getAvailableItems().contains(SITUATION_ROOM_EMAIL_NOTIDICATION_ITEM)) {
+                LOGGER.info("situation room email notification feature is available");
+                if (situationRoomFeature.getDisabledItems().contains(SITUATION_ROOM_EMAIL_NOTIDICATION_ITEM)) {
+                    LOGGER.info("situation room email notification feature is available but disabled");
+                } else {
+                    return true;
+                }
+            }
+        } else {
+            LOGGER.warn("Situation Room Feature is not available.");
+        }
+
+        return false;
+    }
 }
