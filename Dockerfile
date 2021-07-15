@@ -1,4 +1,4 @@
-FROM openjdk:14
+FROM openjdk:14-alpine
 
 ARG version 
 ARG app
