@@ -1210,7 +1210,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
                                                             String inviteeFullname,
                                                             EmailTemplateEnum emailTemplateEnum) {
         List<ParticipantProfileDto> participantProfiles = new ArrayList<>();
-        EmailParticipantsDto participant = new EmailParticipantsDto(chatRoom.getRoomName(), null,
+        EmailParticipantsDto participant = new EmailParticipantsDto(chatRoom.getRoomName(), inviteeFullname,
                 chatRoom.getUserName(), participantProfiles);
         for (String userName : users) {
             participantProfiles.add(new ParticipantProfileDto(userName, userCache.getFullName(userName)));
