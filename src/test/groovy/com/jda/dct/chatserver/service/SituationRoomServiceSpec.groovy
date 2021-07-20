@@ -12,40 +12,31 @@ import com.google.common.collect.Maps
 import com.google.common.collect.Sets
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
-import com.jda.dct.chatservice.constants.ChatRoomConstants
 import com.jda.dct.app.constants.AttachmentConstants
 import com.jda.dct.app.exception.AttachmentException
+import com.jda.dct.chatservice.constants.ChatRoomConstants
 import com.jda.dct.chatservice.domainreader.EntityReaderFactory
-import com.jda.dct.chatservice.dto.upstream.AddUserToRoomDto
-import com.jda.dct.chatservice.dto.upstream.ChatContext
-import com.jda.dct.chatservice.dto.upstream.ChatRoomCreateDto
-import com.jda.dct.chatservice.dto.upstream.ResolveRoomDto
-import com.jda.dct.chatservice.dto.upstream.TokenDto
+import com.jda.dct.chatservice.dto.upstream.*
 import com.jda.dct.chatservice.exception.ChatException
 import com.jda.dct.chatservice.exception.InvalidChatRequest
 import com.jda.dct.chatservice.repository.ChatRoomParticipantRepository
 import com.jda.dct.chatservice.repository.ProxyTokenMappingRepository
 import com.jda.dct.chatservice.repository.SituationRoomRepository
+import com.jda.dct.chatservice.service.EmailService
 import com.jda.dct.chatservice.service.SituationRoomServiceImpl
 import com.jda.dct.chatservice.service.UniqueRoomNameGenerator
+import com.jda.dct.chatservice.service.impl.EmailServiceImpl
 import com.jda.dct.chatservice.utils.ChatRoomUtil
-import com.jda.dct.domain.Attachment
-import com.jda.dct.domain.ChatRoom
-import com.jda.dct.domain.ChatRoomParticipant
-import com.jda.dct.domain.ChatRoomParticipantStatus
-import com.jda.dct.domain.ChatRoomResolution
-import com.jda.dct.domain.ChatRoomStatus
-import com.jda.dct.domain.MessageContent
-import com.jda.dct.domain.MessagePayload
-import com.jda.dct.domain.ProxyTokenMapping
-import com.jda.dct.domain.stateful.PurchaseOrder
+import com.jda.dct.domain.*
 import com.jda.dct.domain.util.StringUtil
 import com.jda.dct.exec.permission.PermissionHelper
 import com.jda.dct.foundation.process.BusinessProcessConfig
+import com.jda.dct.foundation.process.BusinessProcesses
+import com.jda.dct.foundation.process.ConfigurationDef
+import com.jda.dct.foundation.process.FeatureDef
 import com.jda.dct.foundation.process.access.DctServiceRestTemplate
+import com.jda.dct.foundation.process.access.UserCache
 import com.jda.dct.search.SearchConstants
-import com.jda.dct.util.push.NotificationType
-import com.jda.dct.util.push.PushMessage
 import com.jda.luminate.ingest.rest.services.attachments.AttachmentValidator
 import com.jda.luminate.ingest.util.InputStreamWrapper
 import com.jda.luminate.io.documentstore.DocumentStoreService
@@ -82,9 +73,13 @@ class SituationRoomServiceSpec extends Specification {
     BusinessProcessConfig config
     @Shared
     LocalDocumentStore localDocumentStore
-
+    @Shared
+    EmailService emailService
+    @Shared
+    UserCache userCache
     @Subject
     SituationRoomServiceImpl service;
+
 
     def "test get token expect exception if current user is null"() {
         given:
@@ -693,9 +688,9 @@ class SituationRoomServiceSpec extends Specification {
 
         where:
         roomId | ex
-        null    | InvalidChatRequest
-        ""      | InvalidChatRequest
-        "abcd"  | ChatException
+        null   | InvalidChatRequest
+        ""     | InvalidChatRequest
+        "abcd" | ChatException
     }
 
     def "verify delete room expect exception if room created by different user "() {
@@ -1319,14 +1314,14 @@ class SituationRoomServiceSpec extends Specification {
         then:
         thrown(InvalidChatRequest.class)
         where: "Expect InvalidChatRequest"
-        roomId | resolutionList                                       | remark
-        "1"    | null                                                 | "thanks"
-        "1"    | Lists.newArrayList( "resolution1",  null)            | ""
-        "1"    | Lists.newArrayList( "resolution1",  "")              | "thanks"
-        "1"    | Lists.newArrayList( "", "")                          | null
-        "1"    | Lists.newArrayList("")                               | null
-        null   | Lists.newArrayList( "resolution1",  "resolution2")   | "thanks"
-        "1"    | Lists.newArrayList()                                 | "thanks"
+        roomId | resolutionList                                   | remark
+        "1"    | null                                             | "thanks"
+        "1"    | Lists.newArrayList("resolution1", null)          | ""
+        "1"    | Lists.newArrayList("resolution1", "")            | "thanks"
+        "1"    | Lists.newArrayList("", "")                       | null
+        "1"    | Lists.newArrayList("")                           | null
+        null   | Lists.newArrayList("resolution1", "resolution2") | "thanks"
+        "1"    | Lists.newArrayList()                             | "thanks"
 
     }
 
@@ -1335,7 +1330,7 @@ class SituationRoomServiceSpec extends Specification {
         mock()
         authContext.getCurrentUser() >> "user1"
         ResolveRoomDto request = new ResolveRoomDto()
-        request.resolution = Lists.newArrayList((String)"resolution1")
+        request.resolution = Lists.newArrayList((String) "resolution1")
         request.remark = "thanks";
         roomRepository.findById("1") >> Optional.empty()
         when: "Calling resolve room"
@@ -1545,10 +1540,9 @@ class SituationRoomServiceSpec extends Specification {
         }
         participantRepository.save(_ as ChatRoomParticipant) >> {
             chatRoomParticipant ->
-                if(chatRoomParticipant.userName == authContext.getCurrentUser()) {
+                if (chatRoomParticipant.userName == authContext.getCurrentUser()) {
                     chatRoomParticipant.isResolutionRead == true
-                }
-                else {
+                } else {
                     chatRoomParticipant.isResolutionRead == false
                 }
                 return chatRoomParticipant
@@ -2085,6 +2079,7 @@ class SituationRoomServiceSpec extends Specification {
         response.get(0).getAttachmentName() == file.getOriginalFilename()
 
     }
+
     def "Fail to Upload file for Situation Room due to Document Store exception"() {
         given: "Multipart file to upload"
         mock()
@@ -2106,14 +2101,14 @@ class SituationRoomServiceSpec extends Specification {
         when: "Calling upload function"
         roomRepository.findById(_) >> Optional.of(mockRoom)
         initNewSituationRoomService()
-        localDocumentStore.store(_,_,_) >> {throw new DocumentException(DocumentException.DocumentErrorCode.INVALID_FILE_SIGNATURE, null)}
+        localDocumentStore.store(_, _, _) >> { throw new DocumentException(DocumentException.DocumentErrorCode.INVALID_FILE_SIGNATURE, null) }
         service.upload("1", file, "Test")
 
         then:
-        def ex = thrown (AttachmentException)
+        def ex = thrown(AttachmentException)
         ex.getErrorCode() == AttachmentConstants.DOC_UPLOAD_COMPONENT +
                 "." + AttachmentConstants.SERVICE_DOC_UPLOAD +
-                "." +AttachmentException.ErrorCode.INVALID_SIGNATURE.getCode()
+                "." + AttachmentException.ErrorCode.INVALID_SIGNATURE.getCode()
     }
 
     def "Fail to Upload file as situation room is resolved"() {
@@ -2135,11 +2130,11 @@ class SituationRoomServiceSpec extends Specification {
         def mockRoom = mockedChatRoom("1", bytes, Lists.newArrayList(), "user1", ChatRoomStatus.RESOLVED)
         roomRepository.findById(_) >> Optional.of(mockRoom)
         initNewSituationRoomService()
-        localDocumentStore.store(_,_,_) >> {throw new DocumentException(DocumentException.DocumentErrorCode.INVALID_FILE_SIGNATURE, null)}
+        localDocumentStore.store(_, _, _) >> { throw new DocumentException(DocumentException.DocumentErrorCode.INVALID_FILE_SIGNATURE, null) }
         service.upload("1", file, "Test")
 
         then:
-        def ex = thrown (InvalidChatRequest)
+        def ex = thrown(InvalidChatRequest)
         ex.message == "This room has been Resolved.File can't be Uploaded."
     }
 
@@ -2162,7 +2157,7 @@ class SituationRoomServiceSpec extends Specification {
         def file = new MockMultipartFile("data", "filename.txt",
                 "text/plain", "some data".getBytes())
         when: "Calling upload function"
-        localDocumentStore.store(_,_,_) >> {throw new DocumentException(DocumentException.DocumentErrorCode.INVALID_FILE_SIGNATURE, null)}
+        localDocumentStore.store(_, _, _) >> { throw new DocumentException(DocumentException.DocumentErrorCode.INVALID_FILE_SIGNATURE, null) }
         roomRepository.findById(_) >> Optional.of()
         initNewSituationRoomService()
         service.upload("1", file, "Test")
@@ -2190,7 +2185,7 @@ class SituationRoomServiceSpec extends Specification {
         def file = new MockMultipartFile("data", "filename.txt",
                 "text/plain", "some data".getBytes())
         when: "Calling upload function"
-        localDocumentStore.store(_,_,_) >> {throw new IOException()}
+        localDocumentStore.store(_, _, _) >> { throw new IOException() }
         roomRepository.findById(_) >> new Optional(mockRoom)
         initNewSituationRoomService()
         service.upload("1", file, "Test")
@@ -2226,8 +2221,8 @@ class SituationRoomServiceSpec extends Specification {
         thrown(ChatException)
     }
 
-    def "Get document should be passed with valid inputs if no SR Permission"(){
-        given:"download attachment parameters"
+    def "Get document should be passed with valid inputs if no SR Permission"() {
+        given: "download attachment parameters"
         mock()
         permissionHelper = Mock(PermissionHelper)
         List<String> permissionList = new ArrayList<>()
@@ -2250,16 +2245,16 @@ class SituationRoomServiceSpec extends Specification {
         localDocumentStore.retrieve(_) >> Optional.of(stream)
 
         when: "calling get document API"
-        def mockRoom = mockedChatRoom("1", bytes, Lists.newArrayList(), "user1", ChatRoomStatus.RESOLVED )
+        def mockRoom = mockedChatRoom("1", bytes, Lists.newArrayList(), "user1", ChatRoomStatus.RESOLVED)
         roomRepository.findById(_) >> new Optional(mockRoom)
         initNewSituationRoomService()
         List<Object> attachmentsList = new ArrayList<>()
         Map<String, Object> eachAttachmentMap = new LinkedHashMap<String, Object>()
         Map<String, Object> attachmentMetaData = new LinkedHashMap<String, String>()
-        attachmentMetaData.put("filePath","test")
+        attachmentMetaData.put("filePath", "test")
         eachAttachmentMap.put("attachmentName", "text.txt")
-        eachAttachmentMap.put("attachmentMetaData",attachmentMetaData)
-        eachAttachmentMap.put("id","1")
+        eachAttachmentMap.put("attachmentMetaData", attachmentMetaData)
+        eachAttachmentMap.put("id", "1")
         attachmentsList.add(eachAttachmentMap)
         mockRoom.getAttachments() >> attachmentsList
 
@@ -2269,8 +2264,8 @@ class SituationRoomServiceSpec extends Specification {
         thrown(InvalidChatRequest)
     }
 
-    def "Get document should be passed with valid inputs"(){
-        given:"download attachment parameters"
+    def "Get document should be passed with valid inputs"() {
+        given: "download attachment parameters"
         mock()
         String id = "aa-ship-1"
         String documentId = "1"
@@ -2290,16 +2285,16 @@ class SituationRoomServiceSpec extends Specification {
         localDocumentStore.retrieve(_) >> Optional.of(stream)
 
         when: "calling get document API"
-        def mockRoom = mockedChatRoom("1", bytes, Lists.newArrayList(), "user1", ChatRoomStatus.RESOLVED )
+        def mockRoom = mockedChatRoom("1", bytes, Lists.newArrayList(), "user1", ChatRoomStatus.RESOLVED)
         roomRepository.findById(_) >> new Optional(mockRoom)
         initNewSituationRoomService()
         List<Object> attachmentsList = new ArrayList<>()
         Map<String, Object> eachAttachmentMap = new LinkedHashMap<String, Object>()
         Map<String, Object> attachmentMetaData = new LinkedHashMap<String, String>()
-        attachmentMetaData.put("filePath","test")
+        attachmentMetaData.put("filePath", "test")
         eachAttachmentMap.put("attachmentName", "text.txt")
-        eachAttachmentMap.put("attachmentMetaData",attachmentMetaData)
-        eachAttachmentMap.put("id","1")
+        eachAttachmentMap.put("attachmentMetaData", attachmentMetaData)
+        eachAttachmentMap.put("id", "1")
         attachmentsList.add(eachAttachmentMap)
         mockRoom.getAttachments() >> attachmentsList
 
@@ -2310,8 +2305,8 @@ class SituationRoomServiceSpec extends Specification {
         streamWrapper.getInputStream().close()
     }
 
-    def "Get document should be fail if no SR Permission"(){
-        given:"download attachment parameters"
+    def "Get document should be fail if no SR Permission"() {
+        given: "download attachment parameters"
         mock()
         permissionHelper = Mock(PermissionHelper)
         List<String> permissionList = new ArrayList<>()
@@ -2334,16 +2329,16 @@ class SituationRoomServiceSpec extends Specification {
         localDocumentStore.retrieve(_) >> Optional.of(stream)
 
         when: "calling get document API"
-        def mockRoom = mockedChatRoom("1", bytes, Lists.newArrayList(), "user1", ChatRoomStatus.RESOLVED )
+        def mockRoom = mockedChatRoom("1", bytes, Lists.newArrayList(), "user1", ChatRoomStatus.RESOLVED)
         roomRepository.findById(_) >> new Optional(mockRoom)
         initNewSituationRoomService()
         List<Object> attachmentsList = new ArrayList<>()
         Map<String, Object> eachAttachmentMap = new LinkedHashMap<String, Object>()
         Map<String, Object> attachmentMetaData = new LinkedHashMap<String, String>()
-        attachmentMetaData.put("filePath","test")
+        attachmentMetaData.put("filePath", "test")
         eachAttachmentMap.put("attachmentName", "text.txt")
-        eachAttachmentMap.put("attachmentMetaData",attachmentMetaData)
-        eachAttachmentMap.put("id","1")
+        eachAttachmentMap.put("attachmentMetaData", attachmentMetaData)
+        eachAttachmentMap.put("id", "1")
         attachmentsList.add(eachAttachmentMap)
         mockRoom.getAttachments() >> attachmentsList
 
@@ -2353,8 +2348,8 @@ class SituationRoomServiceSpec extends Specification {
         thrown(InvalidChatRequest)
     }
 
-    def "Failed to download document due to incorrect filename from object"(){
-        given:"download attachment parameters"
+    def "Failed to download document due to incorrect filename from object"() {
+        given: "download attachment parameters"
         mock()
         String id = "aa-ship-1"
         String documentId = "123"
@@ -2372,7 +2367,7 @@ class SituationRoomServiceSpec extends Specification {
 
 
         when: "calling Document API"
-        def mockRoom = mockedChatRoom("123", bytes, Lists.newArrayList(), "user1", ChatRoomStatus.RESOLVED )
+        def mockRoom = mockedChatRoom("123", bytes, Lists.newArrayList(), "user1", ChatRoomStatus.RESOLVED)
         roomRepository.findById(_) >> new Optional(mockRoom)
         initNewSituationRoomService()
         mockRoom.getAttachments() >> mockAtachment1()
@@ -2384,8 +2379,8 @@ class SituationRoomServiceSpec extends Specification {
 
     }
 
-    def "Fail to get document should due to no attachment list in object"(){
-        given:"download attachment parameters"
+    def "Fail to get document should due to no attachment list in object"() {
+        given: "download attachment parameters"
         mock()
         String id = "aa-ship-1"
         String documentId = "123"
@@ -2413,8 +2408,8 @@ class SituationRoomServiceSpec extends Specification {
 
     }
 
-    def "Failed to delete document due to if no SR permission"(){
-        given:"Delete Document parameters"
+    def "Failed to delete document due to if no SR permission"() {
+        given: "Delete Document parameters"
         mock()
         permissionHelper = Mock(PermissionHelper)
         List<String> permissionList = new ArrayList<>()
@@ -2450,8 +2445,8 @@ class SituationRoomServiceSpec extends Specification {
 
     }
 
-    def "Delete document should be passed with valid inputs"(){
-        given:"Delete document"
+    def "Delete document should be passed with valid inputs"() {
+        given: "Delete document"
         mock()
         String id = "aa-ship-1"
         def currentUser = "user1"
@@ -2499,8 +2494,8 @@ class SituationRoomServiceSpec extends Specification {
         return postMap
     }
 
-    def "Failed to delete document due to incorrect filename from object"(){
-        given:"Delete Document parameters"
+    def "Failed to delete document due to incorrect filename from object"() {
+        given: "Delete Document parameters"
         mock()
         String id = "aa-ship-1"
         String documentId = "1"
@@ -2533,8 +2528,8 @@ class SituationRoomServiceSpec extends Specification {
 
     }
 
-    def "Failed to delete document due to room got resolved"(){
-        given:"Delete Document parameters"
+    def "Failed to delete document due to room got resolved"() {
+        given: "Delete Document parameters"
         mock()
         String id = "aa-ship-1"
         String documentId = "1"
@@ -2552,7 +2547,7 @@ class SituationRoomServiceSpec extends Specification {
 
 
         when: "calling Document API"
-        def mockRoom = mockedChatRoom("1", bytes, Lists.newArrayList(), "user1", ChatRoomStatus.RESOLVED )
+        def mockRoom = mockedChatRoom("1", bytes, Lists.newArrayList(), "user1", ChatRoomStatus.RESOLVED)
         roomRepository.findById(_) >> new Optional(mockRoom)
         initNewSituationRoomService()
         mockRoom.getAttachments() >> mockAtachment1()
@@ -2561,11 +2556,10 @@ class SituationRoomServiceSpec extends Specification {
         service.deleteAttachment(id, documentId)
         stream.close()
         then: "InvalidChatRequest Exception thown"
-        def ex = thrown (InvalidChatRequest)
+        def ex = thrown(InvalidChatRequest)
         ex.message == "This room has been Resolved.File can't be deleted."
 
     }
-
 
 
     def "Fail to download file for Situation Room due to wrong Chat id"() {
@@ -2587,14 +2581,14 @@ class SituationRoomServiceSpec extends Specification {
         roomRepository.findById(_) >> new Optional()
         initNewSituationRoomService()
         mockRoom.getAttachments() >> null
-        service.deleteAttachment("1",  "123")
+        service.deleteAttachment("1", "123")
 
         then:
         thrown(ChatException)
     }
 
-    def "Fail to download file for Situation Room due to no attachment"(){
-        given:"Delete document"
+    def "Fail to download file for Situation Room due to no attachment"() {
+        given: "Delete document"
         mock()
         String id = "aa-ship-1"
         String documentId = "1"
@@ -2622,8 +2616,8 @@ class SituationRoomServiceSpec extends Specification {
         thrown(AttachmentException)
     }
 
-    def "Fail to get document due to invalid room"(){
-        given:"download attachment parameters"
+    def "Fail to get document due to invalid room"() {
+        given: "download attachment parameters"
         mock()
         String id = "aa-ship-1"
         String documentId = "123"
@@ -2639,7 +2633,7 @@ class SituationRoomServiceSpec extends Specification {
         String jsonString = ChatRoomUtil.objectToJson(entity);
         byte[] bytes = ChatRoomUtil.objectToByteArray(jsonString);
         when: "calling get document API"
-        def mockRoom = mockedChatRoom("1", bytes, Lists.newArrayList(), "user1", ChatRoomStatus.RESOLVED )
+        def mockRoom = mockedChatRoom("1", bytes, Lists.newArrayList(), "user1", ChatRoomStatus.RESOLVED)
         roomRepository.findById(_) >> new Optional()
         initNewSituationRoomService()
         InputStreamWrapper streamWrapper = service.getDocument(id, documentId)
@@ -2701,7 +2695,7 @@ class SituationRoomServiceSpec extends Specification {
                 documentStoreService,
                 dctService,
                 permissionHelper,
-                config)
+                config, emailService, userCache)
         service.setRestTemplate(restTemplate)
         service.setChannelTeamId(CHANNEL_TEAM_ID)
         service.setMattermostUrl("http://localhost:80/api/v4")
@@ -2715,6 +2709,11 @@ class SituationRoomServiceSpec extends Specification {
         tokenRepository = Mock(ProxyTokenMappingRepository)
         restTemplate = Mock(RestTemplate)
         participantRepository = Mock(ChatRoomParticipantRepository)
+        List<ChatRoomParticipant> chatRoomParticipants = new ArrayList<>()
+        ChatRoomParticipant participant = new ChatRoomParticipant()
+        participant.setUserName("test user1")
+        chatRoomParticipants.add(participant)
+        participantRepository.findByRoomId(_) >> chatRoomParticipants
         entityReaderFactory = Mock(EntityReaderFactory)
         generator = Mock(UniqueRoomNameGenerator)
         attachmentValidator = Mock(AttachmentValidator)
@@ -2723,9 +2722,29 @@ class SituationRoomServiceSpec extends Specification {
         dctService = Mock(DctServiceRestTemplate)
         permissionHelper = Mock(PermissionHelper)
         umsUri = "http://localhost:9090/api/v1/ums/users"
+        BusinessProcesses businessProcesses = new BusinessProcesses()
+        ConfigurationDef configurationDef = new ConfigurationDef()
+        businessProcesses.setConfiguration(configurationDef)
+        FeatureDef feature = new FeatureDef()
+        List<String> rootAvailableFeatures = new ArrayList<>()
+        rootAvailableFeatures.add(SituationRoomServiceImpl.SITUATION_ROOM_FEATURE_NAME)
+        feature.setAvailableItems(rootAvailableFeatures)
+        configurationDef.setFeature(feature)
+        Map<String, FeatureDef> features = new HashMap<>()
+        FeatureDef situationRoomFeature = new FeatureDef()
+        List<String> availableItems = new ArrayList<>()
+        availableItems.add(SituationRoomServiceImpl.SITUATION_ROOM_EMAIL_NOTIDICATION_ITEM)
+        situationRoomFeature.setAvailableItems(availableItems)
+        List<String> disabledItems = new ArrayList<>()
+        situationRoomFeature.setDisabledItems(disabledItems)
+        features.put(SituationRoomServiceImpl.SITUATION_ROOM_FEATURE_NAME, situationRoomFeature)
+        feature.setFeatures(features)
         config = Mock(BusinessProcessConfig)
         config.getSubtypeModelMap() >> ["standardPO": "purchaseOrder"]
+        config.getBusinessProcesses(_) >> businessProcesses
         mockPermission()
+        emailService = Mock(EmailServiceImpl)
+        userCache = Mock(UserCache)
     }
 
     def mockPermission() {
@@ -2784,38 +2803,38 @@ class SituationRoomServiceSpec extends Specification {
         return p
     }
 
-    def mockAtachment(){
+    def mockAtachment() {
         List<Object> attachmentsList = new ArrayList<>()
         Map<String, Object> eachAttachmentMap = new LinkedHashMap<String, Object>()
         Map<String, Object> attachmentMetaData = new LinkedHashMap<String, String>()
         attachmentMetaData.put("filePath", "filePath")
         eachAttachmentMap.put("attachmentName", "text.txt")
-        eachAttachmentMap.put("attachmentMetaData",attachmentMetaData)
-        eachAttachmentMap.put("id","document123")
+        eachAttachmentMap.put("attachmentMetaData", attachmentMetaData)
+        eachAttachmentMap.put("id", "document123")
         attachmentsList.add(eachAttachmentMap)
         return attachmentsList
 
     }
 
-    def mockuserInfo(){
+    def mockuserInfo() {
         Optional<String> userInfo
         JsonArray data = new JsonArray()
         JsonObject users = new JsonObject()
-        users.addProperty("userName","1")
-        users.addProperty("firstName","test")
-        users.addProperty("lastName","data")
+        users.addProperty("userName", "1")
+        users.addProperty("firstName", "test")
+        users.addProperty("lastName", "data")
         data.add(users)
         userInfo = Optional.of(data.toString())
     }
 
-    def mockAtachment1(){
+    def mockAtachment1() {
         List<Object> attachmentsList = new ArrayList<>()
         Map<String, Object> eachAttachmentMap = new LinkedHashMap<String, Object>()
         Map<String, Object> attachmentMetaData = new LinkedHashMap<String, String>()
         attachmentMetaData.put("filePath", "")
         eachAttachmentMap.put("attachmentName", "text.txt")
-        eachAttachmentMap.put("attachmentMetaData",attachmentMetaData)
-        eachAttachmentMap.put("id","123")
+        eachAttachmentMap.put("attachmentMetaData", attachmentMetaData)
+        eachAttachmentMap.put("id", "123")
         attachmentsList.add(eachAttachmentMap)
         return attachmentsList
 
@@ -3029,9 +3048,9 @@ class SituationRoomServiceSpec extends Specification {
         Optional<String> userInfo
         JsonArray data = new JsonArray()
         JsonObject users = new JsonObject()
-        users.addProperty("userName","userName@doman.com")
-        users.addProperty("firstName","userFirstName")
-        users.addProperty("lastName","userLastName")
+        users.addProperty("userName", "userName@doman.com")
+        users.addProperty("firstName", "userFirstName")
+        users.addProperty("lastName", "userLastName")
         data.add(users)
         userInfo = Optional.of(data.toString())
 
@@ -3050,7 +3069,7 @@ class SituationRoomServiceSpec extends Specification {
         Optional<String> userInfo
         JsonArray data = new JsonArray()
         JsonObject users = new JsonObject()
-        users.addProperty("userName","userName@doman.com")
+        users.addProperty("userName", "userName@doman.com")
         data.add(users)
         userInfo = Optional.of(data.toString())
 
@@ -3069,8 +3088,8 @@ class SituationRoomServiceSpec extends Specification {
         Optional<String> userInfo
         JsonArray data = new JsonArray()
         JsonObject users = new JsonObject()
-        users.addProperty("userName","userName@doman.com")
-        users.addProperty("lastName","userLastName")
+        users.addProperty("userName", "userName@doman.com")
+        users.addProperty("lastName", "userLastName")
         data.add(users)
         userInfo = Optional.of(data.toString())
 
@@ -3089,8 +3108,8 @@ class SituationRoomServiceSpec extends Specification {
         Optional<String> userInfo
         JsonArray data = new JsonArray()
         JsonObject users = new JsonObject()
-        users.addProperty("userName","userName@doman.com")
-        users.addProperty("firstName","userFirstName")
+        users.addProperty("userName", "userName@doman.com")
+        users.addProperty("firstName", "userFirstName")
         data.add(users)
         userInfo = Optional.of(data.toString())
 
@@ -3109,9 +3128,9 @@ class SituationRoomServiceSpec extends Specification {
         Optional<String> userInfo
         JsonArray data = new JsonArray()
         JsonObject users = new JsonObject()
-        users.addProperty("userName","User.Name@doman.com")
-        users.addProperty("firstName","FirstName")
-        users.addProperty("lastName","LastName")
+        users.addProperty("userName", "User.Name@doman.com")
+        users.addProperty("firstName", "FirstName")
+        users.addProperty("lastName", "LastName")
         data.add(users)
         userInfo = Optional.of(data.toString())
 
