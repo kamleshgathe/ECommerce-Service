@@ -1,7 +1,7 @@
 buildscript {
     ext {
 
-        springBootVersion = '2.2.8.RELEASE'
+        springBootVersion = '2.5.3'
     }
     repositories {
         maven {
@@ -50,7 +50,7 @@ depVersion = "${depVersion}"
 
 group 'com.jda.dct'
 springBoot {
-    mainClassName = 'com.jda.dct.chatservice.ChatServiceApplication'
+    mainClass = 'com.jda.dct.chatservice.ChatServiceApplication'
     buildInfo()
 }
 artifactory {
@@ -87,7 +87,7 @@ configurations {
             eachDependency {
                 drd ->
                     if (drd.requested.group == 'org.springframework.kafka') {
-                        drd.useVersion '2.2.4.RELEASE'
+                        drd.useVersion '2.7.5'
                     }
             }
             cacheChangingModulesFor 0, 'seconds'
@@ -131,15 +131,15 @@ dependencies {
     api 'com.jsoniter:jsoniter:0.9.23'
     zip group: 'com.jda.dct', name: 'cicd', version: '0.0.1-SNAPSHOT', classifier: 'appdynamics-container-config', ext: 'zip'
     runtimeOnly group: 'org.springframework.boot', name: 'spring-boot-starter-actuator'
-    runtimeOnly group: 'org.mariadb.jdbc', name: 'mariadb-java-client', version: '2.4.0'
-    runtimeOnly group: 'net.bytebuddy', name: 'byte-buddy', version: '1.11.1'
-    testImplementation group: 'org.mockito', name: 'mockito-core', version: '3.7.0'
+    runtimeOnly group: 'org.mariadb.jdbc', name: 'mariadb-java-client', version: '2.7.3'
+    runtimeOnly group: 'net.bytebuddy', name: 'byte-buddy', version: '1.11.12'
+    testImplementation group: 'org.mockito', name: 'mockito-core', version: '3.11.2'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation group: 'junit', name: 'junit', version: '4.13.2'
     // mandatory dependencies for using Spock
     testImplementation group: 'org.spockframework', name: 'spock-core', version: '2.0-M5-groovy-3.0', excludeGroovyAll
     // optional dependencies for using Spock
-    testRuntimeOnly "net.bytebuddy:byte-buddy:1.11.1"         // allows mocking of classes (in addition to interfaces)
+    testRuntimeOnly "net.bytebuddy:byte-buddy:1.11.12"         // allows mocking of classes (in addition to interfaces)
     testImplementation group: 'org.spockframework', name: 'spock-junit4', version: '2.0-M5-groovy-3.0'
     testImplementation group: 'org.spockframework', name: 'spock-spring', version: '2.0-M5-groovy-3.0', excludeGroovyAll
 }
