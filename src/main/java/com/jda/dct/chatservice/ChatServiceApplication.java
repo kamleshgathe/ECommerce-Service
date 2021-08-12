@@ -12,11 +12,12 @@ import com.jda.luminate.security.contexts.SpringAuthContextConfig;
 import com.jda.luminate.security.oauth.OAuth2ResourceServerConfig;
 import com.jda.luminate.tracing.LuminateTracingConfig;
 import org.springframework.boot.SpringApplication;
+import org.springframework.boot.actuate.autoconfigure.jdbc.DataSourceHealthContributorAutoConfiguration;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.autoconfigure.data.elasticsearch.ElasticsearchAutoConfiguration;
+import org.springframework.boot.autoconfigure.data.elasticsearch.ElasticsearchDataAutoConfiguration;
 import org.springframework.boot.autoconfigure.data.jpa.JpaRepositoriesAutoConfiguration;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
-import org.springframework.boot.autoconfigure.elasticsearch.rest.RestClientAutoConfiguration;
+import org.springframework.boot.autoconfigure.elasticsearch.ElasticsearchRestClientAutoConfiguration;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration;
 import org.springframework.context.annotation.ComponentScan;
@@ -27,8 +28,9 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
     KafkaAutoConfiguration.class,
     DataSourceAutoConfiguration.class,
     JpaRepositoriesAutoConfiguration.class,
-    ElasticsearchAutoConfiguration.class,
-    RestClientAutoConfiguration.class
+    ElasticsearchRestClientAutoConfiguration.class,
+    DataSourceHealthContributorAutoConfiguration.class,
+    ElasticsearchDataAutoConfiguration.class
 })
 @ComponentScan(basePackages = {
     "com.jda.dct.kafka",

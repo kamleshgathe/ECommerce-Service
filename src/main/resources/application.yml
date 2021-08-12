@@ -72,7 +72,9 @@ messageBroker:
 # only enabled for development and testing
 ---
 spring:
-  profiles: development
+  config:
+    activate:
+      on-profile: development
 server:
   port: 9292
 
