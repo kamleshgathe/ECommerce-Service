@@ -125,9 +125,9 @@ dependencies {
     implementation group: "com.jda.dct", name: "push-notification", version: "${depVersion}", changing: true, excludeGroovyAll
     implementation group: "com.jda.dct", name: "email", version: "${depVersion}", changing: true, excludeGroovyAll
     implementation group: 'com.jda.luminate', name: 'swagger-doc', version: "${platformVersion}", changing: true, excludeGroovyAll
-    api group: 'org.elasticsearch', name: 'elasticsearch', version: '7.13.3'
-    api group: 'org.elasticsearch.client', name: 'elasticsearch-rest-client', version: '7.13.3'
-    api group: 'org.elasticsearch.client', name: 'elasticsearch-rest-high-level-client', version: '7.13.3'
+    api group: 'org.elasticsearch', name: 'elasticsearch', version: '7.14.0'
+    api group: 'org.elasticsearch.client', name: 'elasticsearch-rest-client', version: '7.14.0'
+    api group: 'org.elasticsearch.client', name: 'elasticsearch-rest-high-level-client', version: '7.14.0'
     api 'com.jsoniter:jsoniter:0.9.23'
     zip group: 'com.jda.dct', name: 'cicd', version: '0.0.1-SNAPSHOT', classifier: 'appdynamics-container-config', ext: 'zip'
     runtimeOnly group: 'org.springframework.boot', name: 'spring-boot-starter-actuator'
