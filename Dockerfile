@@ -1,4 +1,4 @@
-FROM openjdk:14-alpine
+FROM openjdk:14
 
 ARG version 
 ARG app
@@ -8,6 +8,8 @@ RUN mkdir -p /opt/appdynamics/appagent && \
     cd /opt/appdynamics/appagent && \
     jar -xvf /tmp/AppServerAgent-4.5.1.23676.zip && \
     rm /tmp/AppServerAgent-4.5.1.23676.zip
+
+RUN microdnf install findutils
 
 COPY build/custom-interceptors.xml /opt/appdynamics/appagent/ver4.5.1.23676/conf
 
