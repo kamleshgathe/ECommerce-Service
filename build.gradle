@@ -129,7 +129,7 @@ dependencies {
     api group: 'org.elasticsearch.client', name: 'elasticsearch-rest-client', version: '6.3.2'
     api group: 'org.elasticsearch.client', name: 'elasticsearch-rest-high-level-client', version: '6.3.2'
     api 'com.jsoniter:jsoniter:0.9.23'
-    zip group: 'com.jda.dct', name: 'cicd', version: '0.0.1-SNAPSHOT', classifier: 'appdynamics-container-config', ext: 'zip'
+    zip group: 'com.jda.dct', name: 'cicd', version: '0.0.2-SNAPSHOT', classifier: 'appdynamics-container-config', ext: 'zip'
     runtimeOnly group: 'org.springframework.boot', name: 'spring-boot-starter-actuator'
     runtimeOnly group: 'org.mariadb.jdbc', name: 'mariadb-java-client', version: '2.4.0'
     runtimeOnly group: 'net.bytebuddy', name: 'byte-buddy', version: '1.11.1'
