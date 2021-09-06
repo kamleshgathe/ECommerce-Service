@@ -36,7 +36,11 @@ import com.jda.dct.foundation.process.ConfigurationDef
 import com.jda.dct.foundation.process.FeatureDef
 import com.jda.dct.foundation.process.access.DctServiceRestTemplate
 import com.jda.dct.foundation.process.access.UserCache
+import com.jda.dct.foundation.tenantutils.config.TenantConfig
 import com.jda.dct.search.SearchConstants
+import com.jda.dct.util.push.PushMessage
+import com.jda.dct.util.push.PushNotificationConfiguration
+import com.jda.luminate.common.base.Tenant
 import com.jda.luminate.ingest.rest.services.attachments.AttachmentValidator
 import com.jda.luminate.ingest.util.InputStreamWrapper
 import com.jda.luminate.io.documentstore.DocumentStoreService
@@ -3141,6 +3145,392 @@ class SituationRoomServiceSpec extends Specification {
         String userName = service.userName("user.name@doman.com", userInfo)
         then:
         userName == "FirstName LastName"
+    }
+
+    def "test the population of the map"() {
+
+        given:
+
+        Map<String, PushNotificationConfiguration> mapTenantPushNotification = new HashMap<>()
+        TenantConfig tenantConfig = Mock(TenantConfig)
+        initNewSituationRoomService()
+        mock()
+        service.tenantConfig = tenantConfig
+        tenantConfig.getProvisionedTenantIds() >> new String[] {"tid"}
+
+        when:
+        service.init()
+        then:
+        mapTenantPushNotification.size() == 0
+    }
+
+    def "test create channel should succeed with push notification"() {
+        given:
+        mock()
+        def channel = new ChatRoomCreateDto()
+        def user = "1"
+        def ptm1 = proxyTokenMapping("1", "remote_user1", "token1")
+        def ptm2 = proxyTokenMapping("2", "remote_user2", "token1")
+        def participants = Sets.newHashSet()
+        def room = Mock(ChatRoom)
+        room.getCreatedBy() >> user
+        room.getParticipants() >> participants
+        addChatParticipant(room, "1", ChatRoomParticipantStatus.PENDING)
+        addChatParticipant(room, "2", ChatRoomParticipantStatus.PENDING)
+        TenantConfig tenantConfig = Mock(TenantConfig)
+        initNewSituationRoomService()
+        service.tenantConfig = tenantConfig
+        tenantConfig.getProvisionedTenantIds() >> new String[] {"tid"}
+        authContext.getCurrentUser() >> user
+
+        tokenRepository.findByAppUserId("1") >> ptm1
+        tokenRepository.findByAppUserId("2") >> ptm2
+
+        roomRepository.findById(_ as String) >> Optional.of(room)
+        tokenRepository.save({
+            ProxyTokenMapping ptm -> ptm.getAppUserId() == "1" ? ptm1 : ptm2
+        });
+        restTemplate.exchange(_ as String, _ as HttpMethod, _ as HttpEntity, Map.class, *_) >>
+                {
+                    args ->
+                        Map body = Maps.newHashMap()
+                        if (args[0].contains("/channels")) {
+                            body.put("id", "1")
+                        }
+                        return mockedResponseEntity(HttpStatus.OK, body)
+                }
+
+        channel.setObjectIds(Lists.newArrayList("1", "2"))
+        channel.setParticipants(Lists.newArrayList("1", "2"))
+        channel.setEntityType("shipment")
+        channel.setName("name1")
+        channel.setSituationType("shipment_delayed")
+        channel.setPurpose("situation room for shipment delayed")
+        when: "Calling create channel"
+
+        PushNotificationConfiguration configuration = new PushNotificationConfiguration("test","testQueue", "testKeu")
+
+        service.mapTenantPushNotification.put("default", configuration)
+
+        service.createChannel(channel)
+        then: "Should succeed"
+        1 * generator.next() >> "abcdhahsmss"
+    }
+
+    def "test create channel should succeed with push notification should return"() {
+        given:
+        mock()
+        def channel = new ChatRoomCreateDto()
+        def user = "1"
+        def ptm1 = proxyTokenMapping("1", "remote_user1", "token1")
+        def ptm2 = proxyTokenMapping("2", "remote_user2", "token1")
+        def participants = Sets.newHashSet()
+        def room = Mock(ChatRoom)
+        room.getCreatedBy() >> user
+        room.getParticipants() >> participants
+        addChatParticipant(room, "1", ChatRoomParticipantStatus.PENDING)
+        addChatParticipant(room, "2", ChatRoomParticipantStatus.PENDING)
+        TenantConfig tenantConfig = Mock(TenantConfig)
+        initNewSituationRoomService()
+        service.tenantConfig = tenantConfig
+        tenantConfig.getProvisionedTenantIds() >> new String[] {"tid"}
+        authContext.getCurrentUser() >> user
+
+        tokenRepository.findByAppUserId("1") >> ptm1
+        tokenRepository.findByAppUserId("2") >> ptm2
+
+        roomRepository.findById(_ as String) >> Optional.of(room)
+        tokenRepository.save({
+            ProxyTokenMapping ptm -> ptm.getAppUserId() == "1" ? ptm1 : ptm2
+        });
+        restTemplate.exchange(_ as String, _ as HttpMethod, _ as HttpEntity, Map.class, *_) >>
+                {
+                    args ->
+                        Map body = Maps.newHashMap()
+                        if (args[0].contains("/channels")) {
+                            body.put("id", "1")
+                        }
+                        return mockedResponseEntity(HttpStatus.OK, body)
+                }
+
+        channel.setObjectIds(Lists.newArrayList("1", "2"))
+        channel.setParticipants(Lists.newArrayList("1", "2"))
+        channel.setEntityType("shipment")
+        channel.setName("name1")
+        channel.setSituationType("shipment_delayed")
+        channel.setPurpose("situation room for shipment delayed")
+        when: "Calling create channel"
+
+        service.createChannel(channel)
+        then: "Should succeed"
+        1 * generator.next() >> "abcdhahsmss"
+    }
+
+    def "test create channel should succeed with push notification should return with one parm"() {
+        given:
+        mock()
+        def channel = new ChatRoomCreateDto()
+        def user = "1"
+        def ptm1 = proxyTokenMapping("1", "remote_user1", "token1")
+        def ptm2 = proxyTokenMapping("2", "remote_user2", "token1")
+        def participants = Sets.newHashSet()
+        def room = Mock(ChatRoom)
+        room.getCreatedBy() >> user
+        room.getParticipants() >> participants
+        addChatParticipant(room, "1", ChatRoomParticipantStatus.PENDING)
+        addChatParticipant(room, "2", ChatRoomParticipantStatus.PENDING)
+        TenantConfig tenantConfig = Mock(TenantConfig)
+        initNewSituationRoomService()
+        service.tenantConfig = tenantConfig
+        tenantConfig.getProvisionedTenantIds() >> new String[] {"tid"}
+        authContext.getCurrentUser() >> user
+
+        tokenRepository.findByAppUserId("1") >> ptm1
+        tokenRepository.findByAppUserId("2") >> ptm2
+
+        roomRepository.findById(_ as String) >> Optional.of(room)
+        tokenRepository.save({
+            ProxyTokenMapping ptm -> ptm.getAppUserId() == "1" ? ptm1 : ptm2
+        });
+        restTemplate.exchange(_ as String, _ as HttpMethod, _ as HttpEntity, Map.class, *_) >>
+                {
+                    args ->
+                        Map body = Maps.newHashMap()
+                        if (args[0].contains("/channels")) {
+                            body.put("id", "1")
+                        }
+                        return mockedResponseEntity(HttpStatus.OK, body)
+                }
+
+        channel.setObjectIds(Lists.newArrayList("1", "2"))
+        channel.setParticipants(Lists.newArrayList("1", "2"))
+        channel.setEntityType("shipment")
+        channel.setName("name1")
+        channel.setSituationType("shipment_delayed")
+        channel.setPurpose("situation room for shipment delayed")
+        when: "Calling create channel"
+
+        PushNotificationConfiguration configuration = new PushNotificationConfiguration("test","", "testKeu")
+
+        service.mapTenantPushNotification.put("default", configuration)
+
+        service.createChannel(channel)
+        then: "Should succeed"
+        1 * generator.next() >> "abcdhahsmss"
+    }
+
+    def "test create channel should succeed with push notification should return with one parm null"() {
+        given:
+        mock()
+        def channel = new ChatRoomCreateDto()
+        def user = "1"
+        def ptm1 = proxyTokenMapping("1", "remote_user1", "token1")
+        def ptm2 = proxyTokenMapping("2", "remote_user2", "token1")
+        def participants = Sets.newHashSet()
+        def room = Mock(ChatRoom)
+        room.getCreatedBy() >> user
+        room.getParticipants() >> participants
+        addChatParticipant(room, "1", ChatRoomParticipantStatus.PENDING)
+        addChatParticipant(room, "2", ChatRoomParticipantStatus.PENDING)
+        TenantConfig tenantConfig = Mock(TenantConfig)
+        initNewSituationRoomService()
+        service.tenantConfig = tenantConfig
+        tenantConfig.getProvisionedTenantIds() >> new String[] {"tid"}
+        authContext.getCurrentUser() >> user
+
+        tokenRepository.findByAppUserId("1") >> ptm1
+        tokenRepository.findByAppUserId("2") >> ptm2
+
+        roomRepository.findById(_ as String) >> Optional.of(room)
+        tokenRepository.save({
+            ProxyTokenMapping ptm -> ptm.getAppUserId() == "1" ? ptm1 : ptm2
+        });
+        restTemplate.exchange(_ as String, _ as HttpMethod, _ as HttpEntity, Map.class, *_) >>
+                {
+                    args ->
+                        Map body = Maps.newHashMap()
+                        if (args[0].contains("/channels")) {
+                            body.put("id", "1")
+                        }
+                        return mockedResponseEntity(HttpStatus.OK, body)
+                }
+
+        channel.setObjectIds(Lists.newArrayList("1", "2"))
+        channel.setParticipants(Lists.newArrayList("1", "2"))
+        channel.setEntityType("shipment")
+        channel.setName("name1")
+        channel.setSituationType("shipment_delayed")
+        channel.setPurpose("situation room for shipment delayed")
+        when: "Calling create channel"
+
+        PushNotificationConfiguration configuration = new PushNotificationConfiguration("","test", "testKeu")
+
+        service.mapTenantPushNotification.put("default", configuration)
+
+        service.createChannel(channel)
+        then: "Should succeed"
+        1 * generator.next() >> "abcdhahsmss"
+    }
+
+    def "test the population of the MessagePayload"() {
+
+        given:
+
+        Map<String, PushNotificationConfiguration> mapTenantPushNotification = new HashMap<>()
+        TenantConfig tenantConfig = Mock(TenantConfig)
+        initNewSituationRoomService()
+        mock()
+        service.dctService = dctService
+        service.tenantConfig = tenantConfig
+        tenantConfig.getProvisionedTenantIds() >> new String[] {"tid"}
+        when:
+        def messagePayload = service.buildMessagePayload("testUser", new ChatRoom(), "key")
+        then:
+        mapTenantPushNotification.size() == 0
+    }
+
+    def "test the instantiation of Push Message"() {
+
+        given:
+
+        initNewSituationRoomService()
+        mock()
+        PushNotificationConfiguration pushNotificationConfiguration = new PushNotificationConfiguration("Endpoint=sb://mobility-platform.servicebus.windows11.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=bdAChlJJmH+f8YFxGfcOiknlDDMwYh8N60c2xFfo","test","")
+        service.dctService = dctService
+        when:
+        service.instantiatePushMessage(pushNotificationConfiguration)
+        then:
+        assert true
+    }
+
+    def "test the pushAlert"() {
+
+        given:
+        mock()
+        initNewSituationRoomService()
+
+        PushNotificationConfiguration pushNotificationConfiguration = new PushNotificationConfiguration("Endpoint=sb://mobility-platform.servicebus.windows11.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=bdAChlJJmH+f8YFxGfcOiknlDDMwYh8N60c2xFfo","test","")
+        service.dctService = dctService
+        service.pushMessage = Mock(PushMessage)
+        authContext = Mock(AuthContext)
+        authContext.getCurrentTid() >> "tid"
+        service.mapTenantPushNotification.put("default", pushNotificationConfiguration)
+        List<String> users = new ArrayList<>()
+        users.add("test")
+        when:
+        service.pushAlert(users, new ChatRoom())
+        then:
+        assert true
+    }
+
+    def "test the pushAlert with exception"() {
+
+        given:
+        mock()
+        initNewSituationRoomService()
+
+        PushNotificationConfiguration pushNotificationConfiguration = new PushNotificationConfiguration("Endpoint=sb://mobility-platform.servicebus.windows11.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=bdAChlJJmH+f8YFxGfcOiknlDDMwYh8N60c2xFfoJi4=","test","")
+        service.dctService = dctService
+        authContext = Mock(AuthContext)
+        authContext.getCurrentTid() >> "tid"
+        service.mapTenantPushNotification.put("default", pushNotificationConfiguration)
+        List<String> users = new ArrayList<>()
+        users.add("test")
+        when:
+        service.pushAlert(users, null)
+        then:
+        assert true
+    }
+
+    def "test the pushAlert with exception in sending the message"() {
+
+        given:
+        mock()
+        initNewSituationRoomService()
+
+        PushNotificationConfiguration pushNotificationConfiguration = new PushNotificationConfiguration("Endpoint=sb://mobility-platform.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=bdAChlJJmH+f8YFxGfcOiknlDDMwYh8N60c2xFfoJi4=","test","")
+        service.dctService = dctService
+        authContext = Mock(AuthContext)
+        authContext.getCurrentTid() >> "tid"
+        service.mapTenantPushNotification.put("default", pushNotificationConfiguration)
+        List<String> users = new ArrayList<>()
+        users.add("test")
+        when:
+        service.pushAlert(users, null)
+        then:
+        assert true
+    }
+
+    def "test the pushAlert with the null attribute"() {
+
+        given:
+        mock()
+        initNewSituationRoomService()
+
+        PushNotificationConfiguration pushNotificationConfiguration = new PushNotificationConfiguration("Endpoint=sb://mobility-platform.servicebus.windows11.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=bdAChlJJmH+f8YFxGfcOiknlDDMwYh8N60c2xFfo","test","")
+        service.dctService = dctService
+        authContext = Mock(AuthContext)
+        authContext.getCurrentTid() >> "tid"
+        service.mapTenantPushNotification.put("default", pushNotificationConfiguration)
+        List<String> users = new ArrayList<>()
+        users.add("test")
+        when:
+        service.pushAlert(users, new ChatRoom())
+        then:
+        assert true
+    }
+
+    def "test the deletePostMessage"() {
+        given:
+        mock()
+        def channel = new ChatRoomCreateDto()
+        def user = "1"
+        def ptm1 = proxyTokenMapping("1", "remote_user1", "token1")
+        def ptm2 = proxyTokenMapping("2", "remote_user2", "token1")
+        def participants = Sets.newHashSet()
+        def room = Mock(ChatRoom)
+        room.getCreatedBy() >> user
+        room.getParticipants() >> participants
+        addChatParticipant(room, "1", ChatRoomParticipantStatus.PENDING)
+        addChatParticipant(room, "2", ChatRoomParticipantStatus.PENDING)
+        TenantConfig tenantConfig = Mock(TenantConfig)
+        initNewSituationRoomService()
+        service.tenantConfig = tenantConfig
+        tenantConfig.getProvisionedTenantIds() >> new String[] {"tid"}
+        authContext.getCurrentUser() >> user
+
+        tokenRepository.findByAppUserId("1") >> ptm1
+        tokenRepository.findByAppUserId("2") >> ptm2
+
+        roomRepository.findById(_ as String) >> Optional.of(room)
+        tokenRepository.save({
+            ProxyTokenMapping ptm -> ptm.getAppUserId() == "1" ? ptm1 : ptm2
+        });
+        restTemplate.exchange(_ as String, _ as HttpMethod, _ as HttpEntity, Map.class, *_) >>
+                {
+                    args ->
+                        Map body = Maps.newHashMap()
+                        if (args[0].contains("/channels")) {
+                            body.put("id", "1")
+                        }
+                        return mockedResponseEntity(HttpStatus.BAD_GATEWAY, body)
+                }
+
+        channel.setObjectIds(Lists.newArrayList("1", "2"))
+        channel.setParticipants(Lists.newArrayList("1", "2"))
+        channel.setEntityType("shipment")
+        channel.setName("name1")
+        channel.setSituationType("shipment_delayed")
+        channel.setPurpose("situation room for shipment delayed")
+        when: "Calling create channel"
+
+        PushNotificationConfiguration configuration = new PushNotificationConfiguration("","test", "testKeu")
+
+        service.mapTenantPushNotification.put("default", configuration)
+
+        service.deletePostMessage("postId")
+        then: "Should succeed"
+        thrown(ResourceAccessException)
     }
 
 
