@@ -73,17 +73,22 @@ import com.jda.dct.foundation.process.BusinessProcesses;
 import com.jda.dct.foundation.process.FeatureDef;
 import com.jda.dct.foundation.process.access.DctServiceRestTemplate;
 import com.jda.dct.foundation.process.access.UserCache;
+import com.jda.dct.foundation.tenantutils.config.TenantConfig;
 import com.jda.dct.ignitecaches.springimpl.Tenants;
 import com.jda.dct.search.SearchConstants;
 import com.jda.dct.util.push.MessageClientType;
 import com.jda.dct.util.push.NotificationType;
 import com.jda.dct.util.push.PushMessage;
+import com.jda.dct.util.push.PushNotificationConfiguration;
+import com.jda.dct.util.push.PushNotificationConfigurationUtil;
 import com.jda.luminate.ingest.rest.services.attachments.AttachmentValidator;
 import com.jda.luminate.ingest.util.InputStreamWrapper;
 import com.jda.luminate.io.documentstore.DocumentStoreService;
 import com.jda.luminate.io.documentstore.exception.DocumentException;
 import com.jda.luminate.objects.Pair;
 import com.jda.luminate.security.contexts.AuthContext;
+
+import com.microsoft.azure.servicebus.primitives.ServiceBusException;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -151,12 +156,6 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     private String adminAccessToken;
     @Value("${dct.situationRoom.mattermost.teamId}")
     private String channelTeamId;
-    @Value("${messageBroker.connectionString}")
-    private String connectionString;
-    @Value("${messageBroker.queueName}")
-    private String queueName;
-    @Value("${messageBroker.customerKey}")
-    private String customerKey;
 
     private final AuthContext authContext;
     private final SituationRoomRepository roomRepository;
@@ -176,8 +175,13 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     @Value("${tenant.umsUserUri}")
     private String umsUri;
 
+    @Autowired
+    TenantConfig tenantConfig;
+
     private RestTemplate restTemplate = new RestTemplate();
     private Random random = new Random();
+
+    protected Map<String, PushNotificationConfiguration> mapTenantPushNotification = new HashMap<>();
 
     /**
      * Mattermost chat service constructor.
@@ -218,14 +222,10 @@ public class SituationRoomServiceImpl implements SituationRoomService {
 
     @PostConstruct
     void init() {
-        if (!StringUtils.isEmpty(connectionString)
-                && !StringUtils.isEmpty(queueName)) {
-            try {
-                pushMessage = new PushMessage(connectionString, queueName, MessageClientType.QUEUE);
-            } catch (Exception e) {
-                LOGGER.error("Exception :" + e.getMessage());
-            }
-        }
+
+        final String[] tids = tenantConfig.getProvisionedTenantIds();
+        PushNotificationConfigurationUtil.populateMapWithConfiguration(tids,
+                mapTenantPushNotification, tenantConfig);
     }
 
     /**
@@ -1801,19 +1801,42 @@ public class SituationRoomServiceImpl implements SituationRoomService {
      * *
      */
     private void pushAlert(List<String> users, ChatRoom chatRoom) {
-        if (StringUtils.isEmpty(connectionString)
-                || StringUtils.isEmpty(queueName)) {
+
+        PushNotificationConfiguration pushNotificationConfiguration =
+                mapTenantPushNotification.getOrDefault(authContext.getCurrentTid(),
+                        mapTenantPushNotification.get("default"));
+        LOGGER.debug("Configurations for pushing alert:  queue -> {} "
+                        + "connectionString -> {} customerKey -> {}",
+                pushNotificationConfiguration.getQueueName(),
+                pushNotificationConfiguration.getConnectionString(),
+                pushNotificationConfiguration.getCustomerKey());
+
+        if (StringUtils.isEmpty(pushNotificationConfiguration.getConnectionString())
+                || StringUtils.isEmpty(pushNotificationConfiguration.getQueueName())) {
             LOGGER.error("ConnectionString or QueueName not configured properly");
+            return;
         }
+        instantiatePushMessage(pushNotificationConfiguration);
         if (pushMessage != null) {
             users.forEach(user -> {
                 try {
-                    MessagePayload payload = buildMessagePayload(user, chatRoom);
+                    MessagePayload payload = buildMessagePayload(user, chatRoom,
+                                                    pushNotificationConfiguration.getCustomerKey());
                     pushMessage.sendMessagesAsync(payload);
                 } catch (Exception e) {
                     LOGGER.error("Message Bus Exception while pushing message for user : " + user + e);
                 }
             });
+        }
+    }
+
+    private void instantiatePushMessage(PushNotificationConfiguration pushNotificationConfiguration) {
+        try {
+            pushMessage = new PushMessage(pushNotificationConfiguration.getConnectionString(),
+                    pushNotificationConfiguration.getQueueName(), MessageClientType.QUEUE);
+        } catch (ServiceBusException | InterruptedException e) {
+            LOGGER.error("Message Bus Exception while pushing message", e);
+            Thread.currentThread().interrupt();
         }
     }
 
@@ -1826,7 +1849,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         return room.get();
     }
 
-    private MessagePayload buildMessagePayload(String user, ChatRoom room) {
+    private MessagePayload buildMessagePayload(String user, ChatRoom room, String customerKey) {
         MessagePayload payload = new MessagePayload();
         payload.setCanAudit(ChatRoomConstants.TRUE);
         payload.setCustomerKey(customerKey);
