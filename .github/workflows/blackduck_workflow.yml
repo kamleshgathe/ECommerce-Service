@@ -60,7 +60,7 @@ jobs:
           --detect.blackduck.signature.scanner.exclusion.pattern.search.depth=0
           --detect.tools.excluded=SIGNATURE_SCAN
           --detect.project.tags=LCT
-          --detect.gradle.excluded.configurations=checkstyle,serviceTestImplementation,testImplementation,testRuntimeOnly,testCompileClasspath,testCompileOnly,testRuntime,testRuntimeClasspath,testRuntimeOnly,testCompile
+          --detect.gradle.excluded.configurations=checkstyle,serviceTestImplementation,serviceTestCompileClasspath,serviceTestRuntimeClasspath,testImplementation,testRuntimeOnly,testCompileClasspath,testCompileOnly,testRuntime,testRuntimeClasspath,testRuntimeOnly,testCompile
           --detect.wait.for.results=false
           --detect.risk.report.pdf=true
           --detect.npm.include.dev.dependencies=false
