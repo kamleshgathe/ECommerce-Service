@@ -57,7 +57,7 @@ jobs:
           version: 7
           args: '--blackduck.url="${{ secrets.LCT_BLACKDUCK_URL }}"
           --blackduck.api.token="${{ secrets.LCT_BLACKDUCK_API_TOKEN }}"
-          --detect.project.name=${{ github.event.repository.name }}
+          --detect.project.name=${{ env.REPOSITORY_NAME }}
           --detect.project.version.name=master-ci
           --detect.blackduck.signature.scanner.upload.source.mode=false
           --detect.blackduck.signature.scanner.exclusion.pattern.search.depth=0
