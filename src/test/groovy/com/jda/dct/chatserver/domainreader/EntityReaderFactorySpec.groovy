@@ -10,6 +10,7 @@ package com.jda.dct.chatserver.domainreader
 import com.jda.dct.chatservice.domainreader.EntityReaderFactory
 import com.jda.dct.domain.stateful.Shipment
 import com.jda.dct.persist.ignite.dao.DctDaoBase
+import com.jda.dct.domain.Node
 import com.jda.luminate.security.contexts.AuthContext
 import spock.lang.Specification
 
@@ -109,5 +110,28 @@ class EntityReaderFactorySpec extends Specification {
                 .nodeRepo(node)
                 .authContext(authContext)
                 .build();
+    }
+
+    def "test generic node entity"() {
+        given: "Initialize reader factory"
+        def authContext = Mock(AuthContext)
+        def dctShipmentDaoBase = Mock(DctDaoBase)
+        def dctSalesOrderDaoBase = Mock(DctDaoBase)
+        def dctPurchaseOrderDaoBase = Mock(DctDaoBase)
+        def dctDeliveryDaoBase = Mock(DctDaoBase)
+        def dctNodeDaoBase = Mock(DctDaoBase)
+        dctNodeDaoBase.getById(_, _) >> Mock(Node)
+
+        def entityReaderFactory = buildEntityReaderFactory(dctShipmentDaoBase,
+                dctSalesOrderDaoBase,
+                dctPurchaseOrderDaoBase,
+                dctDeliveryDaoBase,
+                dctNodeDaoBase,
+                authContext)
+
+        when: "Called with node as type"
+        Object obj = entityReaderFactory.getEntity("node", "id1")
+        then:
+        obj instanceof Node
     }
 }
