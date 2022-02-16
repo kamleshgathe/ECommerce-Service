@@ -22,7 +22,8 @@ import org.apache.logging.log4j.util.Strings;
 import org.springframework.util.Assert;
 
 /**
- * Domain entity reader factory. This factory provided methods for reading domain entity object
+ * Domain entity reader factory. This factory provided methods for reading
+ * domain entity object
  * for chat service.
  */
 public class EntityReaderFactory {
@@ -35,7 +36,7 @@ public class EntityReaderFactory {
     private static final String TYPE_CAPACITY = "capacity";
     private static final String TYPE_PROCUREMENT = "forecast-commits";
     private static final String TYPE_NODE = "node";
-    private static final String TYPE_NODE = "analytics";
+    private static final String TYPE_ANALYTICS = "analytics";
 
     private AuthContext authContext;
 
@@ -61,7 +62,8 @@ public class EntityReaderFactory {
     }
 
     /**
-     * Method returns domain entity object for given business entity and entity id. If type is
+     * Method returns domain entity object for given business entity and entity id.
+     * If type is
      * not supported type by chat server it will return IllegalArgumentException.
      *
      * @param type domain entity type.
@@ -80,6 +82,7 @@ public class EntityReaderFactory {
 
     /**
      * Class type of given entity.
+     * 
      * @param entityType SR entity type.
      * @return
      */
@@ -89,8 +92,9 @@ public class EntityReaderFactory {
     }
 
     /**
-     * EntityReaderFactoryBuilder is builder for EntityReaderFactory which hides the complexity of
-     * EntityReaderFactory  creation.
+     * EntityReaderFactoryBuilder is builder for EntityReaderFactory which hides the
+     * complexity of
+     * EntityReaderFactory creation.
      */
     public static class EntityReaderFactoryBuilder {
         private DctDaoBase<Shipment> shipmentRepo;
@@ -154,7 +158,7 @@ public class EntityReaderFactory {
             readerFactory.repoMap.put(TYPE_PROCUREMENT, nodeRepo);
             // entry added for generic node
             readerFactory.repoMap.put(TYPE_NODE, nodeRepo);
-             // entry added for analytics
+            // entry added for analytics
             readerFactory.repoMap.put(TYPE_ANALYTICS, nodeRepo);
             readerFactory.authContext = authContext;
             return readerFactory;
