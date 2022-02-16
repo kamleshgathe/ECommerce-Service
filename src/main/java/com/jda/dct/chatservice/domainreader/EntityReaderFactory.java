@@ -35,6 +35,7 @@ public class EntityReaderFactory {
     private static final String TYPE_CAPACITY = "capacity";
     private static final String TYPE_PROCUREMENT = "forecast-commits";
     private static final String TYPE_NODE = "node";
+    private static final String TYPE_NODE = "analytics";
 
     private AuthContext authContext;
 
@@ -55,6 +56,8 @@ public class EntityReaderFactory {
         classMap.put(TYPE_SALES_ORDER, SalesOrder.class);
         // entry added for generic node
         classMap.put(TYPE_NODE, Node.class);
+        // entry added for analytics
+        classMap.put(TYPE_ANALYTICS, Node.class);
     }
 
     /**
@@ -151,6 +154,8 @@ public class EntityReaderFactory {
             readerFactory.repoMap.put(TYPE_PROCUREMENT, nodeRepo);
             // entry added for generic node
             readerFactory.repoMap.put(TYPE_NODE, nodeRepo);
+             // entry added for analytics
+            readerFactory.repoMap.put(TYPE_ANALYTICS, nodeRepo);
             readerFactory.authContext = authContext;
             return readerFactory;
         }

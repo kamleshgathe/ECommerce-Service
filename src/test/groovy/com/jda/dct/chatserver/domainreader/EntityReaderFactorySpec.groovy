@@ -134,4 +134,27 @@ class EntityReaderFactorySpec extends Specification {
         then:
         obj instanceof Node
     }
+    
+    def "test analytics entity"() {
+            given: "Initialize reader factory"
+            def authContext = Mock(AuthContext)
+            def dctShipmentDaoBase = Mock(DctDaoBase)
+            def dctSalesOrderDaoBase = Mock(DctDaoBase)
+            def dctPurchaseOrderDaoBase = Mock(DctDaoBase)
+            def dctDeliveryDaoBase = Mock(DctDaoBase)
+            def dctNodeDaoBase = Mock(DctDaoBase)
+            dctNodeDaoBase.getById(_, _) >> Mock(Node)
+    
+            def entityReaderFactory = buildEntityReaderFactory(dctShipmentDaoBase,
+                    dctSalesOrderDaoBase,
+                    dctPurchaseOrderDaoBase,
+                    dctDeliveryDaoBase,
+                    dctNodeDaoBase,
+                    authContext)
+    
+            when: "Called with node as type"
+            Object obj = entityReaderFactory.getEntity("analytics", "id1")
+            then:
+            obj instanceof Node
+    }    
 }
