@@ -8,6 +8,7 @@
 package com.jda.dct.chatservice.config;
 
 import com.jda.dct.chatservice.domainreader.EntityReaderFactory;
+import com.jda.dct.chatservice.repository.Analytics;
 import com.jda.dct.domain.Node;
 import com.jda.dct.domain.stateful.Delivery;
 import com.jda.dct.domain.stateful.PurchaseOrder;
@@ -71,7 +72,10 @@ public class DomainEntityRepoConfig {
     public Class nodeClass() {
         return Node.class;
     }
-
+	@Bean
+    public Class analyticsClass() {
+        return Analytics.class;
+    }
 
     /**
      * Return the bean instance of EntityReaderFactory.
@@ -82,13 +86,14 @@ public class DomainEntityRepoConfig {
     public EntityReaderFactory entityReaderFactory() {
         EntityReaderFactory.EntityReaderFactoryBuilder builder =
             new EntityReaderFactory.EntityReaderFactoryBuilder();
-
+		Analytics analytics = new Analytics();
         return builder.authContext(authContext)
             .salesOrderRepo(salesOrderDao)
             .purchaseOrderRepo(purchaseOrderDao)
             .shipmentRepo(shipmentDao)
             .deliveryRepo(deliveryDao)
             .nodeRepo(nodeDao)
+            .analyticsRepo(analytics)
             .build();
     }
 
