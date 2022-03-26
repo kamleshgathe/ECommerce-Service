@@ -22,6 +22,7 @@ import com.jda.dct.chatservice.exception.InvalidChatRequest
 import com.jda.dct.chatservice.repository.ChatRoomParticipantRepository
 import com.jda.dct.chatservice.repository.ProxyTokenMappingRepository
 import com.jda.dct.chatservice.repository.SituationRoomRepository
+import com.jda.dct.chatservice.repository.Analytics
 import com.jda.dct.chatservice.service.EmailService
 import com.jda.dct.chatservice.service.SituationRoomServiceImpl
 import com.jda.dct.chatservice.service.UniqueRoomNameGenerator
@@ -67,7 +68,7 @@ class SituationRoomServiceSpec extends Specification {
     ProxyTokenMappingRepository tokenRepository
     ChatRoomParticipantRepository participantRepository;
     RestTemplate restTemplate;
-    EntityReaderFactory entityReaderFactory
+    EntityReaderFactory entityReaderFactory;
     UniqueRoomNameGenerator generator;
     AttachmentValidator attachmentValidator;
     DocumentStoreService documentStoreService
@@ -894,7 +895,7 @@ class SituationRoomServiceSpec extends Specification {
         authContext.getCurrentUser() >> "appUser"
 
         when: "getting all the channels from the service"
-        initNewSituationRoomService()
+        analytics_initNewSituationRoomService()
         List<ChatContext> channels = service.getChannels(null, null, null)
         then: "should return channels in sorted order"
         1 * participantRepository.findByUserNameOrderByRoomLmdDesc(_ as String) >> allParticipantsInRepo
@@ -1153,7 +1154,7 @@ class SituationRoomServiceSpec extends Specification {
         authContext.getCurrentUser() >> "1"
 
         when:
-        initNewSituationRoomService()
+        analytics_initNewSituationRoomService()
         List<ChatContext> channels = service.getChannels(null, null, null)
         then:
         1 * participantRepository.findByUserNameOrderByRoomLmdDesc(_ as String) >> participantAllEntries
@@ -2688,6 +2689,28 @@ class SituationRoomServiceSpec extends Specification {
 
     }
 
+    def analytics_initNewSituationRoomService() {
+
+        chatRoom
+        service = new SituationRoomServiceImpl(authContext,
+                roomRepository,
+                tokenRepository,
+                participantRepository,
+                generator,
+                entityReaderFactory,
+                attachmentValidator,
+                documentStoreService,
+                dctService,
+                permissionHelper,
+                config, emailService, userCache)
+        service.setRestTemplate(restTemplate)
+        service.setChannelTeamId(CHANNEL_TEAM_ID)
+        service.setMattermostUrl("http://localhost:80/api/v4")
+        service.setuserUrl("http://localhost:9090/api/v1/ums/users")
+    }
+
+
+
     def initNewSituationRoomService() {
         service = new SituationRoomServiceImpl(authContext,
                 roomRepository,
@@ -2862,6 +2885,7 @@ class SituationRoomServiceSpec extends Specification {
             def roomId, def snapshot, def participants, def createdBy, def roomStatus, def customLmd) {
         def room = Mock(ChatRoom)
         room.getId() >> roomId;
+        snapshot.setEntityType = 'analytics'
         room.getContexts() >> snapshot
         room.getCreationDate() >> new Date()
         room.getLastPostAt() >> new Date()

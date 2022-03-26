@@ -9,6 +9,7 @@ package com.jda.dct.chatserver.domainreader
 
 import com.jda.dct.chatservice.domainreader.EntityReaderFactory
 import com.jda.dct.domain.stateful.Shipment
+import com.jda.dct.chatservice.repository.Analytics
 import com.jda.dct.persist.ignite.dao.DctDaoBase
 import com.jda.dct.domain.Node
 import com.jda.luminate.security.contexts.AuthContext
@@ -18,28 +19,28 @@ class EntityReaderFactorySpec extends Specification {
 
     def "test constructor should throw exception if shipment repo is null"() {
         when: "Initialize constructor"
-        buildEntityReaderFactory(null, null, null, null, null, Mock(AuthContext));
+        buildEntityReaderFactory(null, null, null, null, null, null, Mock(AuthContext));
         then: "Should expect exception"
         thrown(IllegalArgumentException)
     }
 
     def "test constructor should throw exception sales order repo is null"() {
         when: "Initialize constructor"
-        buildEntityReaderFactory(Mock(DctDaoBase), null, null, null, null, Mock(AuthContext));
+        buildEntityReaderFactory(Mock(DctDaoBase), null, null, null, null,null, Mock(AuthContext));
         then: "Should expect exception"
         thrown(IllegalArgumentException)
     }
 
     def "test constructor should throw exception purchase order repo is null"() {
         when: "Initialize constructor"
-        buildEntityReaderFactory(Mock(DctDaoBase), Mock(DctDaoBase), null, null, null, Mock(AuthContext));
+        buildEntityReaderFactory(Mock(DctDaoBase), Mock(DctDaoBase), null, null, null,null, Mock(AuthContext));
         then: "Should expect exception"
         thrown(IllegalArgumentException)
     }
 
     def "test constructor should throw exception if node repo is null"() {
         when: "Initialize constructor"
-        buildEntityReaderFactory(Mock(DctDaoBase), Mock(DctDaoBase), Mock(DctDaoBase), Mock(DctDaoBase), null, Mock(AuthContext));
+        buildEntityReaderFactory(Mock(DctDaoBase), Mock(DctDaoBase), Mock(DctDaoBase), Mock(DctDaoBase), null,null, Mock(AuthContext));
         then: "Should expect exception"
         thrown(IllegalArgumentException)
     }
@@ -51,6 +52,7 @@ class EntityReaderFactorySpec extends Specification {
                 Mock(DctDaoBase),
                 Mock(DctDaoBase),
                 Mock(DctDaoBase),
+                Mock(Analytics),
                 null);
         then: "Should expect exception"
         thrown(IllegalArgumentException)
@@ -63,12 +65,29 @@ class EntityReaderFactorySpec extends Specification {
                 Mock(DctDaoBase),
                 Mock(DctDaoBase),
                 Mock(DctDaoBase),
+                Mock(Analytics),
                 Mock(AuthContext))
 
         when: "Called with invalid type"
         entityReaderFactory.getEntity("abcd", "id1")
         then: "Should expect exception"
         thrown(IllegalArgumentException)
+    }
+
+    def "test when type is analytics"() {
+        given: "Initialize reader factory"
+        def entityReaderFactory = buildEntityReaderFactory(Mock(DctDaoBase),
+                Mock(DctDaoBase),
+                Mock(DctDaoBase),
+                Mock(DctDaoBase),
+                Mock(DctDaoBase),
+                Mock(Analytics),
+                Mock(AuthContext))
+
+        when: "Called with invalid type"
+        def obj = entityReaderFactory.getEntity("analytics", "id1")
+        then: "Should expect exception"
+        obj != null
     }
 
     def "test get domain entity"() {
@@ -79,6 +98,7 @@ class EntityReaderFactorySpec extends Specification {
         def dctPurchaseOrderDaoBase = Mock(DctDaoBase)
         def dctDeliveryDaoBase = Mock(DctDaoBase)
         def dctNodeDaoBase = Mock(DctDaoBase)
+        def analytics = Mock(Analytics)
         def shipment = Mock(Shipment)
         shipment.getShipmentId() >> "shipment1"
         dctShipmentDaoBase.getById(_, _) >> shipment;
@@ -88,6 +108,7 @@ class EntityReaderFactorySpec extends Specification {
                 dctPurchaseOrderDaoBase,
                 dctDeliveryDaoBase,
                 dctNodeDaoBase,
+                analytics,
                 authContext)
 
         when: "Called with shipment as type"
@@ -100,7 +121,7 @@ class EntityReaderFactorySpec extends Specification {
                                                  salesOrder,
                                                  purchaseOrder,
                                                  delivery,
-                                                 node,
+                                                 node, analytics,
                                                  authContext) {
         def builder = new EntityReaderFactory.EntityReaderFactoryBuilder();
         builder.shipmentRepo(shipment)
@@ -108,6 +129,7 @@ class EntityReaderFactorySpec extends Specification {
                 .salesOrderRepo(salesOrder)
                 .deliveryRepo(delivery)
                 .nodeRepo(node)
+                .analyticsRepo(analytics)
                 .authContext(authContext)
                 .build();
     }
@@ -120,6 +142,7 @@ class EntityReaderFactorySpec extends Specification {
         def dctPurchaseOrderDaoBase = Mock(DctDaoBase)
         def dctDeliveryDaoBase = Mock(DctDaoBase)
         def dctNodeDaoBase = Mock(DctDaoBase)
+        def analytics = Mock(Analytics)
         dctNodeDaoBase.getById(_, _) >> Mock(Node)
 
         def entityReaderFactory = buildEntityReaderFactory(dctShipmentDaoBase,
@@ -127,6 +150,7 @@ class EntityReaderFactorySpec extends Specification {
                 dctPurchaseOrderDaoBase,
                 dctDeliveryDaoBase,
                 dctNodeDaoBase,
+                analytics,
                 authContext)
 
         when: "Called with node as type"
@@ -134,27 +158,6 @@ class EntityReaderFactorySpec extends Specification {
         then:
         obj instanceof Node
     }
-    
-    def "test analytics entity"() {
-            given: "Initialize reader factory"
-            def authContext = Mock(AuthContext)
-            def dctShipmentDaoBase = Mock(DctDaoBase)
-            def dctSalesOrderDaoBase = Mock(DctDaoBase)
-            def dctPurchaseOrderDaoBase = Mock(DctDaoBase)
-            def dctDeliveryDaoBase = Mock(DctDaoBase)
-            def dctNodeDaoBase = Mock(DctDaoBase)
-            dctNodeDaoBase.getById(_, _) >> Mock(Node)
-    
-            def entityReaderFactory = buildEntityReaderFactory(dctShipmentDaoBase,
-                    dctSalesOrderDaoBase,
-                    dctPurchaseOrderDaoBase,
-                    dctDeliveryDaoBase,
-                    dctNodeDaoBase,
-                    authContext)
-    
-            when: "Called with node as type"
-            Object obj = entityReaderFactory.getEntity("analytics", "id1")
-            then:
-            obj instanceof Node
-    }    
+
+
 }
