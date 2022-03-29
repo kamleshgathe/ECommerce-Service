@@ -46,7 +46,7 @@ jobs:
           echo "artifactoryUsername=${{ secrets.LCT_ARTIFACTORY_USERNAME }}" >> gradle.properties
           echo "artifactoryPassword=${{ secrets.LCT_ARTIFACTORY_PASSWORD }}" >> gradle.properties
       - name: "BUILD - Build with Gradle"
-        uses: eskatos/gradle-command-action@v1
+        uses: gradle/gradle-build-action@v2
         with: 
           arguments: build -x test 
 
