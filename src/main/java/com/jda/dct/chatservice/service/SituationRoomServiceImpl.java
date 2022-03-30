@@ -1478,15 +1478,15 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         context.setParticipants(channelUsers);
         context.setPurpose(room.getDescription());
         context.setSituationType(room.getSituationType());
-        if (room.getEntityType() !=null){
-            if (!room.getEntityType().equals("analytics") )
+        if (room.getEntityType() != null) {
+            if (!room.getEntityType().equals("analytics")) {
                 context.setEntity(handleRestrictedEntity(room.getContexts(), room.getEntityType()));
-            else
+            } else {
                 context.setEntity(handleEntity(room.getContexts(), room.getEntityType()));
-        }
-        else
+            }
+        } else {
             context.setEntity(handleEntity(room.getContexts(), room.getEntityType()));
-
+        }
         context.setCreatedAt(room.getCreationDate().getTime());
         context.setUpdatedAt(room.getLmd().getTime());
         context.setLastPostAt(room.getLastPostAt().getTime());

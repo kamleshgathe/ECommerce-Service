@@ -72,7 +72,8 @@ public class DomainEntityRepoConfig {
     public Class nodeClass() {
         return Node.class;
     }
-	@Bean
+
+    @Bean
     public Class analyticsClass() {
         return Analytics.class;
     }
@@ -86,7 +87,7 @@ public class DomainEntityRepoConfig {
     public EntityReaderFactory entityReaderFactory() {
         EntityReaderFactory.EntityReaderFactoryBuilder builder =
             new EntityReaderFactory.EntityReaderFactoryBuilder();
-		Analytics analytics = new Analytics();
+        Analytics analytics = new Analytics();
         return builder.authContext(authContext)
             .salesOrderRepo(salesOrderDao)
             .purchaseOrderRepo(purchaseOrderDao)

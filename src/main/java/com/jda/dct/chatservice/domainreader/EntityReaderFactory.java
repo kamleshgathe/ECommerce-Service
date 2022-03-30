@@ -76,17 +76,14 @@ public class EntityReaderFactory {
     public Object getEntity(String type, String id) {
         Assert.isTrue(Strings.isNotEmpty(type), "Entity type can't be null or empty");
         Assert.isTrue(Strings.isNotEmpty(id), "Entity id can't be null or empty");
-        if(!type.equals("analytics")) {
+        if (!type.equals("analytics")) {
             if (!repoMap.containsKey(type)) {
-            throw new IllegalArgumentException(String.format("Invalid entity type %s", type));
-        }
+                throw new IllegalArgumentException(String.format("Invalid entity type %s", type));
+            }
             return repoMap.get(type).getById(authContext.getCurrentTid(), id);
-        }
-        else{
+        } else {
             return analyticsRepoMap.get(type);
         }
-
-
     }
 
     /**
@@ -141,11 +138,10 @@ public class EntityReaderFactory {
         }
 
 
-        public EntityReaderFactoryBuilder analyticsRepo(final Analytics
-         analyticsRepo) {
-         this.analyticsRepo = analyticsRepo;
-         return this;
-         }
+        public EntityReaderFactoryBuilder analyticsRepo(final Analytics analyticsRepo) {
+            this.analyticsRepo = analyticsRepo;
+            return this;
+        }
 
 
         public EntityReaderFactoryBuilder authContext(final AuthContext authContext) {

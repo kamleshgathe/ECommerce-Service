@@ -7,32 +7,17 @@
  */
 package com.jda.dct.chatservice.repository;
 
-import com.jda.dct.domain.DctBoBase;
-import com.jda.dct.domain.KeyField;
-
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.jda.dct.foundation.process.ModelConstants;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import javax.persistence.Column;
-import javax.persistence.Entity;
-
 public class Analytics {
-
+    /**
+     * Constructor for Analytics.
+     */
     public Analytics(String reportName) {
         super();
         this.reportName = reportName;
 
     }
 
-    public Analytics()
-    {
+    public Analytics() {
         super();
     }
 
