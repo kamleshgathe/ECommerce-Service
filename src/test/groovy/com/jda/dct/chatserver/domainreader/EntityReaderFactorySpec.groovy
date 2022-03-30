@@ -158,6 +158,4 @@ class EntityReaderFactorySpec extends Specification {
         then:
         obj instanceof Node
     }
-
-
 }

@@ -29,4 +29,5 @@ class AnalyticsSpec extends Specification {
         then: "should get report name"
         reportName == "test"
     }
+
 }

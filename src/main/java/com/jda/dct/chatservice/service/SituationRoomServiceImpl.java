@@ -1478,7 +1478,15 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         context.setParticipants(channelUsers);
         context.setPurpose(room.getDescription());
         context.setSituationType(room.getSituationType());
-        context.setEntity(handleRestrictedEntity(room.getContexts(), room.getEntityType()));
+        if (room.getEntityType() !=null){
+            if (!room.getEntityType().equals("analytics") )
+                context.setEntity(handleRestrictedEntity(room.getContexts(), room.getEntityType()));
+            else
+                context.setEntity(handleEntity(room.getContexts(), room.getEntityType()));
+        }
+        else
+            context.setEntity(handleEntity(room.getContexts(), room.getEntityType()));
+
         context.setCreatedAt(room.getCreationDate().getTime());
         context.setUpdatedAt(room.getLmd().getTime());
         context.setLastPostAt(room.getLastPostAt().getTime());
@@ -1509,6 +1517,14 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         } else {
             list = ChatRoomUtil.jsonToObject(entityInString);
         }
+        return list;
+    }
+
+    private List handleEntity(byte[] entity, String entityType) {
+        List list = null;
+        String entityInString = (String) ChatRoomUtil.byteArrayToObject(entity);
+        list = ChatRoomUtil.jsonToObject(entityInString);
+
         return list;
     }
 
