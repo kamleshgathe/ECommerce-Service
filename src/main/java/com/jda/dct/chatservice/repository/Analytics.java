@@ -22,7 +22,7 @@ public class Analytics {
     }
 
 
-    public String reportName;
+    private String reportName;
 
     public String getReportName() {
         return reportName;

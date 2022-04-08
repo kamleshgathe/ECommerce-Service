@@ -3555,6 +3555,18 @@ class SituationRoomServiceSpec extends Specification {
         ((List) ((ChatContext) actual).getEntity()).get(0) != null;
     }
 
+    def "test get chat context should succeed for PO entity type"() {
+        given: "Setup request"
+        purchaseOrderMock()
+        byte[] bytes = getValidDummySnapshot()
+        def mockRoom = MockedChatRoomWithEntityType("1", bytes, Lists.newArrayList(), "1", ChatRoomStatus.OPEN, "purchase_order")
+        roomRepository.findById("1") >> Optional.of(mockRoom);
+        when: "Calling get channel context"
+        initNewSituationRoomService()
+        Object actual = service.getChannelContext("1")
+        then: "Should get context"
+        actual != null
+    }
 
     def MockedChatRoomWithEntityType(def roomId, def snapshot, def participants, def createdBy, def roomStatus, def entityType) {
         def room = Mock(ChatRoom)
@@ -3618,6 +3630,109 @@ class SituationRoomServiceSpec extends Specification {
         classMap.put("analytics", Analytics.class);
     }
 
- 
+   def purchaseOrderMock(){
+        authContext = Mock(AuthContext)
+        roomRepository = Mock(SituationRoomRepository)
+        tokenRepository = Mock(ProxyTokenMappingRepository)
+        restTemplate = Mock(RestTemplate)
+        participantRepository = Mock(ChatRoomParticipantRepository)
+        List<ChatRoomParticipant> chatRoomParticipants = new ArrayList<>()
+        ChatRoomParticipant participant = new ChatRoomParticipant()
+        participant.setUserName("test user1")
+        chatRoomParticipants.add(participant)
+        participantRepository.findByRoomId(_) >> chatRoomParticipants
+        entityReaderFactory = new EntityReaderFactory()
+
+        entityReaderFactory.getEntityClass(_) >> Mock(PurchaseOrder)
+        generator = Mock(UniqueRoomNameGenerator)
+        attachmentValidator = Mock(AttachmentValidator)
+        documentStoreService = Mock(DocumentStoreService)
+        localDocumentStore = Mock(LocalDocumentStore)
+        dctService = Mock(DctServiceRestTemplate)
+        permissionHelper = Mock(PermissionHelper)
+        List<String> permissionList = new ArrayList<>()
+        permissionList.add("standardPO")
+        permissionHelper.getPermittedObjects() >> permissionList
+        umsUri = "http://localhost:9090/api/v1/ums/users"
+        BusinessProcesses businessProcesses = new BusinessProcesses()
+        ConfigurationDef configurationDef = new ConfigurationDef()
+        businessProcesses.setConfiguration(configurationDef)
+        FeatureDef feature = new FeatureDef()
+        List<String> rootAvailableFeatures = new ArrayList<>()
+        rootAvailableFeatures.add(SituationRoomServiceImpl.SITUATION_ROOM_FEATURE_NAME)
+        feature.setAvailableItems(rootAvailableFeatures)
+        configurationDef.setFeature(feature)
+        Map<String, FeatureDef> features = new HashMap<>()
+        FeatureDef situationRoomFeature = new FeatureDef()
+        List<String> availableItems = new ArrayList<>()
+        availableItems.add(SituationRoomServiceImpl.SITUATION_ROOM_EMAIL_NOTIDICATION_ITEM)
+        situationRoomFeature.setAvailableItems(availableItems)
+        List<String> disabledItems = new ArrayList<>()
+        situationRoomFeature.setDisabledItems(disabledItems)
+        features.put(SituationRoomServiceImpl.SITUATION_ROOM_FEATURE_NAME, situationRoomFeature)
+        feature.setFeatures(features)
+        config = Mock(BusinessProcessConfig)
+        config.getSubtypeModelMap() >> ["standardPO": "purchaseOrder"]
+        config.getBusinessProcesses(_) >> businessProcesses
+        mockPermission()
+        emailService = Mock(EmailServiceImpl)
+        userCache = Mock(UserCache)
+        def classMap = new HashMap<>()
+        classMap.put("purchase_order", PurchaseOrder.class);
+    }
+
+    def byte[] getValidDummySnapshot() {
+        List<PurchaseOrder> objects = new ArrayList<>()
+        PurchaseOrder purchaseOrder = new PurchaseOrder()
+        purchaseOrder.setPurchaseOrderType("standardPO")
+        objects.add(purchaseOrder)
+        String jsonString = ChatRoomUtil.objectToJson(objects)
+
+        //String jsonString = ChatRoomUtil.objectToJson(entity);
+        byte[] bytes = ChatRoomUtil.objectToByteArray(jsonString);
+        bytes
+    }
+
+    PurchaseOrder createPurchaseOrder() {
+        PurchaseOrder purchaseOrder = new PurchaseOrder()
+        purchaseOrder.setPurchaseOrderId("PO1234")
+        purchaseOrder.setCustomerName("IBM")
+        purchaseOrder.setSupplierName("CA")
+        purchaseOrder.setPurchaseOrderType("standardPO")
+        purchaseOrder.setProcessType("demand")
+
+        PurchaseOrderLine orderLine = new PurchaseOrderLine()
+        orderLine.setPoLineId("PL1234")
+        orderLine.setCustomerItemName("IBM")
+        orderLine.setNeedByDate(new Date())
+        orderLine.setOrderQuantity(10.0)
+        orderLine.setSupplierItemName("CA")
+        orderLine.setShipToSiteName("DCT")
+
+        PurchaseOrderLine orderLine1 = new PurchaseOrderLine()
+        orderLine1.setPoLineId("PL12345")
+        orderLine1.setCustomerItemName("IBM1")
+        orderLine1.setNeedByDate(new Date())
+        orderLine1.setOrderQuantity(20.0)
+        orderLine1.setSupplierItemName("CA1")
+        orderLine1.setShipToSiteName("DC")
+
+        Map<String, PurchaseOrderLine> orderLineMap = new HashMap<>()
+        orderLineMap.put(orderLine.getPoLineId(), orderLine)
+        orderLineMap.put(orderLine1.getPoLineId(), orderLine1)
+        purchaseOrder.setPurchaseOrderLines(orderLineMap)
+
+        PurchaseOrderDeliverySchedule orderDeliverySchedule = new PurchaseOrderDeliverySchedule()
+        orderDeliverySchedule.setPoDeliveryScheduleId("Sch1234")
+        orderDeliverySchedule.setConfirmedQuantity(10.0)
+        orderDeliverySchedule.setConfirmedDeliveryDate(new Date())
+        orderDeliverySchedule.setAsnId("ASN123456")
+        Map<String, PurchaseOrderDeliverySchedule> orderDeliveryScheduleHashMap = new HashMap<>()
+        orderDeliveryScheduleHashMap.put(orderDeliverySchedule.getPoDeliveryScheduleId(), orderDeliverySchedule)
+        orderLine.setPurchaseOrderDeliverySchedule(orderDeliveryScheduleHashMap)
+        orderLine1.setPurchaseOrderDeliverySchedule(orderDeliveryScheduleHashMap)
+
+        return purchaseOrder
+    }
 }
 

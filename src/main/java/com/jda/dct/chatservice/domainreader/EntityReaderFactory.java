@@ -76,7 +76,7 @@ public class EntityReaderFactory {
     public Object getEntity(String type, String id) {
         Assert.isTrue(Strings.isNotEmpty(type), "Entity type can't be null or empty");
         Assert.isTrue(Strings.isNotEmpty(id), "Entity id can't be null or empty");
-        if (!type.equals("analytics")) {
+        if (!type.equals(TYPE_ANALYTICS)) {
             if (!repoMap.containsKey(type)) {
                 throw new IllegalArgumentException(String.format("Invalid entity type %s", type));
             }
