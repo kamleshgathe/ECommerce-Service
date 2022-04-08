@@ -87,33 +87,6 @@ class DomainEntityRepoConfigSpec extends Specification {
         then:
         analyticsClass == Analytics
     }
-/*
-    def "test entityReaderFactory"(){
-        given: "Initialize reader factory"
-        authContext = Mock(AuthContext)
-        shipmentRepo = Mock(DctDaoBase)
-        salesOrderRepo = Mock(DctDaoBase)
-        purchaseOrderRepo = Mock(DctDaoBase)
-        deliveryRepo = Mock(DctDaoBase)
-        nodeRepo = Mock(DctDaoBase)
-        analytics = Mock(Analytics)
-        when:
-
-        EntityReaderFactory.EntityReaderFactoryBuilder builder =
-                new EntityReaderFactory.EntityReaderFactoryBuilder()
-        EntityReaderFactory entityReaderFactory = builder.authContext(authContext)
-                .salesOrderRepo(salesOrderRepo)
-                .purchaseOrderRepo(purchaseOrderRepo)
-                .shipmentRepo(shipmentRepo)
-                .deliveryRepo(deliveryRepo)
-                .nodeRepo(nodeRepo)
-                .analyticsRepo(analytics)
-                .build()
-        then:
-        entityReaderFactory != null
-
-    }*/
-
 
     def "test entityReaderFactory "(){
         given: "Initialize reader factory"
