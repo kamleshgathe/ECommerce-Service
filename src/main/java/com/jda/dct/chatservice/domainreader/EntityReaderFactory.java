@@ -7,6 +7,7 @@
  */
 package com.jda.dct.chatservice.domainreader;
 
+import com.jda.dct.chatservice.repository.Analytics;
 import com.jda.dct.domain.Node;
 import com.jda.dct.domain.stateful.Delivery;
 import com.jda.dct.domain.stateful.PurchaseOrder;
@@ -22,7 +23,8 @@ import org.apache.logging.log4j.util.Strings;
 import org.springframework.util.Assert;
 
 /**
- * Domain entity reader factory. This factory provided methods for reading domain entity object
+ * Domain entity reader factory. This factory provided methods for reading
+ * domain entity object
  * for chat service.
  */
 public class EntityReaderFactory {
@@ -35,10 +37,12 @@ public class EntityReaderFactory {
     private static final String TYPE_CAPACITY = "capacity";
     private static final String TYPE_PROCUREMENT = "forecast-commits";
     private static final String TYPE_NODE = "node";
+    private static final String TYPE_ANALYTICS = "analytics";
 
     private AuthContext authContext;
 
     private final Map<String, DctDaoBase> repoMap;
+    private final Map<String, Class> analyticsRepoMap;
     private final Map<String, Class> classMap = new HashMap<>();
 
     /**
@@ -46,6 +50,7 @@ public class EntityReaderFactory {
      */
     private EntityReaderFactory() {
         repoMap = new HashMap<>();
+        analyticsRepoMap = new HashMap<>();
         classMap.put(TYPE_SHIPMENT, Shipment.class);
         classMap.put(TYPE_CAPACITY, Node.class);
         classMap.put(TYPE_DELIVERY, Delivery.class);
@@ -55,10 +60,13 @@ public class EntityReaderFactory {
         classMap.put(TYPE_SALES_ORDER, SalesOrder.class);
         // entry added for generic node
         classMap.put(TYPE_NODE, Node.class);
+        // entry added for analytics
+        classMap.put(TYPE_ANALYTICS, Analytics.class);
     }
 
     /**
-     * Method returns domain entity object for given business entity and entity id. If type is
+     * Method returns domain entity object for given business entity and entity id.
+     * If type is
      * not supported type by chat server it will return IllegalArgumentException.
      *
      * @param type domain entity type.
@@ -68,15 +76,19 @@ public class EntityReaderFactory {
     public Object getEntity(String type, String id) {
         Assert.isTrue(Strings.isNotEmpty(type), "Entity type can't be null or empty");
         Assert.isTrue(Strings.isNotEmpty(id), "Entity id can't be null or empty");
-        if (!repoMap.containsKey(type)) {
-            throw new IllegalArgumentException(String.format("Invalid entity type %s", type));
+        if (!type.equals(TYPE_ANALYTICS)) {
+            if (!repoMap.containsKey(type)) {
+                throw new IllegalArgumentException(String.format("Invalid entity type %s", type));
+            }
+            return repoMap.get(type).getById(authContext.getCurrentTid(), id);
+        } else {
+            return analyticsRepoMap.get(type);
         }
-
-        return repoMap.get(type).getById(authContext.getCurrentTid(), id);
     }
 
     /**
      * Class type of given entity.
+     *
      * @param entityType SR entity type.
      * @return
      */
@@ -86,8 +98,9 @@ public class EntityReaderFactory {
     }
 
     /**
-     * EntityReaderFactoryBuilder is builder for EntityReaderFactory which hides the complexity of
-     * EntityReaderFactory  creation.
+     * EntityReaderFactoryBuilder is builder for EntityReaderFactory which hides the
+     * complexity of
+     * EntityReaderFactory creation.
      */
     public static class EntityReaderFactoryBuilder {
         private DctDaoBase<Shipment> shipmentRepo;
@@ -95,6 +108,7 @@ public class EntityReaderFactory {
         private DctDaoBase<PurchaseOrder> purchaseOrderRepo;
         private DctDaoBase<Delivery> deliveryRepo;
         private DctDaoBase<Node> nodeRepo;
+        private Analytics analyticsRepo;
 
         private AuthContext authContext;
 
@@ -123,6 +137,13 @@ public class EntityReaderFactory {
             return this;
         }
 
+
+        public EntityReaderFactoryBuilder analyticsRepo(final Analytics analyticsRepo) {
+            this.analyticsRepo = analyticsRepo;
+            return this;
+        }
+
+
         public EntityReaderFactoryBuilder authContext(final AuthContext authContext) {
             this.authContext = authContext;
             return this;
@@ -134,11 +155,13 @@ public class EntityReaderFactory {
          * @return return EntityReaderFactory.
          */
         public EntityReaderFactory build() {
+
             Assert.notNull(shipmentRepo, "Shipment repository can't be null");
             Assert.notNull(salesOrderRepo, "SalesOrder repository can't be null");
             Assert.notNull(purchaseOrderRepo, "PurchaseOrder repository can't be null");
             Assert.notNull(deliveryRepo, "Delivery repository can't be null");
             Assert.notNull(nodeRepo, "Node repository can't be null");
+            Assert.notNull(analyticsRepo, "Analytics repository can't be null");
             Assert.notNull(authContext, "AuthContext can't be null");
 
             EntityReaderFactory readerFactory = new EntityReaderFactory();
@@ -151,6 +174,8 @@ public class EntityReaderFactory {
             readerFactory.repoMap.put(TYPE_PROCUREMENT, nodeRepo);
             // entry added for generic node
             readerFactory.repoMap.put(TYPE_NODE, nodeRepo);
+            // entry added for analytics
+            readerFactory.analyticsRepoMap.put(TYPE_ANALYTICS, Analytics.class);
             readerFactory.authContext = authContext;
             return readerFactory;
         }

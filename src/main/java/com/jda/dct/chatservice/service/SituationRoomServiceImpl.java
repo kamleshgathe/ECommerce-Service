@@ -1495,7 +1495,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
         String entityInString = (String) ChatRoomUtil.byteArrayToObject(entity);
         Class entityClass = entityReaderFactory.getEntityClass(entityType);
         List<String> allowedObject = permissionHelper.getPermittedObjects();
-        if (entityClass != null) {
+        if (entityClass != null && (entityType != null && !entityType.equals("analytics"))) {
             List filteredList = new ArrayList<>();
             list = ChatRoomUtil.jsonToObject(entityInString, entityClass);
             for (Object base : list) {
