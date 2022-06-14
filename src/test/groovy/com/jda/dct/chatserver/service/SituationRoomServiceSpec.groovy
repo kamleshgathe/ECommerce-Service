@@ -2035,7 +2035,7 @@ class SituationRoomServiceSpec extends Specification {
                     body.put("id", "111")
                     return mockedResponseEntity(HttpStatus.OK, body)
                 }
-        dctService.restTemplateForTenantService(umsUri) >> mockuserInfo()
+        dctService.internalAuthTemplateForTenantService(umsUri) >> mockuserInfo()
         initNewSituationRoomService()
         List<Attachment> response = service.upload(roomId, file, "Test")
 
