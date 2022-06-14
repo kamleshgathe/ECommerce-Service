@@ -1792,7 +1792,7 @@ public class SituationRoomServiceImpl implements SituationRoomService {
     @Cacheable(value = "usersInfo")
     public Optional<String> userData() {
         Optional<String> userInfo;
-        userInfo = dctService.restTemplateForTenantService(umsUri);
+        userInfo = dctService.internalAuthTemplateForTenantService(umsUri);
         return userInfo;
     }
 
