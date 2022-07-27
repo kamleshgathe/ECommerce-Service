@@ -162,7 +162,6 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS_JDA_PD_DEV_TEST }}
       - run: az acr login -n dctContainerRegistry
-      - run: docker tag ${{env.REPOSITORY_NAME}}:latest ${{env.CONTAINER_REGISTRY}}/${{env.REPOSITORY_NAME}}:${{env.BUILD_VERSION}}-${{github.run_number}}
       - run: docker push ${{env.CONTAINER_REGISTRY}}/${{env.REPOSITORY_NAME}}:${{env.BUILD_VERSION}}-${{github.run_number}}
       - run: sleep 30
  
