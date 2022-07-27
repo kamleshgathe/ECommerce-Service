@@ -150,8 +150,12 @@ jobs:
               artifactoryPublish
       - run: echo "REPOSITORY_NAME=$(echo '${{ github.repository }}' | awk -F '/' '{print $2}' |  sed 's/plat-lct-//g')" >> $GITHUB_ENV
         shell: bash        
-      - name: 'RUN - Build Docker image'
-        run: docker build . -f Dockerfile --build-arg app=${{env.REPOSITORY_NAME}} --build-arg version=${{env.BUILD_VERSION}}-${{github.run_number}} --tag ${{env.REPOSITORY_NAME}}
+      - name: 'RUN - Build Docker image - Release'
+        if: startsWith(github.ref, 'refs/heads/release/')
+        run: docker build . -f Dockerfile --build-arg app=${{env.REPOSITORY_NAME}} --build-arg version=${{env.BUILD_VERSION}} --tag ${{env.CONTAINER_REGISTRY}}/${{env.REPOSITORY_NAME}}:${{env.BUILD_VERSION}}
+      - name: 'RUN - Build Docker image - master-ci'
+        if: contains(github.ref, 'master-ci')
+        run: docker build . -f Dockerfile --build-arg app=${{env.REPOSITORY_NAME}} --build-arg version=${{env.BUILD_VERSION}} --tag ${{env.CONTAINER_REGISTRY}}/${{env.REPOSITORY_NAME}}:${{env.BUILD_VERSION}}-${{github.run_number}}
     
       - name: 'RUN - Push Image to ACR'
         uses: azure/login@v1
