@@ -23,7 +23,7 @@ on:
         default: ''    
       foundationBuildNumber:
         description: 'LCT foundation dependency build number'     
-        required: true
+        required: false
         default: ''   
 
 env:
