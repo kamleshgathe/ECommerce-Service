@@ -1,7 +1,7 @@
 /**
  * Copyright © 2022, JDA Software Group, Inc. ALL RIGHTS RESERVED.
- * <p>
- * This software is the confidential information of JDA Software, Inc., and is licensed
+ *
+ * <p>This software is the confidential information of JDA Software, Inc., and is licensed
  * as restricted rights software. The use,reproduction, or disclosure of this software
  * is subject to restrictions set forth in your license agreement with JDA.
  */
@@ -57,7 +57,8 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
     "com.jda.luminate.io.documentstore",
     "com.jda.luminate.ingest.rest.services",
     "com.jda.luminate.documentation",
-    "com.jda.luminate.common.cache"
+    "com.jda.luminate.common.cache",
+    "com.jda.dct.email"
 })
 
 @EntityScan(basePackages = {"com.jda.dct.domain"})
