@@ -62,10 +62,12 @@ jobs:
           echo "BUILD_VERSION=${{env.BRANCH_VERSION}}-${{env.LABEL}}-${{github.run_number}}" >> $GITHUB_ENV
           if [[ "${{ github.event.inputs.foundationBuildNumber }}" != "" ]] ; then
           echo "DEP_VERSION_LOOKUP=${{env.BRANCH_VERSION}}-${{env.LABEL}}-${{ github.event.inputs.foundationBuildNumber }}" >> $GITHUB_ENV
+          echo "PLATFORM_VERSION_LOOKUP=${{env.BRANCH_VERSION}}-${{env.LABEL}}+" >> $GITHUB_ENV
           fi
           if [[ "${{ github.event.inputs.foundationBuildNumber }}" == "" ]] ; then
           echo "DEP_VERSION_LOOKUP=${{env.BRANCH_VERSION}}-${{env.LABEL}}+" >> $GITHUB_ENV
           echo "PLATFORM_VERSION_LOOKUP=${{env.BRANCH_VERSION}}-${{env.LABEL}}+" >> $GITHUB_ENV
+          fi
       - name: Setting Env variables 
         if: startsWith(github.ref, 'refs/heads/teams/') 
         env:
@@ -161,9 +163,17 @@ jobs:
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS_JDA_PD_DEV_TEST }}
-      - run: az acr login -n dctContainerRegistry
-      - run: docker push ${{env.CONTAINER_REGISTRY}}/${{env.REPOSITORY_NAME}}:${{env.BUILD_VERSION}}-${{github.run_number}}
-      - run: sleep 30
+      - run: az acr login -n dctContainerRegistry 
+      - name: Push Image - Master-ci
+        if: contains(github.ref, 'master-ci')
+        run: |
+            docker push ${{env.CONTAINER_REGISTRY}}/${{env.REPOSITORY_NAME}}:${{env.BUILD_VERSION}}-${{github.run_number}}
+            sleep 30
+      - name: 'Push Image - Release'
+        if: startsWith(github.ref, 'refs/heads/release/')
+        run: |
+             docker push ${{env.CONTAINER_REGISTRY}}/${{env.REPOSITORY_NAME}}:${{env.BUILD_VERSION}}
+             sleep 30
  
   trigger-deployment:
     needs: [build]
