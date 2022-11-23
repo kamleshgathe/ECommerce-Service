@@ -13,6 +13,7 @@ import com.jda.dct.domain.stateful.Delivery;
 import com.jda.dct.domain.stateful.PurchaseOrder;
 import com.jda.dct.domain.stateful.SalesOrder;
 import com.jda.dct.domain.stateful.Shipment;
+import com.jda.dct.domain.util.CriteriaUtil;
 import com.jda.dct.persist.ignite.dao.DctDaoBase;
 import com.jda.luminate.security.contexts.AuthContext;
 
@@ -80,7 +81,7 @@ public class EntityReaderFactory {
             if (!repoMap.containsKey(type)) {
                 throw new IllegalArgumentException(String.format("Invalid entity type %s", type));
             }
-            return repoMap.get(type).getById(authContext.getCurrentTid(), id);
+            return repoMap.get(type).getById(authContext.getCurrentTid(), id, CriteriaUtil.getAllRefObjsCriteria());
         } else {
             return analyticsRepoMap.get(type);
         }

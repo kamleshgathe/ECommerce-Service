@@ -8,11 +8,13 @@
 package com.jda.dct.chatserver.domainreader
 
 import com.jda.dct.chatservice.domainreader.EntityReaderFactory
+import com.jda.dct.domain.Site
 import com.jda.dct.domain.stateful.Shipment
 import com.jda.dct.chatservice.repository.Analytics
 import com.jda.dct.persist.ignite.dao.DctDaoBase
 import com.jda.dct.domain.Node
 import com.jda.luminate.security.contexts.AuthContext
+import org.testng.Assert
 import spock.lang.Specification
 
 class EntityReaderFactorySpec extends Specification {
@@ -101,7 +103,7 @@ class EntityReaderFactorySpec extends Specification {
         def analytics = Mock(Analytics)
         def shipment = Mock(Shipment)
         shipment.getShipmentId() >> "shipment1"
-        dctShipmentDaoBase.getById(_, _) >> shipment;
+        dctShipmentDaoBase.getById(_, _, _) >> shipment;
 
         def entityReaderFactory = buildEntityReaderFactory(dctShipmentDaoBase,
                 dctSalesOrderDaoBase,
@@ -143,7 +145,7 @@ class EntityReaderFactorySpec extends Specification {
         def dctDeliveryDaoBase = Mock(DctDaoBase)
         def dctNodeDaoBase = Mock(DctDaoBase)
         def analytics = Mock(Analytics)
-        dctNodeDaoBase.getById(_, _) >> Mock(Node)
+        dctNodeDaoBase.getById(_, _, _) >> Mock(Node)
 
         def entityReaderFactory = buildEntityReaderFactory(dctShipmentDaoBase,
                 dctSalesOrderDaoBase,
@@ -158,4 +160,61 @@ class EntityReaderFactorySpec extends Specification {
         then:
         obj instanceof Node
     }
+
+    def "test site name and description in entity"() {
+        given: "Initialize reader factory"
+        def authContext = Mock(AuthContext)
+        def dctShipmentDaoBase = Mock(DctDaoBase)
+        def dctSalesOrderDaoBase = Mock(DctDaoBase)
+        def dctPurchaseOrderDaoBase = Mock(DctDaoBase)
+        def dctDeliveryDaoBase = Mock(DctDaoBase)
+        def dctNodeDaoBase = Mock(DctDaoBase)
+        def analytics = Mock(Analytics)
+        def node = getNodeData()
+        dctShipmentDaoBase.getById(_, _, _) >> node;
+
+        def entityReaderFactory = buildEntityReaderFactory(dctShipmentDaoBase,
+                dctSalesOrderDaoBase,
+                dctPurchaseOrderDaoBase,
+                dctDeliveryDaoBase,
+                dctNodeDaoBase,
+                analytics,
+                authContext)
+
+        when: "Called with shipment as type"
+        Object obj = entityReaderFactory.getEntity("shipment", "id1")
+
+        then: "Should have siteName and SiteDescription"
+        assert  obj != null
+        assert "Acme Warehouse Germany".equals(obj.refObjects.get("shipToSites").getAt(0).getSiteDescription())
+        assert "AC-WH01".equals(obj.refObjects.get("shipToSites").getAt(0).getSiteName())
+    }
+
+    def getNodeData() {
+        Node node = new Node()
+        node.setId("a4b7a825f67930965747445709011120-Node-176d7d88b1953abe7eeeff3b38bf8398")
+        node.setNodeType("capacity")
+        node.setRefObjects(getRefObjects())
+
+        return node
+    }
+
+    def getRefObjects() {
+        Map<String, String> map = [:]
+        Set<Site> set = new HashSet<>();
+        set.add(getSiteObject())
+        map.put("shipToSites", set)
+
+        return map
+    }
+
+    def getSiteObject() {
+        Site site = new Site()
+        site.setId("a4b7a825f67930965747445709011120-Site-07eea86e6147ec8e4d133ea3e93488b3")
+        site.setSiteName("AC-WH01")
+        site.setSiteDescription("Acme Warehouse Germany")
+
+        return site
+    }
+
 }
