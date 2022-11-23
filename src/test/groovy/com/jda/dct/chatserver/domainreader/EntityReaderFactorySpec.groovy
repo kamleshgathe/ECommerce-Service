@@ -14,7 +14,6 @@ import com.jda.dct.chatservice.repository.Analytics
 import com.jda.dct.persist.ignite.dao.DctDaoBase
 import com.jda.dct.domain.Node
 import com.jda.luminate.security.contexts.AuthContext
-import org.junit.Test
 import spock.lang.Specification
 
 class EntityReaderFactorySpec extends Specification {
@@ -160,8 +159,7 @@ class EntityReaderFactorySpec extends Specification {
         then:
         obj instanceof Node
     }
-
-    @Test
+    
     def "testSiteNameAndDescriptionInEntity"() {
         given: "Initialize reader factory and set the required data for site name and description"
         def authContext = Mock(AuthContext)
