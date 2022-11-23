@@ -14,7 +14,6 @@ import com.jda.dct.chatservice.repository.Analytics
 import com.jda.dct.persist.ignite.dao.DctDaoBase
 import com.jda.dct.domain.Node
 import com.jda.luminate.security.contexts.AuthContext
-import org.testng.Assert
 import spock.lang.Specification
 
 class EntityReaderFactorySpec extends Specification {
@@ -103,7 +102,7 @@ class EntityReaderFactorySpec extends Specification {
         def analytics = Mock(Analytics)
         def shipment = Mock(Shipment)
         shipment.getShipmentId() >> "shipment1"
-        dctShipmentDaoBase.getById(_, _, _) >> shipment;
+        dctShipmentDaoBase.getById(_, _, _) >> shipment
 
         def entityReaderFactory = buildEntityReaderFactory(dctShipmentDaoBase,
                 dctSalesOrderDaoBase,
@@ -162,7 +161,7 @@ class EntityReaderFactorySpec extends Specification {
     }
 
     def "test site name and description in entity"() {
-        given: "Initialize reader factory"
+        given: "Initialize reader factory and set the required data for site name and description"
         def authContext = Mock(AuthContext)
         def dctShipmentDaoBase = Mock(DctDaoBase)
         def dctSalesOrderDaoBase = Mock(DctDaoBase)
@@ -170,8 +169,8 @@ class EntityReaderFactorySpec extends Specification {
         def dctDeliveryDaoBase = Mock(DctDaoBase)
         def dctNodeDaoBase = Mock(DctDaoBase)
         def analytics = Mock(Analytics)
-        def node = getNodeData()
-        dctShipmentDaoBase.getById(_, _, _) >> node;
+        def node = nodeData()
+        dctShipmentDaoBase.getById(_, _, _) >> node
 
         def entityReaderFactory = buildEntityReaderFactory(dctShipmentDaoBase,
                 dctSalesOrderDaoBase,
@@ -186,29 +185,29 @@ class EntityReaderFactorySpec extends Specification {
 
         then: "Should have siteName and SiteDescription"
         assert  obj != null
-        assert "Acme Warehouse Germany".equals(obj.refObjects.get("shipToSites").getAt(0).getSiteDescription())
-        assert "AC-WH01".equals(obj.refObjects.get("shipToSites").getAt(0).getSiteName())
+        "Acme Warehouse Germany" == obj.refObjects.get("shipToSites")[(0)].getSiteDescription()
+        "AC-WH01" == obj.refObjects.get("shipToSites")[(0)].getSiteName()
     }
 
-    def getNodeData() {
+    public Node nodeData() {
         Node node = new Node()
         node.setId("a4b7a825f67930965747445709011120-Node-176d7d88b1953abe7eeeff3b38bf8398")
         node.setNodeType("capacity")
-        node.setRefObjects(getRefObjects())
+        node.setRefObjects(refObjects())
 
         return node
     }
 
-    def getRefObjects() {
+    public def refObjects() {
         Map<String, String> map = [:]
-        Set<Site> set = new HashSet<>();
-        set.add(getSiteObject())
+        Set<Site> set = [] as Set
+        set.add(siteDescription())
         map.put("shipToSites", set)
 
         return map
     }
 
-    def getSiteObject() {
+    public def siteDescription() {
         Site site = new Site()
         site.setId("a4b7a825f67930965747445709011120-Site-07eea86e6147ec8e4d133ea3e93488b3")
         site.setSiteName("AC-WH01")
