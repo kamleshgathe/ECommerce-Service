@@ -160,7 +160,7 @@ class EntityReaderFactorySpec extends Specification {
         obj instanceof Node
     }
 
-    def siteNameAndDescriptionInEntity() {
+    def testSiteNameAndDescriptionInEntity() {
         given: "Initialize reader factory and set the required data for site name and description"
         def authContext = Mock(AuthContext)
         def dctShipmentDaoBase = Mock(DctDaoBase)
