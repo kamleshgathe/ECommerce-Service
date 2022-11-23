@@ -160,7 +160,7 @@ class EntityReaderFactorySpec extends Specification {
         obj instanceof Node
     }
 
-    def "siteNameAndDescriptionInEntity"() {
+    def siteNameAndDescriptionInEntity() {
         given: "Initialize reader factory and set the required data for site name and description"
         def authContext = Mock(AuthContext)
         def dctShipmentDaoBase = Mock(DctDaoBase)
@@ -198,7 +198,7 @@ class EntityReaderFactorySpec extends Specification {
         return node
     }
 
-    private def refObjects() {
+    private refObjects() {
         Map<String, String> map = [:]
         Set<Site> set = [] as Set
         set.add(siteDescription())
@@ -207,7 +207,7 @@ class EntityReaderFactorySpec extends Specification {
         return map
     }
 
-    private def siteDescription() {
+    private siteDescription() {
         Site site = new Site()
         site.setId("a4b7a825f67930965747445709011120-Site-07eea86e6147ec8e4d133ea3e93488b3")
         site.setSiteName("AC-WH01")
