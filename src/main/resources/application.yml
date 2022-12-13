@@ -63,7 +63,11 @@ datalake:
   authTokenEndpoint: https://login.microsoftonline.com/2ac36cee-0617-4ac0-bebf-e1ce5dfab86c/oauth2/token
   clientkey: vLw30RPsY+FFQacp3Ip+loWYGUoiHsIPkkcbDaZ7vr4=
   account: cdcicddatalake.azuredatalakestore.net
-
+  name: lctdevusdatalakegen2
+  key: Er5EUtIGBdtoQ3d+r+VKOEfUouWy/heClqtNCwFGVA3bsBt8qHwxq1dnld75QLr4icAIp2oD6/k1KVS0GBm9Cw==
+  container: lctdata
+  url:
+    format: https://%s.dfs.core.windows.net
 
 # only enabled for development and testing
 ---
