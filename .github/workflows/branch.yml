@@ -29,6 +29,8 @@ on:
 env:
   TARGET_PRODUCT: luminate-lct
   CONTAINER_REGISTRY : 'dctcontainerregistry.azurecr.io'
+  JDA_DELIVERS_CONTAINER_REGISTRY: 'lctjdadeliversregistry.azurecr.io'
+  JDA_CONTAINER_REGISTRY: 'o3wxrtwt72kazpqnjjps0uwc.azurecr.io'
   SNAPSHOT_VERSION: 2022.5.0
 
 
@@ -174,6 +176,21 @@ jobs:
         run: |
              docker push ${{env.CONTAINER_REGISTRY}}/${{env.REPOSITORY_NAME}}:${{env.BUILD_VERSION}}
              sleep 30
+      - name: RUN - 'Push Image to JDA Delivers ACR'
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS_JDA_DELIVERS_DEV }}
+      - run: az acr login -n lctjdadeliversregistry
+      - run: docker tag ${{env.CONTAINER_REGISTRY}}/${{env.REPOSITORY_NAME}}:${{env.BUILD_VERSION}} ${{env.JDA_DELIVERS_CONTAINER_REGISTRY}}/${{env.REPOSITORY_NAME}}:${{env.BUILD_VERSION}}
+      - run: docker push ${{env.JDA_DELIVERS_CONTAINER_REGISTRY}}/${{env.REPOSITORY_NAME}}:${{env.BUILD_VERSION}}
+
+      - name: 'RUN - Push Image to JDA Delivers STRATOSPHERE ACR'
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS_JDA_DELIVERS_STRATOSPHERE }}
+      - run: az acr login -n o3wxrtwt72kazpqnjjps0uwc
+      - run: docker tag ${{env.CONTAINER_REGISTRY}}/${{env.REPOSITORY_NAME}}:${{env.BUILD_VERSION}} ${{env.JDA_CONTAINER_REGISTRY}}/${{env.REPOSITORY_NAME}}:${{env.BUILD_VERSION}}
+      - run: docker push ${{env.JDA_CONTAINER_REGISTRY}}/${{env.REPOSITORY_NAME}}:${{env.BUILD_VERSION}}
  
   trigger-deployment:
     needs: [build]
