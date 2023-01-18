@@ -10,23 +10,23 @@ on:
   workflow_dispatch:
      inputs:
       version:
-        description: 'Version for build artifacts'     
+        description: 'Version for build artifacts'
         required: true
         default: ''
       depVersion:
-        description: 'Version for LCT foundation build artifacts'     
+        description: 'Version for LCT foundation build artifacts'
         required: true
-        default: ''   
+        default: ''
       platformVersion:
-        description: 'Version for yoda foundation build artifacts'     
+        description: 'Version for yoda foundation build artifacts'
         required: true
         default: '' 
        
 env:
-  SNAPSHOT_VERSION: 2022.5.0       
+  SNAPSHOT_VERSION: 2023.5.0
 
 
-jobs:         
+jobs:
   build:
     runs-on: ubuntu-latest
     steps:
@@ -41,31 +41,31 @@ jobs:
           ref: ${{ github.head_ref }}
       - name: Base branch check
         run: |
-          echo "PR_BASE_BRANCH=${{ github.event.pull_request.base.ref }}" >>  $GITHUB_ENV 
+          echo "PR_BASE_BRANCH=${{ github.event.pull_request.base.ref }}" >>  $GITHUB_ENV
       - name: Current branch name
         run: |
-          echo "BRANCH_VERSION=`echo ${{env.PR_BASE_BRANCH}} | sed -e 's,.*/\(.*\),\1,'`" >>  $GITHUB_ENV      
+          echo "BRANCH_VERSION=`echo ${{env.PR_BASE_BRANCH}} | sed -e 's,.*/\(.*\),\1,'`" >>  $GITHUB_ENV
       - name: Setting Env variables
         if: github.event.pull_request.base.ref == 'master-ci'
         env:
           LABEL: SNAPSHOT
-        run: |       
-          echo "BUILD_VERSION=${{env.SNAPSHOT_VERSION}}-${{env.LABEL}}" >> $GITHUB_ENV 
-          echo "DEP_VERSION_LOOKUP=${{env.SNAPSHOT_VERSION}}-${{env.LABEL}}" >> $GITHUB_ENV      
+        run: |
+          echo "BUILD_VERSION=${{env.SNAPSHOT_VERSION}}-${{env.LABEL}}" >> $GITHUB_ENV
+          echo "DEP_VERSION_LOOKUP=${{env.SNAPSHOT_VERSION}}-${{env.LABEL}}" >> $GITHUB_ENV
           echo "PLATFORM_VERSION_LOOKUP=${{env.SNAPSHOT_VERSION}}-${{env.LABEL}}" >> $GITHUB_ENV
       - name: Setting Env variables
-        if: startsWith(github.base_ref, 'teams/') 
+        if: startsWith(github.base_ref, 'teams/')
         env:
           LABEL: ${{env.BRANCH_VERSION}}
-        run: |       
-          echo "BUILD_VERSION=${{env.SNAPSHOT_VERSION}}-${{env.LABEL}}" >> $GITHUB_ENV 
+        run: |
+          echo "BUILD_VERSION=${{env.SNAPSHOT_VERSION}}-${{env.LABEL}}" >> $GITHUB_ENV
           echo "DEP_VERSION_LOOKUP=${{env.SNAPSHOT_VERSION}}-${{env.LABEL}}" >> $GITHUB_ENV
-          echo "PLATFORM_VERSION_LOOKUP=${{env.SNAPSHOT_VERSION}}-SNAPSHOT" >> $GITHUB_ENV
+          echo "PLATFORM_VERSION_LOOKUP=${{env.SNAPSHOT_VERSION}}-${{env.LABEL}}" >> $GITHUB_ENV
       - name: Setting Env variables
         if: startsWith(github.base_ref, 'release/')
         env:
           LABEL: rc
-        run: |       
+        run: |
           echo "BUILD_VERSION=${{env.BRANCH_VERSION}}-${{env.LABEL}}-${{github.run_number}}" >> $GITHUB_ENV
           echo "DEP_VERSION_LOOKUP=${{env.BRANCH_VERSION}}-${{env.LABEL}}+" >> $GITHUB_ENV
           echo "PLATFORM_VERSION_LOOKUP=${{env.BRANCH_VERSION}}-${{env.LABEL}}+" >> $GITHUB_ENV
@@ -93,7 +93,7 @@ jobs:
           echo "artifactoryUsername=${{ secrets.LCT_ARTIFACTORY_USERNAME }}" >> gradle.properties
           echo "artifactoryPassword=${{ secrets.LCT_ARTIFACTORY_PASSWORD }}" >> gradle.properties
       - name: Build and Checks
-        uses: gradle/gradle-build-action@v1  
+        uses: gradle/gradle-build-action@v1 
         with: 
           arguments: |
               -Dorg.gradle.internal.http.socketTimeout=120000 
@@ -116,7 +116,7 @@ jobs:
           path: |
             build/reports
             build/test-results
-          retention-days: 1  
+          retention-days: 1 
       - name: 'Coverage Report'
         uses: codacy/codacy-coverage-reporter-action@v1
         with:

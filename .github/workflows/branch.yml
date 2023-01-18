@@ -1,4 +1,4 @@
-name: Chat-WF
+name: Branch 
 
 on:
   push:
@@ -10,29 +10,30 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version for build artifacts'     
+        description: 'Version for build artifacts'
         required: true
         default: ''
       depVersion:
-        description: 'Version for LCT foundation build artifacts'     
+        description: 'Version for LCT foundation build artifacts'
         required: true
-        default: '' 
+        default: ''
       platformVersion:
-        description: 'Version for LCT platform build artifacts'     
+        description: 'Version for LCT platform build artifacts'
         required: true
-        default: ''    
+        default: ''
       foundationBuildNumber:
-        description: 'LCT foundation dependency build number'     
+        description: 'LCT foundation dependency build number'
         required: false
-        default: ''   
+        default: ''
 
 env:
   TARGET_PRODUCT: luminate-lct
   CONTAINER_REGISTRY : 'dctcontainerregistry.azurecr.io'
-  SNAPSHOT_VERSION: 2022.5.0
+  JDA_DELIVERS_CONTAINER_REGISTRY: 'lctjdadeliversregistry.azurecr.io'
+  JDA_CONTAINER_REGISTRY: 'o3wxrtwt72kazpqnjjps0uwc.azurecr.io'
+  SNAPSHOT_VERSION: 2023.5.0
 
-
-jobs:        
+jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 60
@@ -49,16 +50,16 @@ jobs:
         shell: bash
       - name: Get branch names
         id: branch-name
-        uses: tj-actions/branch-names@v5 
+        uses: tj-actions/branch-names@v5
       - name: Current branch name
         run: |
           echo "BRANCH=${{ steps.branch-name.outputs.current_branch }}" >>  $GITHUB_ENV
           echo "BRANCH_VERSION=`git symbolic-ref HEAD | sed -e 's,.*/\(.*\),\1,'`" >>  $GITHUB_ENV
-      - name: Setting Env variables 
-        if: startsWith(github.ref, 'refs/heads/release/') 
+      - name: Setting Env variables
+        if: startsWith(github.ref, 'refs/heads/release/')
         env:
            LABEL: rc
-        run: | 
+        run: |
           echo "BUILD_VERSION=${{env.BRANCH_VERSION}}-${{env.LABEL}}-${{github.run_number}}" >> $GITHUB_ENV
           if [[ "${{ github.event.inputs.foundationBuildNumber }}" != "" ]] ; then
           echo "DEP_VERSION_LOOKUP=${{env.BRANCH_VERSION}}-${{env.LABEL}}-${{ github.event.inputs.foundationBuildNumber }}" >> $GITHUB_ENV
@@ -68,23 +69,21 @@ jobs:
           echo "DEP_VERSION_LOOKUP=${{env.BRANCH_VERSION}}-${{env.LABEL}}+" >> $GITHUB_ENV
           echo "PLATFORM_VERSION_LOOKUP=${{env.BRANCH_VERSION}}-${{env.LABEL}}+" >> $GITHUB_ENV
           fi
-      - name: Setting Env variables 
-        if: startsWith(github.ref, 'refs/heads/teams/') 
+      - name: Setting Env variables
+        if: startsWith(github.ref, 'refs/heads/teams/')
         env:
           LABEL: ${{env.BRANCH_VERSION}}
-        run: | 
-         
+        run: |
           echo "BUILD_VERSION=${{env.SNAPSHOT_VERSION}}-${{env.LABEL}}" >> $GITHUB_ENV
           echo "DEP_VERSION_LOOKUP=${{env.SNAPSHOT_VERSION}}-${{env.LABEL}}" >> $GITHUB_ENV
-          echo "PLATFORM_VERSION_LOOKUP=${{env.SNAPSHOT_VERSION}}-SNAPSHOT" >> $GITHUB_ENV
-      - name: Setting Env variables 
-        if: contains(github.ref, 'master-ci') 
+          echo "PLATFORM_VERSION_LOOKUP=${{env.SNAPSHOT_VERSION}}-${{env.LABEL}}" >> $GITHUB_ENV
+      - name: Setting Env variables
+        if: contains(github.ref, 'master-ci')
         env:
           LABEL: SNAPSHOT
-        run: | 
-         
+        run: |
           echo "BUILD_VERSION=${{env.SNAPSHOT_VERSION}}-${{env.LABEL}}" >> $GITHUB_ENV
-          echo "DEP_VERSION_LOOKUP=${{env.SNAPSHOT_VERSION}}-${{env.LABEL}}" >> $GITHUB_ENV      
+          echo "DEP_VERSION_LOOKUP=${{env.SNAPSHOT_VERSION}}-${{env.LABEL}}" >> $GITHUB_ENV 
           echo "PLATFORM_VERSION_LOOKUP=${{env.SNAPSHOT_VERSION}}-${{env.LABEL}}" >> $GITHUB_ENV
       - name: 'SETUP - JAVA JDK 14'
         uses: actions/setup-java@v2
@@ -111,9 +110,9 @@ jobs:
           echo "artifactoryPassword=${{ secrets.LCT_ARTIFACTORY_PASSWORD }}" >> gradle.properties
       - name: 'BUILD - Service'
         uses: gradle/gradle-build-action@v2
-        with: 
+        with:
           arguments: |
-              -Dorg.gradle.internal.http.socketTimeout=120000 
+              -Dorg.gradle.internal.http.socketTimeout=120000
               -Dorg.gradle.internal.http.connectionTimeout=120000
               -Pversion=${{env.BUILD_VERSION}}
               -PdepVersion=${{env.DEP_VERSION_LOOKUP}}
@@ -133,39 +132,39 @@ jobs:
           path: |
             build/reports
             build/test-results
-          retention-days: 1                
+          retention-days: 1 
       - name: 'STATIC CHECK - Run Codacy Analysis'
         uses: codacy/codacy-coverage-reporter-action@v1
         with:
           project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
-          coverage-reports: build/reports/jacoco/test/jacocoTestReport.xml  
+          coverage-reports: build/reports/jacoco/test/jacocoTestReport.xml
       - name: 'PACKAGE - Upload Artifact'
-        if: startsWith(github.ref, 'refs/heads/release/') || contains(github.ref, 'master-ci') || contains(github.ref, 'teams/test')
-        uses: gradle/gradle-build-action@v2 
+        if: startsWith(github.ref, 'refs/heads/release/') || contains(github.ref, 'master-ci') || contains(github.ref, 'refs/heads/teams/jaguarlatest')
+        uses: gradle/gradle-build-action@v2
         with:
-          arguments: |        
-              -Dorg.gradle.internal.http.socketTimeout=120000 
+          arguments: |
+              -Dorg.gradle.internal.http.socketTimeout=120000
               -Dorg.gradle.internal.http.connectionTimeout=120000
               -Pversion=${{env.BUILD_VERSION}}
               -PdepVersion=${{env.DEP_VERSION_LOOKUP}}
               -PplatformVersion=${{env.PLATFORM_VERSION_LOOKUP}}
               artifactoryPublish
       - run: echo "REPOSITORY_NAME=$(echo '${{ github.repository }}' | awk -F '/' '{print $2}' |  sed 's/plat-lct-//g')" >> $GITHUB_ENV
-        shell: bash        
+        shell: bash 
       - name: 'RUN - Build Docker image - Release'
         if: startsWith(github.ref, 'refs/heads/release/')
         run: docker build . -f Dockerfile --build-arg app=${{env.REPOSITORY_NAME}} --build-arg version=${{env.BUILD_VERSION}} --tag ${{env.CONTAINER_REGISTRY}}/${{env.REPOSITORY_NAME}}:${{env.BUILD_VERSION}}
       - name: 'RUN - Build Docker image - master-ci'
-        if: contains(github.ref, 'master-ci')
+        if: startsWith(github.ref, 'refs/heads/teams/') || contains(github.ref, 'master-ci')
         run: docker build . -f Dockerfile --build-arg app=${{env.REPOSITORY_NAME}} --build-arg version=${{env.BUILD_VERSION}} --tag ${{env.CONTAINER_REGISTRY}}/${{env.REPOSITORY_NAME}}:${{env.BUILD_VERSION}}-${{github.run_number}}
     
       - name: 'RUN - Push Image to ACR'
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS_JDA_PD_DEV_TEST }}
-      - run: az acr login -n dctContainerRegistry 
+      - run: az acr login -n dctContainerRegistry
       - name: Push Image - Master-ci
-        if: contains(github.ref, 'master-ci')
+        if: startsWith(github.ref, 'refs/heads/teams/') || contains(github.ref, 'master-ci')
         run: |
             docker push ${{env.CONTAINER_REGISTRY}}/${{env.REPOSITORY_NAME}}:${{env.BUILD_VERSION}}-${{github.run_number}}
             sleep 30
@@ -174,11 +173,27 @@ jobs:
         run: |
              docker push ${{env.CONTAINER_REGISTRY}}/${{env.REPOSITORY_NAME}}:${{env.BUILD_VERSION}}
              sleep 30
+             
+      - name: RUN - 'Push Image to JDA Delivers ACR'
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS_JDA_DELIVERS_DEV }}
+      - run: az acr login -n lctjdadeliversregistry
+      - run: docker tag ${{env.CONTAINER_REGISTRY}}/${{env.REPOSITORY_NAME}}:${{env.BUILD_VERSION}}-${{github.run_number}} ${{env.JDA_DELIVERS_CONTAINER_REGISTRY}}/${{env.REPOSITORY_NAME}}:${{env.BUILD_VERSION}}-${{github.run_number}}
+      - run: docker push ${{env.JDA_DELIVERS_CONTAINER_REGISTRY}}/${{env.REPOSITORY_NAME}}:${{env.BUILD_VERSION}}-${{github.run_number}}
+
+      - name: 'RUN - Push Image to JDA Delivers STRATOSPHERE ACR'
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS_JDA_DELIVERS_STRATOSPHERE }}
+      - run: az acr login -n o3wxrtwt72kazpqnjjps0uwc
+      - run: docker tag ${{env.CONTAINER_REGISTRY}}/${{env.REPOSITORY_NAME}}:${{env.BUILD_VERSION}} ${{env.JDA_CONTAINER_REGISTRY}}/${{env.REPOSITORY_NAME}}:${{env.BUILD_VERSION}}
+      - run: docker push ${{env.JDA_CONTAINER_REGISTRY}}/${{env.REPOSITORY_NAME}}:${{env.BUILD_VERSION}}       
  
   trigger-deployment:
     needs: [build]
     if: github.event_name == 'push'
-    runs-on: ubuntu-latest        
+    runs-on: ubuntu-latest 
     steps:
     - name: Generate token
       id: generate_token
