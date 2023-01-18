@@ -179,8 +179,8 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS_JDA_DELIVERS_DEV }}
       - run: az acr login -n lctjdadeliversregistry
-      - run: docker tag ${{env.CONTAINER_REGISTRY}}/${{env.REPOSITORY_NAME}}:${{env.BUILD_VERSION}}-${{github.run_number}} ${{env.JDA_DELIVERS_CONTAINER_REGISTRY}}/${{env.REPOSITORY_NAME}}:${{env.BUILD_VERSION}}-${{github.run_number}}
-      - run: docker push ${{env.JDA_DELIVERS_CONTAINER_REGISTRY}}/${{env.REPOSITORY_NAME}}:${{env.BUILD_VERSION}}-${{github.run_number}}
+      - run: docker tag ${{env.CONTAINER_REGISTRY}}/${{env.REPOSITORY_NAME}}:${{env.BUILD_VERSION}} ${{env.JDA_DELIVERS_CONTAINER_REGISTRY}}/${{env.REPOSITORY_NAME}}:${{env.BUILD_VERSION}}
+      - run: docker push ${{env.JDA_DELIVERS_CONTAINER_REGISTRY}}/${{env.REPOSITORY_NAME}}:${{env.BUILD_VERSION}}
 
       - name: 'RUN - Push Image to JDA Delivers STRATOSPHERE ACR'
         uses: azure/login@v1
