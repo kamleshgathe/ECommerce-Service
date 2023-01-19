@@ -139,7 +139,7 @@ jobs:
           project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
           coverage-reports: build/reports/jacoco/test/jacocoTestReport.xml
       - name: 'PACKAGE - Upload Artifact'
-        if: startsWith(github.ref, 'refs/heads/release/') || contains(github.ref, 'master-ci') || contains(github.ref, 'refs/heads/teams/jaguarlatest')
+        if: startsWith(github.ref, 'refs/heads/release/') || contains(github.ref, 'master-ci') || startsWith(github.ref, 'refs/heads/teams/')
         uses: gradle/gradle-build-action@v2
         with:
           arguments: |
@@ -179,16 +179,33 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS_JDA_DELIVERS_DEV }}
       - run: az acr login -n lctjdadeliversregistry
-      - run: docker tag ${{env.CONTAINER_REGISTRY}}/${{env.REPOSITORY_NAME}}:${{env.BUILD_VERSION}}-${{github.run_number}} ${{env.JDA_DELIVERS_CONTAINER_REGISTRY}}/${{env.REPOSITORY_NAME}}:${{env.BUILD_VERSION}}-${{github.run_number}}
-      - run: docker push ${{env.JDA_DELIVERS_CONTAINER_REGISTRY}}/${{env.REPOSITORY_NAME}}:${{env.BUILD_VERSION}}-${{github.run_number}}
+      - name: Tag and Push Image - Master-ci
+        if: startsWith(github.ref, 'refs/heads/teams/') || contains(github.ref, 'master-ci')
+        run: |
+             docker tag ${{env.CONTAINER_REGISTRY}}/${{env.REPOSITORY_NAME}}:${{env.BUILD_VERSION}}-${{github.run_number}} ${{env.JDA_DELIVERS_CONTAINER_REGISTRY}}/${{env.REPOSITORY_NAME}}:${{env.BUILD_VERSION}}-${{github.run_number}}
+             docker push ${{env.JDA_DELIVERS_CONTAINER_REGISTRY}}/${{env.REPOSITORY_NAME}}:${{env.BUILD_VERSION}}-${{github.run_number}}
+       
+      - name: 'Tag and Push Image - Release'
+        if: startsWith(github.ref, 'refs/heads/release/')
+        run: |
+             docker tag ${{env.CONTAINER_REGISTRY}}/${{env.REPOSITORY_NAME}}:${{env.BUILD_VERSION}} ${{env.JDA_DELIVERS_CONTAINER_REGISTRY}}/${{env.REPOSITORY_NAME}}:${{env.BUILD_VERSION}}
+             docker push ${{env.JDA_DELIVERS_CONTAINER_REGISTRY}}/${{env.REPOSITORY_NAME}}:${{env.BUILD_VERSION}}
 
       - name: 'RUN - Push Image to JDA Delivers STRATOSPHERE ACR'
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS_JDA_DELIVERS_STRATOSPHERE }}
       - run: az acr login -n o3wxrtwt72kazpqnjjps0uwc
-      - run: docker tag ${{env.CONTAINER_REGISTRY}}/${{env.REPOSITORY_NAME}}:${{env.BUILD_VERSION}} ${{env.JDA_CONTAINER_REGISTRY}}/${{env.REPOSITORY_NAME}}:${{env.BUILD_VERSION}}
-      - run: docker push ${{env.JDA_CONTAINER_REGISTRY}}/${{env.REPOSITORY_NAME}}:${{env.BUILD_VERSION}}       
+      - name: Tag and Push Image - Master-ci
+        if: startsWith(github.ref, 'refs/heads/teams/') || contains(github.ref, 'master-ci')
+        run: |
+             docker tag ${{env.CONTAINER_REGISTRY}}/${{env.REPOSITORY_NAME}}:${{env.BUILD_VERSION}}-${{github.run_number}} ${{env.JDA_CONTAINER_REGISTRY}}/${{env.REPOSITORY_NAME}}:${{env.BUILD_VERSION}}-${{github.run_number}}
+             docker push ${{env.JDA_CONTAINER_REGISTRY}}/${{env.REPOSITORY_NAME}}:${{env.BUILD_VERSION}}-${{github.run_number}}      
+      - name: 'Tag and Push Image - Release'       
+        if: startsWith(github.ref, 'refs/heads/release/')
+        run: |
+             docker tag ${{env.CONTAINER_REGISTRY}}/${{env.REPOSITORY_NAME}}:${{env.BUILD_VERSION}} ${{env.JDA_CONTAINER_REGISTRY}}/${{env.REPOSITORY_NAME}}:${{env.BUILD_VERSION}}
+             docker push ${{env.JDA_CONTAINER_REGISTRY}}/${{env.REPOSITORY_NAME}}:${{env.BUILD_VERSION}}      
  
   trigger-deployment:
     needs: [build]
