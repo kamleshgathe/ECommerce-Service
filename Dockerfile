@@ -1,4 +1,4 @@
-FROM openjdk:14
+FROM openjdk:17
 
 ARG version 
 ARG app
