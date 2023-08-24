@@ -1,9 +1,10 @@
 buildscript {
     ext {
 
-        springBootVersion = '2.5.10'
+        springBootVersion = '2.7.14'
     }
     repositories {
+        mavenLocal()
         maven {
             url "${artifactoryContextUrl}/jda-dev-repositories"
             credentials {
@@ -100,6 +101,7 @@ configurations {
 }
 
 repositories {
+    mavenLocal()
     maven {
         url "${artifactoryContextUrl}/jda-dev-repositories"
         credentials {
@@ -127,7 +129,6 @@ dependencies {
     implementation group: "com.jda.dct", name: "core", version: "${depVersion}", changing: true, excludeGroovyAll
     implementation group: "com.jda.dct", name: "push-notification", version: "${depVersion}", changing: true, excludeGroovyAll
     implementation group: "com.jda.dct", name: "email", version: "${depVersion}", changing: true, excludeGroovyAll
-    implementation group: 'com.jda.luminate', name: 'swagger-doc', version: "${platformVersion}", changing: true, excludeGroovyAll
     api group: 'org.elasticsearch', name: 'elasticsearch', version: '7.14.0'
     api group: 'org.elasticsearch.client', name: 'elasticsearch-rest-client', version: '7.14.0'
     api group: 'org.elasticsearch.client', name: 'elasticsearch-rest-high-level-client', version: '7.14.0'
