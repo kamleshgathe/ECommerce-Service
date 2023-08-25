@@ -136,14 +136,14 @@ dependencies {
     zip group: 'com.jda.dct', name: 'cicd', version: '0.0.5-SNAPSHOT', classifier: 'appdynamics-container-config', ext: 'zip'
     runtimeOnly group: 'org.springframework.boot', name: 'spring-boot-starter-actuator'
     runtimeOnly group: 'org.mariadb.jdbc', name: 'mariadb-java-client', version: '2.7.3'
-    runtimeOnly group: 'net.bytebuddy', name: 'byte-buddy', version: '1.11.12'
+    runtimeOnly group: 'net.bytebuddy', name: 'byte-buddy', version: '1.14.2'
     testImplementation group: 'org.mockito', name: 'mockito-core', version: '3.11.2'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation group: 'junit', name: 'junit', version: '4.13.2'
     // mandatory dependencies for using Spock
     testImplementation group: 'org.spockframework', name: 'spock-core', version: '2.0-M5-groovy-3.0', excludeGroovyAll
     // optional dependencies for using Spock
-    testRuntimeOnly "net.bytebuddy:byte-buddy:1.11.12"         // allows mocking of classes (in addition to interfaces)
+    testRuntimeOnly 'net.bytebuddy:byte-buddy:1.14.2'         // allows mocking of classes (in addition to interfaces)
     testImplementation group: 'org.spockframework', name: 'spock-junit4', version: '2.0-M5-groovy-3.0'
     testImplementation group: 'org.spockframework', name: 'spock-spring', version: '2.0-M5-groovy-3.0', excludeGroovyAll
 }
@@ -190,6 +190,7 @@ repositories {
             password = artifactoryPassword
         }
     }
+    mavenCentral()
 }
 
 task unzip {
