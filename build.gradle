@@ -4,7 +4,6 @@ buildscript {
         springBootVersion = '2.7.14'
     }
     repositories {
-        mavenLocal()
         maven {
             url "${artifactoryContextUrl}/jda-dev-repositories"
             credentials {
@@ -101,7 +100,6 @@ configurations {
 }
 
 repositories {
-    mavenLocal()
     maven {
         url "${artifactoryContextUrl}/jda-dev-repositories"
         credentials {
