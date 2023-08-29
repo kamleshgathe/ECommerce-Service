@@ -71,7 +71,7 @@ jobs:
         id: bd-scan
         uses: synopsys-sig/detect-action@v0.3.4
         env:
-          DETECT_PROJECT_NAME: plat-lct-transportation-service
+          DETECT_PROJECT_NAME: plat-lct-chat-service
           DETECT_PROJECT_VERSION_NAME: Upgrade-Spring-boot
           DETECT_REQUIRED_DETECTOR_TYPES: GRADLE
           DETECT_TOOLS_EXCLUDED: SIGNATURE_SCAN
