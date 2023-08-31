@@ -87,10 +87,10 @@ configurations {
             eachDependency {
                 drd ->
                     if (drd.requested.group == 'org.springframework.kafka') {
-                        drd.useVersion '2.8.0'
+                        drd.useVersion '2.9.11'
                     }
                     if (drd.requested.group == 'org.apache.kafka') {
-                        drd.useVersion '3.0.0'
+                        drd.useVersion '3.5.1'
                     }
             }
             cacheChangingModulesFor 0, 'seconds'
