@@ -51,7 +51,7 @@ jobs:
       - name: "BUILD - Build with Gradle"
         uses: gradle/gradle-build-action@v2
         with:
-          arguments: build -x test
+          arguments: --refresh-dependencies build -x test
       - id: temp_gh_access_token
         uses: tibdex/github-app-token@v1
         with:
@@ -72,7 +72,7 @@ jobs:
         uses: synopsys-sig/detect-action@v0.3.4
         env:
           DETECT_PROJECT_NAME: plat-lct-chat-service
-          DETECT_PROJECT_VERSION_NAME: Upgrade-Spring-boot
+          DETECT_PROJECT_VERSION_NAME: Upgrade-Spring-boot-1
           DETECT_REQUIRED_DETECTOR_TYPES: GRADLE
           DETECT_TOOLS_EXCLUDED: SIGNATURE_SCAN
           DETECT_PROJECT_USER_GROUPS: plat-lct-users,plat-lct-admins
