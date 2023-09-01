@@ -92,9 +92,6 @@ configurations {
                     if (drd.requested.group == 'org.apache.kafka') {
                         drd.useVersion '3.5.1'
                     }
-                    if (drd.requested.group == 'org.yaml') {
-                        drd.useVersion '2.0'
-                    }
             }
             cacheChangingModulesFor 0, 'seconds'
         }
@@ -110,6 +107,7 @@ repositories {
             password = artifactoryPassword
         }
     }
+    maven { url 'https://maven.repository.redhat.com/ga/'}
 }
 
 
@@ -134,6 +132,7 @@ dependencies {
     api group: 'org.elasticsearch.client', name: 'elasticsearch-rest-client', version: '7.14.0'
     api group: 'org.elasticsearch.client', name: 'elasticsearch-rest-high-level-client', version: '7.14.0'
     api 'com.jsoniter:jsoniter:0.9.23'
+    api 'org.yaml:snakeyaml:1.33.0.redhat-00001'
     zip group: 'com.jda.dct', name: 'cicd', version: '0.0.5-SNAPSHOT', classifier: 'appdynamics-container-config', ext: 'zip'
     runtimeOnly group: 'org.springframework.boot', name: 'spring-boot-starter-actuator'
     runtimeOnly group: 'org.mariadb.jdbc', name: 'mariadb-java-client', version: '2.7.3'
