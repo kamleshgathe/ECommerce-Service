@@ -132,7 +132,7 @@ dependencies {
     api group: 'org.elasticsearch.client', name: 'elasticsearch-rest-client', version: '7.14.0'
     api group: 'org.elasticsearch.client', name: 'elasticsearch-rest-high-level-client', version: '7.14.0'
     api 'com.jsoniter:jsoniter:0.9.23'
-    api 'org.yaml:snakeyaml:1.33.0.redhat-00001'
+    api 'org.yaml:snakeyaml:1.33.0.SP1-redhat-00001'
     zip group: 'com.jda.dct', name: 'cicd', version: '0.0.5-SNAPSHOT', classifier: 'appdynamics-container-config', ext: 'zip'
     runtimeOnly group: 'org.springframework.boot', name: 'spring-boot-starter-actuator'
     runtimeOnly group: 'org.mariadb.jdbc', name: 'mariadb-java-client', version: '2.7.3'
