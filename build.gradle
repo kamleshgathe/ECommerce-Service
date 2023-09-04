@@ -1,7 +1,7 @@
 buildscript {
     ext {
 
-        springBootVersion = '2.5.10'
+        springBootVersion = '2.7.14'
     }
     repositories {
         maven {
@@ -87,10 +87,10 @@ configurations {
             eachDependency {
                 drd ->
                     if (drd.requested.group == 'org.springframework.kafka') {
-                        drd.useVersion '2.8.0'
+                        drd.useVersion '2.9.11'
                     }
                     if (drd.requested.group == 'org.apache.kafka') {
-                        drd.useVersion '3.0.0'
+                        drd.useVersion '3.5.1'
                     }
             }
             cacheChangingModulesFor 0, 'seconds'
@@ -107,6 +107,7 @@ repositories {
             password = artifactoryPassword
         }
     }
+    maven { url 'https://maven.repository.redhat.com/ga/'}
 }
 
 
@@ -127,22 +128,22 @@ dependencies {
     implementation group: "com.jda.dct", name: "core", version: "${depVersion}", changing: true, excludeGroovyAll
     implementation group: "com.jda.dct", name: "push-notification", version: "${depVersion}", changing: true, excludeGroovyAll
     implementation group: "com.jda.dct", name: "email", version: "${depVersion}", changing: true, excludeGroovyAll
-    implementation group: 'com.jda.luminate', name: 'swagger-doc', version: "${platformVersion}", changing: true, excludeGroovyAll
     api group: 'org.elasticsearch', name: 'elasticsearch', version: '7.14.0'
     api group: 'org.elasticsearch.client', name: 'elasticsearch-rest-client', version: '7.14.0'
     api group: 'org.elasticsearch.client', name: 'elasticsearch-rest-high-level-client', version: '7.14.0'
     api 'com.jsoniter:jsoniter:0.9.23'
+    api 'org.yaml:snakeyaml:1.33.0.SP1-redhat-00001'
     zip group: 'com.jda.dct', name: 'cicd', version: '0.0.5-SNAPSHOT', classifier: 'appdynamics-container-config', ext: 'zip'
     runtimeOnly group: 'org.springframework.boot', name: 'spring-boot-starter-actuator'
     runtimeOnly group: 'org.mariadb.jdbc', name: 'mariadb-java-client', version: '2.7.3'
-    runtimeOnly group: 'net.bytebuddy', name: 'byte-buddy', version: '1.11.12'
+    runtimeOnly group: 'net.bytebuddy', name: 'byte-buddy', version: '1.14.2'
     testImplementation group: 'org.mockito', name: 'mockito-core', version: '3.11.2'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation group: 'junit', name: 'junit', version: '4.13.2'
     // mandatory dependencies for using Spock
     testImplementation group: 'org.spockframework', name: 'spock-core', version: '2.0-M5-groovy-3.0', excludeGroovyAll
     // optional dependencies for using Spock
-    testRuntimeOnly "net.bytebuddy:byte-buddy:1.11.12"         // allows mocking of classes (in addition to interfaces)
+    testRuntimeOnly 'net.bytebuddy:byte-buddy:1.14.2'         // allows mocking of classes (in addition to interfaces)
     testImplementation group: 'org.spockframework', name: 'spock-junit4', version: '2.0-M5-groovy-3.0'
     testImplementation group: 'org.spockframework', name: 'spock-spring', version: '2.0-M5-groovy-3.0', excludeGroovyAll
 }
@@ -189,6 +190,7 @@ repositories {
             password = artifactoryPassword
         }
     }
+    mavenCentral()
 }
 
 task unzip {
