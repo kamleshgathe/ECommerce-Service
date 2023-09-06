@@ -22,11 +22,11 @@ jobs:
       - run: echo "REPOSITORY_NAME=$(echo '${{ github.repository }}' | awk -F '/' '{print $2}')" >> $GITHUB_ENV
         shell: bash
 
-      - name: 'SETUP - JAVA JDK 16'
-        uses: actions/setup-java@v2
+      - name: 'SETUP - JAVA JDK 17'
+        uses: actions/setup-java@v3
         with:
-            java-version: 16
-            distribution: 'adopt'
+          java-version: 17
+          distribution: "zulu"
 
       - name: 'GRANT PERMISSION - Grant execute permission for gradlew'
         run: chmod +x gradlew
@@ -49,30 +49,41 @@ jobs:
         uses: gradle/gradle-build-action@v2
         with: 
           arguments: build -x test 
-
-      - name: 'RUN- Perform Blackduck scan'
-        timeout-minutes: 5
-        uses: blackducksoftware/github-action@v2
+      - id: temp_gh_access_token
+        uses: tibdex/github-app-token@v1
         with:
-          version: 7
-          args: '--blackduck.url="${{ secrets.DS_BLACKDUCK_URL }}"
-          --blackduck.api.token="${{ secrets.PLAT_LCT_BLACKDUCK_TOKEN }}"
-          --detect.project.name=${{ env.REPOSITORY_NAME }}
-          --detect.project.version.name=master-ci
-          --detect.blackduck.signature.scanner.upload.source.mode=false
-          --detect.blackduck.signature.scanner.exclusion.pattern.search.depth=0
-          --detect.tools.excluded=SIGNATURE_SCAN
-          --detect.project.tags=LCT
-          --detect.gradle.excluded.configurations=checkstyle,serviceTestImplementation,serviceTestCompileClasspath,serviceTestRuntimeClasspath,testImplementation,testRuntimeOnly,testCompileClasspath,testCompileOnly,testRuntime,testRuntimeClasspath,testRuntimeOnly,testCompile
-          --detect.wait.for.results=false
-          --detect.risk.report.pdf=true
-          --detect.npm.include.dev.dependencies=false
-          --detect.report.timeout=3600
-          --detect.project.user.groups=lumplatform-ct-admins,lumplatform-ct-users
-          --detect.project.codelocation.unmap=true'
-      - name: Notify Teams Channel
-        uses: aliencube/microsoft-teams-actions@v0.8.0
+          app_id: ${{ secrets.PLAT_LCT_GHAPP_ID }}
+          private_key: ${{ secrets.PLAT_LCT_GHAPP_PRIV_KEY }}
+    
+      - name: Set scan mode
+        id: scan-mode
+        shell: bash
+        run: |
+          if [[ "${GITHUB_REF_NAME}" == "master-ci" ]]; then
+              echo "data=INTELLIGENT" >> $GITHUB_OUTPUT
+          else
+              echo "data=RAPID" >> $GITHUB_OUTPUT
+          fi
+      - name: 'Blackduck scan'
+        id: bd-scan
+        uses: synopsys-sig/detect-action@v0.3.4
+        env:
+          DETECT_PROJECT_NAME: ${{ env.REPOSITORY_NAME}}
+          DETECT_PROJECT_VERSION_NAME: ${{ env.GITHUB_REF_NAME }}
+          DETECT_REQUIRED_DETECTOR_TYPES: GRADLE
+          DETECT_TOOLS_EXCLUDED: SIGNATURE_SCAN
+          DETECT_PROJECT_USER_GROUPS: plat-lct-users,plat-lct-admins
+          DETECT_PROJECT_CODELOCATION_UNMAP: true
+          DETECT_WAIT_FOR_RESULTS: true
+          DETECT_RISK_REPORT_PDF: true
+          DETECT_BLACKDUCK_SIGNATURE_SCANNER_UPLOAD_SOURCE: false
+          DETECT_BLACKDUCK_SIGNATURE_SCANNER_EXCLUSION_PATTERN_SEARCH_DEPTH: 0
+          DETECT_REPORT_TIMEOUT: 600
+          DETECT_PROJECT_TAGS: lct
         with:
-          webhook_uri: ${{ secrets.LCT_BLACKDUCK_MS_TEAMS_WEBHOOK }}
-          title: "${{ env.REPOSITORY_NAME }} : SUCCESSFUL"
-          summary: "${{ env.REPOSITORY_NAME }} : SUCCESSFUL"
+          detect-version: 8.1.1
+          scan-mode: ${{ steps.scan-mode.outputs.data }}
+          github-token: ${{ steps.temp_gh_access_token.outputs.token }}
+          blackduck-url: ${{ secrets.DS_BLACKDUCK_URL }}
+          blackduck-api-token: ${{ secrets.PLAT_LCT_BLACKDUCK_TOKEN }}
+          fail-on-all-policy-severities: false
