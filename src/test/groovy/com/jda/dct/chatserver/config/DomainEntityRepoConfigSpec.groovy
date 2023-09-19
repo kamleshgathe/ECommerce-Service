@@ -1,5 +1,5 @@
 /*
- * Copyright © 2022, JDA Software Group, Inc. ALL RIGHTS RESERVED.
+ * Copyright © 2023, JDA Software Group, Inc. ALL RIGHTS RESERVED.
  * <p>
  * This software is the confidential information of JDA Software, Inc., and is licensed
  * as restricted rights software. The use,reproduction, or disclosure of this software
@@ -13,6 +13,7 @@ import com.jda.dct.chatservice.domainreader.EntityReaderFactory
 import com.jda.dct.chatservice.repository.Analytics
 import com.jda.dct.domain.stateful.Delivery
 import com.jda.dct.domain.stateful.PurchaseOrder
+import com.jda.dct.domain.stateful.Risk
 import com.jda.dct.domain.stateful.SalesOrder
 import com.jda.dct.domain.stateful.Shipment
 import com.jda.dct.domain.Node
@@ -31,6 +32,7 @@ class DomainEntityRepoConfigSpec extends Specification {
      DctDaoBase<PurchaseOrder> purchaseOrderRepo;
      DctDaoBase<Delivery> deliveryRepo;
      DctDaoBase<Node> nodeRepo;
+     DctDaoBase<Risk> riskRepo;
      Analytics analytics;
 
 
@@ -59,6 +61,15 @@ class DomainEntityRepoConfigSpec extends Specification {
         Class shipmentClass = domainEntityRepoConfig.shipmentClass()
         then:
         shipmentClass == Shipment
+    }
+
+        def "test DomainEntityRepoConfig riskClass"() {
+        given:
+        DomainEntityRepoConfig domainEntityRepoConfig = new DomainEntityRepoConfig()
+        when:
+        Class riskClass = domainEntityRepoConfig.riskClass()
+        then:
+        riskClass == Risk
     }
 
     def "test DomainEntityRepoConfig purchaseOrderClass"() {
@@ -96,6 +107,7 @@ class DomainEntityRepoConfigSpec extends Specification {
         purchaseOrderRepo = Mock(DctDaoBase)
         deliveryRepo = Mock(DctDaoBase)
         nodeRepo = Mock(DctDaoBase)
+        riskRepo = Mock(DctDaoBase)
         analytics = Mock(Analytics)
         DomainEntityRepoConfig domainEntityRepoConfig = new DomainEntityRepoConfig()
         EntityReaderFactory entityReaderFactory1 = new EntityReaderFactory()
@@ -106,6 +118,7 @@ class DomainEntityRepoConfigSpec extends Specification {
                 .shipmentRepo(shipmentRepo)
                 .deliveryRepo(deliveryRepo)
                 .nodeRepo(nodeRepo)
+                .riskRepo(riskRepo)
                 .analyticsRepo(analytics)
                 .build()
         when:

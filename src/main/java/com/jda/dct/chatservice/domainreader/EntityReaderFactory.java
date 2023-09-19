@@ -1,5 +1,5 @@
 /**
- * Copyright © 2022, JDA Software Group, Inc. ALL RIGHTS RESERVED.
+ * Copyright © 2023, JDA Software Group, Inc. ALL RIGHTS RESERVED.
  * <p>
  * This software is the confidential information of JDA Software, Inc., and is licensed
  * as restricted rights software. The use,reproduction, or disclosure of this software
@@ -11,6 +11,7 @@ import com.jda.dct.chatservice.repository.Analytics;
 import com.jda.dct.domain.Node;
 import com.jda.dct.domain.stateful.Delivery;
 import com.jda.dct.domain.stateful.PurchaseOrder;
+import com.jda.dct.domain.stateful.Risk;
 import com.jda.dct.domain.stateful.SalesOrder;
 import com.jda.dct.domain.stateful.Shipment;
 import com.jda.dct.domain.util.CriteriaUtil;
@@ -39,6 +40,7 @@ public class EntityReaderFactory {
     private static final String TYPE_PROCUREMENT = "forecast-commits";
     private static final String TYPE_NODE = "node";
     private static final String TYPE_ANALYTICS = "analytics";
+    private static final String TYPE_RISK = "risk";
 
     private AuthContext authContext;
 
@@ -59,6 +61,7 @@ public class EntityReaderFactory {
         classMap.put(TYPE_PROCUREMENT, Node.class);
         classMap.put(TYPE_PURCHASE_ORDER, PurchaseOrder.class);
         classMap.put(TYPE_SALES_ORDER, SalesOrder.class);
+        classMap.put(TYPE_RISK, Risk.class);
         // entry added for generic node
         classMap.put(TYPE_NODE, Node.class);
         // entry added for analytics
@@ -109,6 +112,7 @@ public class EntityReaderFactory {
         private DctDaoBase<PurchaseOrder> purchaseOrderRepo;
         private DctDaoBase<Delivery> deliveryRepo;
         private DctDaoBase<Node> nodeRepo;
+        private DctDaoBase<Risk> riskRepo;
         private Analytics analyticsRepo;
 
         private AuthContext authContext;
@@ -144,6 +148,11 @@ public class EntityReaderFactory {
             return this;
         }
 
+        public EntityReaderFactoryBuilder riskRepo(final DctDaoBase<Risk> riskRepo) {
+            this.riskRepo = riskRepo;
+            return this;
+        }
+
 
         public EntityReaderFactoryBuilder authContext(final AuthContext authContext) {
             this.authContext = authContext;
@@ -164,6 +173,7 @@ public class EntityReaderFactory {
             Assert.notNull(nodeRepo, "Node repository can't be null");
             Assert.notNull(analyticsRepo, "Analytics repository can't be null");
             Assert.notNull(authContext, "AuthContext can't be null");
+            Assert.notNull(riskRepo, "Risk repository can't be null");
 
             EntityReaderFactory readerFactory = new EntityReaderFactory();
             readerFactory.repoMap.put(TYPE_SHIPMENT, shipmentRepo);
@@ -173,6 +183,7 @@ public class EntityReaderFactory {
             readerFactory.repoMap.put(TYPE_INVENTORY, nodeRepo);
             readerFactory.repoMap.put(TYPE_CAPACITY, nodeRepo);
             readerFactory.repoMap.put(TYPE_PROCUREMENT, nodeRepo);
+            readerFactory.repoMap.put(TYPE_RISK, riskRepo);
             // entry added for generic node
             readerFactory.repoMap.put(TYPE_NODE, nodeRepo);
             // entry added for analytics
