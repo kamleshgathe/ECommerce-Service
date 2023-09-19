@@ -1,5 +1,5 @@
 /*
- * Copyright © 2022, JDA Software Group, Inc. ALL RIGHTS RESERVED.
+ * Copyright © 2023, JDA Software Group, Inc. ALL RIGHTS RESERVED.
  * <p>
  * This software is the confidential information of JDA Software, Inc., and is licensed
  * as restricted rights software. The use,reproduction, or disclosure of this software
@@ -9,6 +9,7 @@ package com.jda.dct.chatserver.domainreader
 
 import com.jda.dct.chatservice.domainreader.EntityReaderFactory
 import com.jda.dct.domain.Site
+import com.jda.dct.domain.stateful.Risk
 import com.jda.dct.domain.stateful.Shipment
 import com.jda.dct.chatservice.repository.Analytics
 import com.jda.dct.persist.ignite.dao.DctDaoBase
@@ -21,28 +22,35 @@ class EntityReaderFactorySpec extends Specification {
 
     def "test constructor should throw exception if shipment repo is null"() {
         when: "Initialize constructor"
-        buildEntityReaderFactory(null, null, null, null, null, null, Mock(AuthContext));
+        buildEntityReaderFactory(null, null, null, null, null, null, null, Mock(AuthContext));
         then: "Should expect exception"
         thrown(IllegalArgumentException)
     }
 
     def "test constructor should throw exception sales order repo is null"() {
         when: "Initialize constructor"
-        buildEntityReaderFactory(Mock(DctDaoBase), null, null, null, null,null, Mock(AuthContext));
+        buildEntityReaderFactory(Mock(DctDaoBase), null, null, null, null, null, null, Mock(AuthContext));
         then: "Should expect exception"
         thrown(IllegalArgumentException)
     }
 
     def "test constructor should throw exception purchase order repo is null"() {
         when: "Initialize constructor"
-        buildEntityReaderFactory(Mock(DctDaoBase), Mock(DctDaoBase), null, null, null,null, Mock(AuthContext));
+        buildEntityReaderFactory(Mock(DctDaoBase), Mock(DctDaoBase), null, null, null,null, null, Mock(AuthContext));
         then: "Should expect exception"
         thrown(IllegalArgumentException)
     }
 
     def "test constructor should throw exception if node repo is null"() {
         when: "Initialize constructor"
-        buildEntityReaderFactory(Mock(DctDaoBase), Mock(DctDaoBase), Mock(DctDaoBase), Mock(DctDaoBase), null,null, Mock(AuthContext));
+        buildEntityReaderFactory(Mock(DctDaoBase), Mock(DctDaoBase), Mock(DctDaoBase), Mock(DctDaoBase), null,null, null, Mock(AuthContext));
+        then: "Should expect exception"
+        thrown(IllegalArgumentException)
+    }
+
+        def "test constructor should throw exception if risk repo is null"() {
+        when: "Initialize constructor"
+        buildEntityReaderFactory(Mock(DctDaoBase), Mock(DctDaoBase), Mock(DctDaoBase), Mock(DctDaoBase), null,null, null, Mock(AuthContext));
         then: "Should expect exception"
         thrown(IllegalArgumentException)
     }
@@ -50,6 +58,7 @@ class EntityReaderFactorySpec extends Specification {
     def "test constructor should throw exception auth context is null"() {
         when: "Initialize constructor"
         buildEntityReaderFactory(Mock(DctDaoBase),
+                Mock(DctDaoBase),
                 Mock(DctDaoBase),
                 Mock(DctDaoBase),
                 Mock(DctDaoBase),
@@ -67,6 +76,7 @@ class EntityReaderFactorySpec extends Specification {
                 Mock(DctDaoBase),
                 Mock(DctDaoBase),
                 Mock(DctDaoBase),
+                Mock(DctDaoBase),
                 Mock(Analytics),
                 Mock(AuthContext))
 
@@ -79,6 +89,7 @@ class EntityReaderFactorySpec extends Specification {
     def "test when type is analytics"() {
         given: "Initialize reader factory"
         def entityReaderFactory = buildEntityReaderFactory(Mock(DctDaoBase),
+                Mock(DctDaoBase),
                 Mock(DctDaoBase),
                 Mock(DctDaoBase),
                 Mock(DctDaoBase),
@@ -100,6 +111,7 @@ class EntityReaderFactorySpec extends Specification {
         def dctPurchaseOrderDaoBase = Mock(DctDaoBase)
         def dctDeliveryDaoBase = Mock(DctDaoBase)
         def dctNodeDaoBase = Mock(DctDaoBase)
+        def dctRiskDaoBase = Mock(DctDaoBase)
         def analytics = Mock(Analytics)
         def shipment = Mock(Shipment)
         shipment.getShipmentId() >> "shipment1"
@@ -110,6 +122,7 @@ class EntityReaderFactorySpec extends Specification {
                 dctPurchaseOrderDaoBase,
                 dctDeliveryDaoBase,
                 dctNodeDaoBase,
+                dctRiskDaoBase,
                 analytics,
                 authContext)
 
@@ -123,7 +136,7 @@ class EntityReaderFactorySpec extends Specification {
                                                  salesOrder,
                                                  purchaseOrder,
                                                  delivery,
-                                                 node, analytics,
+                                                 node, risk , analytics,
                                                  authContext) {
         def builder = new EntityReaderFactory.EntityReaderFactoryBuilder();
         builder.shipmentRepo(shipment)
@@ -131,6 +144,7 @@ class EntityReaderFactorySpec extends Specification {
                 .salesOrderRepo(salesOrder)
                 .deliveryRepo(delivery)
                 .nodeRepo(node)
+                .riskRepo(risk)
                 .analyticsRepo(analytics)
                 .authContext(authContext)
                 .build();
@@ -144,6 +158,7 @@ class EntityReaderFactorySpec extends Specification {
         def dctPurchaseOrderDaoBase = Mock(DctDaoBase)
         def dctDeliveryDaoBase = Mock(DctDaoBase)
         def dctNodeDaoBase = Mock(DctDaoBase)
+        def dctRiskDaoBase = Mock(DctDaoBase)
         def analytics = Mock(Analytics)
         dctNodeDaoBase.getById(_, _, _) >> Mock(Node)
 
@@ -152,6 +167,7 @@ class EntityReaderFactorySpec extends Specification {
                 dctPurchaseOrderDaoBase,
                 dctDeliveryDaoBase,
                 dctNodeDaoBase,
+                dctRiskDaoBase,
                 analytics,
                 authContext)
 
@@ -170,6 +186,7 @@ class EntityReaderFactorySpec extends Specification {
         def dctPurchaseOrderDaoBase = Mock(DctDaoBase)
         def dctDeliveryDaoBase = Mock(DctDaoBase)
         def dctNodeDaoBase = Mock(DctDaoBase)
+        def dctRiskDaoBase = Mock(DctDaoBase)
         def analytics = Mock(Analytics)
         def node = nodeData()
         dctShipmentDaoBase.getById(_, _, _) >> node
@@ -179,6 +196,7 @@ class EntityReaderFactorySpec extends Specification {
                 dctPurchaseOrderDaoBase,
                 dctDeliveryDaoBase,
                 dctNodeDaoBase,
+                dctRiskDaoBase,
                 analytics,
                 authContext)
 

@@ -1,5 +1,5 @@
 /**
- * Copyright © 2022, JDA Software Group, Inc. ALL RIGHTS RESERVED.
+ * Copyright © 2023, JDA Software Group, Inc. ALL RIGHTS RESERVED.
  * <p>
  * This software is the confidential information of JDA Software, Inc., and is licensed
  * as restricted rights software. The use,reproduction, or disclosure of this software
@@ -12,11 +12,13 @@ import com.jda.dct.chatservice.repository.Analytics;
 import com.jda.dct.domain.Node;
 import com.jda.dct.domain.stateful.Delivery;
 import com.jda.dct.domain.stateful.PurchaseOrder;
+import com.jda.dct.domain.stateful.Risk;
 import com.jda.dct.domain.stateful.SalesOrder;
 import com.jda.dct.domain.stateful.Shipment;
 import com.jda.dct.persist.ignite.dao.DeliveryDaoImpl;
 import com.jda.dct.persist.ignite.dao.NodeDaoImpl;
 import com.jda.dct.persist.ignite.dao.PurchaseOrderDaoImpl;
+import com.jda.dct.persist.ignite.dao.RiskDaoImpl;
 import com.jda.dct.persist.ignite.dao.SalesOrderDaoImpl;
 import com.jda.dct.persist.ignite.dao.ShipmentDaoImpl;
 import com.jda.luminate.security.contexts.AuthContext;
@@ -48,6 +50,9 @@ public class DomainEntityRepoConfig {
     @Autowired
     private AuthContext authContext;
 
+    @Autowired
+    private RiskDaoImpl riskDao;
+
     @Bean
     public Class shipmentClass() {
         return Shipment.class;
@@ -78,6 +83,11 @@ public class DomainEntityRepoConfig {
         return Analytics.class;
     }
 
+    @Bean
+    public Class riskClass() {
+        return Risk.class;
+    }
+
     /**
      * Return the bean instance of EntityReaderFactory.
      *
@@ -94,6 +104,7 @@ public class DomainEntityRepoConfig {
             .shipmentRepo(shipmentDao)
             .deliveryRepo(deliveryDao)
             .nodeRepo(nodeDao)
+            .riskRepo(riskDao)
             .analyticsRepo(analytics)
             .build();
     }
