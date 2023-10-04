@@ -63,7 +63,7 @@ tenant:
 datalake:
   clientid: 555602e1-99a6-4586-9100-a1ceb189916e
   authTokenEndpoint: https://login.microsoftonline.com/c9536685-1262-420b-a94b-4f5420284680/oauth2/token
-  clientkey: u_Y8Q~mRkq2bvdto6jyUoMywxUTkqqQczDBVcay5
+  clientkey: 39_8Q~0hnHu.HHfHWhdj7nuUjfi6S6MjS2qCsaMJ
   account: lctgen1datalake.azuredatalakestore.net
 
 # only enabled for development and testing
