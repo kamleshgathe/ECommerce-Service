@@ -12,21 +12,15 @@
         <appender-ref ref="STDOUT" />
     </root>
 
-    <logger name="com.jda" level="warn" additivity="false">
+    <logger name="com.chartercommunications" level="warn" additivity="false">
         <appender-ref ref="STDOUT" />
     </logger>
 
-    <logger name="org.apache.ignite" level="warn" additivity="false">
-        <appender-ref ref="STDOUT" />
-    </logger>
 
-    <logger name="com.jda.dct.exec.lib.relationships" level="ERROR" additivity="false">
+    <logger name="com.chartercommunications" level="ERROR" additivity="false">
         <appender-ref ref="STDOUT"/>
     </logger>
 
-    <turboFilter class="com.jda.luminate.tracing.ErrorTurboFilter">
-    </turboFilter>
 
-    <include optional="true" file="/jda/luminate/logging/override/plat-lct-chat-service_override.xml"/>
 
 </configuration>

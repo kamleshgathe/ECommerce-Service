@@ -1,118 +1,15 @@
-spring.application.name: chat-service
+spring.application.name: Ecommerce-service
+
 spring:
-  main: 
-    allow-circular-references: true
-  profiles:
-    active: production
-  servlet:
-    multipart:
-      max-file-size: 10MB
-      max-request-size: 100MB
-
-server:
-  compression:
-    enabled: true
-    mime-types: text/html,text/xml,text/plain,text/css,application/javascript,application/json
-
-dct:
-  datasource:
-    driverClassName: org.mariadb.jdbc.Driver
-  tenants:
-    ids:
-  swagger:
-    path: /v1/swagger/**
-  service:
-    allowDeletes: true
-  fileUpload:
-    validFormats: doc, docx, txt, pdf, xls, csv, jpeg, png, jpg, xlsx
-  fileSize:
-    maxSize: 10MB
-
-delivery:
-  service:
-    batch:
-      commit:
-        interval: 100
-        max.wait.time.milliseconds: 5000
-ignite:
-  ipFinderImpl: kubernetes
-
-enable:
-  kafka:
-    auto:
-      commit: false
-
-kafka:
-  acknowledge:
-    manual:
-      commit: true
-
-luminate:
-  application:
-    component: dct
-    service: chat
-
-oauth2:
-  jwt:
-    key: 123
-
-tenant:
-  umsUserUri: http://luminate-auth:80/api/v1/ums/users
-  umsUri: http://luminate-auth:80/api/v1/ums
-
-datalake:
-  clientid: 555602e1-99a6-4586-9100-a1ceb189916e
-  authTokenEndpoint: https://login.microsoftonline.com/c9536685-1262-420b-a94b-4f5420284680/oauth2/token
-  clientkey: 39_8Q~0hnHu.HHfHWhdj7nuUjfi6S6MjS2qCsaMJ
-  account: lctgen1datalake.azuredatalakestore.net
-
-# only enabled for development and testing
----
-spring:
+  jpa:
+    show-sql: true
   config:
     activate:
       on-profile: development
+  datasource:
+    name: ecommercedb
 server:
   port: 9292
 
-ignite:
-  ipFinderImpl: multicast
 
-dct:
-  tenants:
-    ids: a4b7a825f67930965747445709011120
-  datasource:
-    driverClassName: org.mariadb.jdbc.Driver
-    urlTemplate: 'jdbc:mariadb://localhost:3306/dct{tid}?useUnicode=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC&useSSL=false&autoReconnect=true'
-    jdbcUsername: dct
-    jdbcPassword: unr3@lity
-    a4b7a825f67930965747445709011120:
-      url: 'jdbc:mariadb://127.0.0.1:3306/dcta4b7a825f67930965747445709011120?useUnicode=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC&useSSL=false&autoReconnect=true'
-      username: dct
-      password: unr3@lity
-  service:
-    allowDeletes: true
-  fileUpload:
-    validFormats: doc, docx, txt, pdf, xls, csv, jpeg, png, jpg, xlsx
-  situationRoom:
-       mattermost:
-          host: http://localhost:8065/api/v4/
-          teamId: rgua1b36r7r7xkg9ajh58n33br
-       token: zdjyp6kg9tbxbbipu6ojqfjomo
-kafka:
-  bootstrap:
-    servers: http://localhost:9092
 
-es:
-  hosts: http://localhost:9200
-
-tenant:
-  umsUserUri: http://localhost:33333/api/v1/ums/users
-  umsUri: http://localhost:33333/api/v1/ums
-
-local:
-  store:
-    location: /jda/attachments
-
----
-#end of development  profile

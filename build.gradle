@@ -4,13 +4,6 @@ buildscript {
         springBootVersion = '2.7.14'
     }
     repositories {
-        maven {
-            url "${artifactoryContextUrl}/jda-dev-repositories"
-            credentials {
-                username = artifactoryUsername
-                password = artifactoryPassword
-            }
-        }
         mavenCentral()
     }
     dependencies {
@@ -33,28 +26,24 @@ apply plugin: 'io.spring.dependency-management'
 apply plugin: 'jacoco'
 apply plugin: 'com.jfrog.artifactory'
 apply plugin: 'maven-publish'
-apply plugin: 'checkstyle'
 apply plugin: 'project-report'
 apply plugin: 'info.solidsoft.pitest'
 
 sourceCompatibility = JavaVersion.VERSION_17
 targetCompatibility = JavaVersion.VERSION_17
 
-checkstyle {
-    toolVersion "8.8"
-}
+
 
 version "${version}"
 
 depVersion = "${depVersion}"
 
-group 'com.jda.dct'
+group 'com.chartercommunications.ecommerceservice'
 springBoot {
-    mainClass = 'com.jda.dct.chatservice.ChatServiceApplication'
+    mainClass = 'com.chartercommunications.ecommerceservice.EcommerceServiceApplication'
     buildInfo()
 }
 artifactory {
-    contextUrl = "${artifactoryContextUrl}"
     publish {
         repository {
             if (version.contains('snapshot') || version.contains('SNAPSHOT'))
@@ -100,13 +89,6 @@ configurations {
 }
 
 repositories {
-    maven {
-        url "${artifactoryContextUrl}/jda-dev-repositories"
-        credentials {
-            username = artifactoryUsername
-            password = artifactoryPassword
-        }
-    }
     maven { url 'https://maven.repository.redhat.com/ga/'}
 }
 
@@ -114,26 +96,11 @@ repositories {
 dependencies {
     def excludeGroovyAll = { exclude group: 'org.codehaus.groovy'}
     implementation localGroovy()
+    implementation group: 'jakarta.persistence', name: 'jakarta.persistence-api', version: '3.1.0'
+    implementation group: 'org.springframework.boot', name: 'spring-boot-starter-data-jpa', version: '3.1.4'
     api 'org.springframework.data:spring-data-commons'
     api 'org.springframework.boot:spring-boot-starter-web'
     api 'org.springframework.boot:spring-boot-starter-actuator'
-    implementation group: "com.jda.dct", name: "toys", version: "${depVersion}", changing: true, excludeGroovyAll
-    implementation group: "com.jda.dct", name: "igniteconfig", version: "${depVersion}", changing: true, excludeGroovyAll
-    implementation group: "com.jda.dct", name: "persist", version: "${depVersion}", changing: true, excludeGroovyAll
-    implementation group: "com.jda.dct", name: "tenantutils", version: "${depVersion}", changing: true, excludeGroovyAll
-    implementation group: "com.jda.dct", name: "kafkaclient", version: "${depVersion}", changing: true, excludeGroovyAll
-    implementation group: "com.jda.dct", name: "search", version: "${depVersion}", changing: true, excludeGroovyAll
-    implementation group: "com.jda.dct", name: "ingest", version: "${depVersion}", changing: true, excludeGroovyAll
-    implementation group: "com.jda.dct", name: "app", version: "${depVersion}", changing: true, excludeGroovyAll
-    implementation group: "com.jda.dct", name: "core", version: "${depVersion}", changing: true, excludeGroovyAll
-    implementation group: "com.jda.dct", name: "push-notification", version: "${depVersion}", changing: true, excludeGroovyAll
-    implementation group: "com.jda.dct", name: "email", version: "${depVersion}", changing: true, excludeGroovyAll
-    api group: 'org.elasticsearch', name: 'elasticsearch', version: '7.14.0'
-    api group: 'org.elasticsearch.client', name: 'elasticsearch-rest-client', version: '7.14.0'
-    api group: 'org.elasticsearch.client', name: 'elasticsearch-rest-high-level-client', version: '7.14.0'
-    api 'com.jsoniter:jsoniter:0.9.23'
-    api 'org.yaml:snakeyaml:1.33.0.SP1-redhat-00001'
-    zip group: 'com.jda.dct', name: 'cicd', version: '0.0.5-SNAPSHOT', classifier: 'appdynamics-container-config', ext: 'zip'
     runtimeOnly group: 'org.springframework.boot', name: 'spring-boot-starter-actuator'
     runtimeOnly group: 'org.mariadb.jdbc', name: 'mariadb-java-client', version: '2.7.3'
     runtimeOnly group: 'net.bytebuddy', name: 'byte-buddy', version: '1.14.2'
@@ -158,38 +125,9 @@ jacocoTestReport {
     }
 }
 
-jacocoTestCoverageVerification {
-    violationRules {
-        rule {
-            enabled = true
-            element = 'CLASS'
-            includes = ['com.jda.dct.*']
-            excludes = ['com.jda.dct.chatservice.dto.downstream.*',
-                        'com.jda.dct.chatservice.dto.upstream.*',
-                        'com.jda.dct.chatservice.config.*',
-                        'com.jda.dct.chatservice.constants.*',
-                        'com.jda.dct.chatservice.ChatServiceApplication']
-            limit {
-                counter = 'LINE'
-                minimum = 0.80
-            }
-        }
-    }
-}
 
-test {
-    finalizedBy jacocoTestReport
-    finalizedBy jacocoTestCoverageVerification
-}
 
 repositories {
-    maven {
-        url "${artifactoryContextUrl}/jda-dev-repositories"
-        credentials {
-            username = artifactoryUsername
-            password = artifactoryPassword
-        }
-    }
     mavenCentral()
 }
 
